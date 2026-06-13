@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 import duckdb
+from rich.console import Console
 
 from .config import CatalogConfig
 from .convert import to_webp
@@ -18,6 +19,8 @@ from .ids import generate_item_id
 # Priority order for selecting which image becomes the webp preview.
 PREVIEW_MIME_PRIORITY = ["image/png", "image/jpeg", "image/tiff", "image/svg+xml"]
 
+console = Console()
+
 
 def _mime_type(name: str) -> Optional[str]:
     mime, _ = mimetypes.guess_type(name)
@@ -26,17 +29,18 @@ def _mime_type(name: str) -> Optional[str]:
     return mime
 
 
-def _select_preview(members: list[str]) -> Optional[tuple[str, str]]:
-    """Return (member_name, mime_type) for the chosen preview image, or None."""
-    candidates = {}
+def _select_preview(members: list[str]) -> tuple[Optional[tuple[str, str]], list[str]]:
+    """Return ((member_name, mime_type), all_candidate_names_for_that_mime) for the
+    chosen preview image, or (None, []) if no image is found."""
+    candidates: dict[str, list[str]] = {}
     for name in members:
         mime = _mime_type(name)
         if mime in PREVIEW_MIME_PRIORITY:
-            candidates.setdefault(mime, name)
+            candidates.setdefault(mime, []).append(name)
     for mime in PREVIEW_MIME_PRIORITY:
         if mime in candidates:
-            return candidates[mime], mime
-    return None
+            return (candidates[mime][0], mime), candidates[mime]
+    return None, []
 
 
 def _load_overrides(col_toml_path: Path, content_hash: str, zip_stem: str) -> dict:
@@ -70,7 +74,13 @@ def ingest_zip(
             if not n.startswith("__MACOSX/") and not n.endswith("/")
         ]
 
-        preview_choice = _select_preview(members)
+        preview_choice, preview_candidates = _select_preview(members)
+        if len(preview_candidates) > 1:
+            ext = Path(preview_choice[0]).suffix.lstrip(".")
+            console.print(
+                f"[dim]note:[/dim] {len(preview_candidates)} {ext} images found in "
+                f"{zip_path.name}, using [bold]{preview_choice[0]}[/bold] as preview"
+            )
 
         item_id = existing or generate_item_id(conn)
         items_dir = repo_root / cfg.paths.output_dir / "items" / item_id
