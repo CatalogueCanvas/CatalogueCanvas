@@ -12,10 +12,10 @@ dependencies = [
     "markdown>=3.6",
     "pytz>=2024.1",
     "tomli-w>=1.0",
+    "cairosvg>=2.7",
 ]
 
 [project.optional-dependencies]
-svg = ["cairosvg>=2.7"]
 compress = ["lz4"]
 
 [project.scripts]

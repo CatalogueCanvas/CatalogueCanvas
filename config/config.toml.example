@@ -23,3 +23,6 @@ model = "google/gemma-4-12b-qat"
 api_key_env = ""
 item_type = "image"
 summary_focus = "the item's notable characteristics"
+
+[ingest]
+compress_other_files = false

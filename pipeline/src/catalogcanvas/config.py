@@ -41,11 +41,17 @@ class LLMConfig:
 
 
 @dataclass
+class IngestConfig:
+    compress_other_files: bool = False
+
+
+@dataclass
 class CatalogConfig:
     site: SiteConfig = field(default_factory=SiteConfig)
     build: BuildConfig = field(default_factory=BuildConfig)
     paths: PathsConfig = field(default_factory=PathsConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
+    ingest: IngestConfig = field(default_factory=IngestConfig)
 
 
 def load_config(config_dir: Path) -> CatalogConfig:
@@ -59,11 +65,13 @@ def load_config(config_dir: Path) -> CatalogConfig:
         b = data.get("build", {})
         p = data.get("paths", {})
         l = data.get("llm", {})
+        i = data.get("ingest", {})
         cfg = CatalogConfig(
             site=SiteConfig(**{k: v for k, v in s.items() if k in SiteConfig.__dataclass_fields__}),
             build=BuildConfig(**{k: v for k, v in b.items() if k in BuildConfig.__dataclass_fields__}),
             paths=PathsConfig(**{k: v for k, v in p.items() if k in PathsConfig.__dataclass_fields__}),
             llm=LLMConfig(**{k: v for k, v in l.items() if k in LLMConfig.__dataclass_fields__}),
+            ingest=IngestConfig(**{k: v for k, v in i.items() if k in IngestConfig.__dataclass_fields__}),
         )
 
     return cfg
@@ -76,6 +84,7 @@ def save_config(config_dir: Path, cfg: CatalogConfig) -> Path:
         "build": asdict(cfg.build),
         "paths": asdict(cfg.paths),
         "llm": asdict(cfg.llm),
+        "ingest": asdict(cfg.ingest),
     }
     config_dir.mkdir(parents=True, exist_ok=True)
     with open(config_path, "wb") as f:

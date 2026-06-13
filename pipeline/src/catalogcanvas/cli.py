@@ -1,11 +1,16 @@
 from __future__ import annotations
+import datetime
 from pathlib import Path
+from typing import Optional
 
 import typer
 from rich.console import Console
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
 from .config import BuildConfig, CatalogConfig, LLMConfig, PathsConfig, SiteConfig, load_config, save_config
+from .db import ensure_schema, get_connection
+from .ingest import ingest_zip
 
 app = typer.Typer(help="CatalogCanvas — generic ingestion & site builder")
 console = Console()
@@ -17,6 +22,13 @@ CONFIG_DIR = REPO_ROOT / "config"
 @app.callback()
 def main():
     pass
+
+
+def _get_conn():
+    cfg = load_config(CONFIG_DIR)
+    conn = get_connection(REPO_ROOT / cfg.paths.db_path)
+    ensure_schema(conn)
+    return conn, cfg
 
 
 @app.command()
@@ -86,3 +98,48 @@ def init():
     console.print()
     console.print(table)
     console.print(f"\n[green]✓[/green] wrote {written.relative_to(REPO_ROOT)}")
+
+
+@app.command()
+def ingest(
+    file: Optional[Path] = typer.Option(None, "--file", "-f", help="Single ZIP to ingest"),
+    force: bool = typer.Option(False, "--force", help="Re-ingest even if hash exists"),
+):
+    """Ingest ZIP files into the database."""
+    conn, cfg = _get_conn()
+
+    if file:
+        zips = [file]
+    else:
+        ingestion_dir = REPO_ROOT / cfg.paths.ingestion_dir
+        zips = sorted(ingestion_dir.glob("*.zip"))
+        if not zips:
+            console.print(f"[yellow]no ZIPs found in {ingestion_dir}[/yellow]")
+            raise typer.Exit()
+
+    col_toml_path = CONFIG_DIR / "catalog.toml"
+    import_dt = datetime.datetime.now().isoformat(timespec="seconds")
+    ingested = 0
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[bold green]{task.description}"),
+        BarColumn(),
+        TextColumn("{task.completed}/{task.total} files"),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Ingesting...", total=len(zips))
+        for zip_path in zips:
+            progress.update(task, description=f"[bold]{zip_path.name}[/bold]")
+            item_id = ingest_zip(zip_path, conn, cfg, REPO_ROOT, col_toml_path=col_toml_path,
+                                  force=force, import_dt=import_dt)
+            if item_id:
+                console.print(f"[green]✓[/green] {zip_path.name} → [bold]{item_id}[/bold]")
+                ingested += 1
+            else:
+                console.print(f"[dim]skip[/dim] {zip_path.name} (already ingested)")
+            progress.advance(task)
+
+    conn.close()
+    console.print(f"\n[bold]done[/bold] — {ingested}/{len(zips)} ingested")

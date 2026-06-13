@@ -44,6 +44,7 @@ name = "catalogcanvas"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "cairosvg" },
     { name = "duckdb" },
     { name = "jinja2" },
     { name = "markdown" },
@@ -59,13 +60,10 @@ dependencies = [
 compress = [
     { name = "lz4" },
 ]
-svg = [
-    { name = "cairosvg" },
-]
 
 [package.metadata]
 requires-dist = [
-    { name = "cairosvg", marker = "extra == 'svg'", specifier = ">=2.7" },
+    { name = "cairosvg", specifier = ">=2.7" },
     { name = "duckdb", specifier = ">=0.10" },
     { name = "jinja2", specifier = ">=3.1" },
     { name = "lz4", marker = "extra == 'compress'" },
@@ -77,7 +75,7 @@ requires-dist = [
     { name = "tomli-w", specifier = ">=1.0" },
     { name = "typer", specifier = ">=0.12" },
 ]
-provides-extras = ["svg", "compress"]
+provides-extras = ["compress"]
 
 [[package]]
 name = "cffi"
