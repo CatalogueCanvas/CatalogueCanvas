@@ -1,0 +1,17 @@
+# Prompt template for LLM-based item descriptions.
+#
+# Placeholders {item_type} and {summary_focus} are substituted by describe.sh
+# (via LLM_ITEM_TYPE / LLM_SUMMARY_FOCUS env vars) before the prompt is sent.
+
+[output_schema]
+descriptions = "array of exactly 3 bullet points, each under 50 words"
+summary = "a couple of sentences covering {summary_focus}"
+
+[instructions]
+task = "Analyze the provided {item_type} and return a JSON object matching the output_schema above."
+constraints = [
+    "Provide exactly 3 bullet points in the descriptions array.",
+    "Each bullet point must be under 50 words.",
+    "The summary must be a couple of sentences covering {summary_focus}.",
+    "Output only the raw JSON code without any conversational filler or markdown code blocks.",
+]
