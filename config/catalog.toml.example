@@ -1,0 +1,15 @@
+# Collections — group items by common theme
+# [[collections]]
+# id = "explorations"
+# title = "Early Explorations"
+# description = "First batch of items."
+# cover_item_id = ""
+
+# Per-item overrides — use the item's content hash or filename stem as the key
+# [items.<id>]
+# title = "Item Title"
+# note = """
+# Notes in markdown.
+# """
+# tags = ["tag1", "tag2"]
+# collection = "explorations"

@@ -1,0 +1,25 @@
+[site]
+title = "My Catalog"
+description = "My catalog of items"
+base_url = ""
+author = ""
+theme = "dark"
+
+[build]
+items_per_page = 12
+image_format = "webp"
+image_scale = 2.5
+
+[paths]
+ingestion_dir = "ingestion"
+output_dir = "output"
+db_path = "config/catalog.db"
+backup_dir = ""
+
+[llm]
+provider = "lmstudio"
+api_url = "http://localhost:1234/v1/chat/completions"
+model = "google/gemma-4-12b-qat"
+api_key_env = ""
+item_type = "image"
+summary_focus = "the item's notable characteristics"

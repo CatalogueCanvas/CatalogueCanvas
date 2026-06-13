@@ -1,0 +1,18 @@
+# Python / uv
+__pycache__/
+*.pyc
+.venv/
+.uv/
+
+# DB and generated artifacts
+*.db
+*.duckdb
+output/*
+!output/.gitkeep
+ingestion/*
+!ingestion/.gitkeep
+
+# Status Bank System
+CLAUDE.md
+CLAUDE-*.md
+.claude/
