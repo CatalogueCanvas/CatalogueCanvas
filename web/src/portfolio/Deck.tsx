@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
 import * as api from '../api/client'
 import type { PublicPortfolio } from '../api/client'
 import './deck.css'
@@ -27,7 +28,7 @@ export function Deck() {
       <section className="cc-deck__sec cc-deck__cover">
         <p className="cc-deck__kicker">Portfolio · {total} works</p>
         <h1 className="cc-deck__title">{portfolio.title}</h1>
-        {portfolio.description && <p className="cc-deck__desc">{portfolio.description}</p>}
+        {portfolio.description && <div className="cc-deck__desc"><ReactMarkdown>{portfolio.description}</ReactMarkdown></div>}
         <div className="cc-deck__cover-foot">
           <span>CatalogCanvas</span>
           <span>/p/{portfolio.slug}</span>
@@ -78,7 +79,7 @@ export function Deck() {
       <section className="cc-deck__sec cc-deck__colo">
         <div>
           <h2>About this work</h2>
-          {portfolio.description && <p>{portfolio.description}</p>}
+          {portfolio.description && <ReactMarkdown>{portfolio.description}</ReactMarkdown>}
           <p>A portfolio of {total} works shared via CatalogCanvas.</p>
         </div>
         <ul className="cc-deck__worklist">

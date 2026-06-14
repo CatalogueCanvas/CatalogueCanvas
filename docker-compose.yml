@@ -9,7 +9,4 @@ services:
       CC_SITE_TITLE: ${CC_SITE_TITLE:-CatalogCanvas}
       CC_SITE_AUTHOR: ${CC_SITE_AUTHOR:-}
     volumes:
-      - cc-data:/data
-
-volumes:
-  cc-data:
+      - ./data:/data

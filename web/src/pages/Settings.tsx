@@ -62,6 +62,7 @@ export function Settings() {
         llm_summary_focus: settings.llm_summary_focus,
         llm_bullet_count: settings.llm_bullet_count,
         llm_bullet_max_words: settings.llm_bullet_max_words,
+        llm_auto_generate: settings.llm_auto_generate,
         llm_prompt_template: settings.llm_prompt_template,
       })
       setSettings(updated)
@@ -166,6 +167,22 @@ export function Settings() {
         <section className="cc-panel">
           <h2 className="cc-h2" style={{ marginBottom: 'var(--space-4)' }}>LLM defaults</h2>
           <div className="cc-form">
+            <div className="cc-field">
+              <label className="cc-label">Generate description (LLM)</label>
+              <div className="cc-seg">
+                {([['true', 'On'], ['false', 'Off']] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={settings.llm_auto_generate === value}
+                    onClick={() => setSettings({ ...settings, llm_auto_generate: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="cc-hint">When on, the item editor shows a button to generate a description with the LLM. Notes stay empty until you apply a generated description or write your own.</p>
+            </div>
             <div className="cc-field">
               <label className="cc-label" htmlFor="set-llm-api-url">API URL</label>
               <input

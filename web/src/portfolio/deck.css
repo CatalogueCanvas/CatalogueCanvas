@@ -24,6 +24,8 @@
   font-size: clamp(44px, 8vw, 110px); margin: 0; max-width: 16ch; text-wrap: balance;
 }
 .cc-deck__desc { font-size: clamp(17px, 1.7vw, 22px); max-width: 54ch; margin: 28px 0 0; line-height: 1.5; }
+.cc-deck__desc > :first-child { margin-top: 0; }
+.cc-deck__desc > :last-child { margin-bottom: 0; }
 .cc-deck__cover .cc-deck__desc { color: color-mix(in oklab, var(--bg) 78%, var(--text)); }
 .cc-deck__cover-foot {
   display: flex; justify-content: space-between; margin-top: clamp(40px, 8vw, 90px);

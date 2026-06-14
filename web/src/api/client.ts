@@ -57,6 +57,7 @@ export interface AppSettings {
   llm_summary_focus: string
   llm_bullet_count: string
   llm_bullet_max_words: string
+  llm_auto_generate: string
   llm_prompt_template: string
   llm_prompt_template_default: string
   theme: Theme

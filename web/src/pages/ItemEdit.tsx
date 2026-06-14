@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import * as api from '../api/client'
-import type { Item, DescribeResult } from '../api/client'
+import type { Item, DescribeResult, AppSettings } from '../api/client'
 import { LLMButton } from '../components/LLMButton'
 import { MetadataForm } from '../components/MetadataForm'
 import { NotesPanel } from '../components/NotesPanel'
@@ -10,11 +10,16 @@ export function ItemEdit() {
   const { id } = useParams<{ id: string }>()
   const [item, setItem] = useState<Item | null>(null)
   const [llmResult, setLlmResult] = useState<DescribeResult | null>(null)
+  const [settings, setSettings] = useState<AppSettings | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
     if (id) api.getItem(id).then(setItem)
   }, [id])
+
+  useEffect(() => {
+    api.getSettings().then(setSettings)
+  }, [])
 
   if (!item) return <div className="container"><div className="cc-empty"><p className="cc-empty__title">Loading...</p></div></div>
 
@@ -84,7 +89,7 @@ export function ItemEdit() {
           <div className="cc-panel">
             <MetadataForm item={item} onSaved={setItem} />
           </div>
-          <LLMButton itemId={item.id} onResult={setLlmResult} />
+          {settings?.llm_auto_generate === 'true' && <LLMButton itemId={item.id} onResult={setLlmResult} />}
           {llmResult && (
             <div className="cc-llm__result">
               <strong>Summary:</strong> {llmResult.summary}
