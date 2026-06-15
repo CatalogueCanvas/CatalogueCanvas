@@ -72,7 +72,7 @@ export function Dashboard() {
     <div className="container">
       <div className="cc-page-header">
         <div>
-          <p className="cc-kicker">Catalog</p>
+          <p className="cc-kicker">Catalogue</p>
           <h1 className="cc-h1">Items<span className="cc-count">({items.length})</span></h1>
         </div>
         <div className="cc-search">

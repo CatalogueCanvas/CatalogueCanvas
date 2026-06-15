@@ -30,7 +30,8 @@ export function Uploader({ onUploaded }: { onUploaded: () => void }) {
       try {
         const res = await uploadItem(file)
         if (res.created) {
-          updateEntry(file.name, { status: 'done', detail: `→ ${res.item?.id}` })
+          const detail = res.note ? `→ ${res.item?.id} (${res.note})` : `→ ${res.item?.id}`
+          updateEntry(file.name, { status: 'done', detail })
         } else {
           updateEntry(file.name, { status: 'skipped', detail: res.note ?? undefined })
         }

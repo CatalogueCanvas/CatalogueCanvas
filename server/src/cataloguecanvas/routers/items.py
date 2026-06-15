@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import mimetypes
 import sqlite3
 import zipfile
 from datetime import datetime, timezone
@@ -7,8 +8,9 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Optional
 
+import lz4.frame
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from ..auth import require_admin
@@ -29,7 +31,8 @@ TEXT_EXTS = {
 
 
 def _file_type(path: str) -> str:
-    ext = Path(path).suffix.lower()
+    name = path[:-4] if path.lower().endswith(".lz4") else path
+    ext = Path(name).suffix.lower()
     if ext in IMAGE_EXTS:
         return "image"
     if ext in TEXT_EXTS:
@@ -59,7 +62,12 @@ def _enrich(item: dict[str, Any]) -> dict[str, Any]:
         item["preview_url"] = None
 
     item["download_urls"] = [
-        {"name": Path(f).name, "url": f"/storage/{f}", "type": _file_type(f)} for f in other_files
+        {
+            "name": Path(f[:-4] if f.lower().endswith(".lz4") else f).name,
+            "url": f"/api/items/{item['id']}/raw/{Path(f).name}" if f.lower().endswith(".lz4") else f"/storage/{f}",
+            "type": _file_type(f),
+        }
+        for f in other_files
     ]
 
     if not item.get("title"):
@@ -138,6 +146,23 @@ def get_item_endpoint(item_id: str, conn: sqlite3.Connection = Depends(get_db), 
     return _enrich(item)
 
 
+@router.get("/{item_id}/raw/{filename}")
+def raw_file(item_id: str, filename: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+    item = get_item(conn, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="item not found")
+    other_files = _json_field(item.get("other_files"))
+    match = next((f for f in other_files if f.lower().endswith(".lz4") and Path(f).name == f"{filename}.lz4"), None)
+    if not match:
+        raise HTTPException(status_code=404, detail="file not found")
+    file_path = settings.storage_dir / match
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="file not found")
+    data = lz4.frame.decompress(file_path.read_bytes())
+    media_type, _ = mimetypes.guess_type(filename)
+    return Response(content=data, media_type=media_type or "application/octet-stream")
+
+
 def _write_item_to_zip(zf: zipfile.ZipFile, item: dict[str, Any], prefix: str = "") -> None:
     other_files = _json_field(item.get("other_files"))
     if item.get("preview_path"):
@@ -146,7 +171,11 @@ def _write_item_to_zip(zf: zipfile.ZipFile, item: dict[str, Any], prefix: str = 
             zf.write(preview_path, f"{prefix}{Path(item['preview_path']).name}")
     for f in other_files:
         file_path = settings.storage_dir / f
-        if file_path.exists():
+        if not file_path.exists():
+            continue
+        if f.lower().endswith(".lz4"):
+            zf.writestr(f"{prefix}{Path(f[:-4]).name}", lz4.frame.decompress(file_path.read_bytes()))
+        else:
             zf.write(file_path, f"{prefix}{Path(f).name}")
 
 

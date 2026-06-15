@@ -1,6 +1,6 @@
 /* ============================================================================
    deck.css — public portfolio presentation (/p/:slug).
-   Ported from design/catalog/styles/deck.css onto the cc-* token system.
+   Ported from design/catalogue/styles/deck.css onto the cc-* token system.
    ============================================================================ */
 .cc-deck {
   background: var(--bg); color: var(--text);

@@ -32,7 +32,7 @@ export function Login() {
             <path d="M40 13 A16 16 0 1 0 40 35" fill="none" stroke="var(--text)" strokeWidth="3.4" strokeLinecap="round" />
             <path d="M34 19 A9 9 0 1 0 34 29" fill="none" stroke="var(--accent)" strokeWidth="3.4" strokeLinecap="round" />
           </svg>
-          CatalogCanvas
+          CatalogueCanvas
         </div>
         <div className="cc-field">
           <label className="cc-label" htmlFor="password">Admin password</label>

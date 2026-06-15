@@ -18,7 +18,7 @@ def create_app() -> FastAPI:
     ensure_admin(conn)
     conn.close()
 
-    app = FastAPI(title="CatalogCanvas")
+    app = FastAPI(title="CatalogueCanvas")
 
     app.include_router(auth.router)
     app.include_router(items.router)

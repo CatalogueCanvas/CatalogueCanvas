@@ -9,6 +9,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
+import lz4.frame
 from PIL import Image
 
 from .convert import to_webp
@@ -24,6 +25,19 @@ def _mime_type(name: str) -> Optional[str]:
     if mime == "image/svg" or name.lower().endswith(".svg"):
         return "image/svg+xml"
     return mime
+
+
+def _write_other_file(other_dir: Path, base_name: str, data: bytes, storage_dir: Path) -> str:
+    """Write a file into other_dir, lz4-compressing SVGs, and return its
+    storage-relative path."""
+    other_dir.mkdir(parents=True, exist_ok=True)
+    if base_name.lower().endswith(".svg"):
+        out_file = other_dir / f"{base_name}.lz4"
+        out_file.write_bytes(lz4.frame.compress(data))
+    else:
+        out_file = other_dir / base_name
+        out_file.write_bytes(data)
+    return str(out_file.relative_to(storage_dir))
 
 
 def _select_preview(members: list[str]) -> tuple[Optional[tuple[str, str]], list[str]]:
@@ -95,6 +109,7 @@ def ingest_zip_bytes(
         preview_height: Optional[int] = None
         other_files: list[str] = []
         raw_meta: dict = {}
+        svg_compressed = False
 
         for name in members:
             member_data = zf.read(name)
@@ -108,10 +123,8 @@ def ingest_zip_bytes(
                 with Image.open(out_file) as img:
                     preview_width, preview_height = img.size
                 if preview_mime == "image/svg+xml":
-                    other_dir.mkdir(parents=True, exist_ok=True)
-                    svg_file = other_dir / base_name
-                    svg_file.write_bytes(member_data)
-                    other_files.append(str(svg_file.relative_to(storage_dir)))
+                    other_files.append(_write_other_file(other_dir, base_name, member_data, storage_dir))
+                    svg_compressed = True
                 continue
 
             if base_name in ("metadata.json", "metadata.toml"):
@@ -124,10 +137,13 @@ def ingest_zip_bytes(
                 except (json.JSONDecodeError, tomllib.TOMLDecodeError):
                     raw_meta = {}
 
-            other_dir.mkdir(parents=True, exist_ok=True)
-            out_file = other_dir / base_name
-            out_file.write_bytes(member_data)
-            other_files.append(str(out_file.relative_to(storage_dir)))
+            other_files.append(_write_other_file(other_dir, base_name, member_data, storage_dir))
+            if base_name.lower().endswith(".svg"):
+                svg_compressed = True
+
+    if svg_compressed:
+        compress_note = "SVG compressed (lz4)"
+        note = f"{note}; {compress_note}" if note else compress_note
 
     record = {
         "id": item_id,

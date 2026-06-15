@@ -102,7 +102,7 @@ def export_db(_: None = Depends(require_admin)):
     return FileResponse(
         tmp_path,
         media_type="application/octet-stream",
-        filename=f"catalog-{timestamp}.db",
+        filename=f"catalogue-{timestamp}.db",
         background=BackgroundTask(tmp_path.unlink, missing_ok=True),
     )
 
@@ -123,7 +123,7 @@ def export_all(_: None = Depends(require_admin)):
 
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.write(tmp_path, "catalog.db")
+        zf.write(tmp_path, "catalogue.db")
         if settings.storage_dir.exists():
             for path in settings.storage_dir.rglob("*"):
                 if path.is_file():
@@ -131,7 +131,7 @@ def export_all(_: None = Depends(require_admin)):
     tmp_path.unlink(missing_ok=True)
     buffer.seek(0)
 
-    filename = f"catalogcanvas-backup-{timestamp}.zip"
+    filename = f"cataloguecanvas-backup-{timestamp}.zip"
     return StreamingResponse(
         buffer,
         media_type="application/zip",

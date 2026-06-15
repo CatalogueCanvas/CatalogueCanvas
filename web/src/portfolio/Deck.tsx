@@ -39,7 +39,7 @@ export function Deck() {
         <h1 className="cc-deck__title">{portfolio.title}</h1>
         {portfolio.description && <div className="cc-deck__desc"><ReactMarkdown>{portfolio.description}</ReactMarkdown></div>}
         <div className="cc-deck__cover-foot">
-          <span>CatalogCanvas</span>
+          <span>CatalogueCanvas</span>
           <span>/p/{portfolio.slug}</span>
         </div>
       </section>
@@ -94,7 +94,7 @@ export function Deck() {
         <div>
           <h2>About this work</h2>
           {portfolio.description && <ReactMarkdown>{portfolio.description}</ReactMarkdown>}
-          <p>A portfolio of {total} works shared via CatalogCanvas.</p>
+          <p>A portfolio of {total} works shared via CatalogueCanvas.</p>
         </div>
         <ul className="cc-deck__worklist">
           {items.map((item, i) => (

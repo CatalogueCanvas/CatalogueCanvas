@@ -1,14 +1,14 @@
-# CatalogCanvas
+# CatalogueCanvas
 
-A domain-agnostic catalog server: ingest ZIP items into a SQLite-backed FastAPI app with a React admin UI, organize them into collections, and share public portfolios.
+A domain-agnostic catalogue server: ingest ZIP items into a SQLite-backed FastAPI app with a React admin UI, organize them into collections, and share public portfolios.
 
 ## Architecture
 
-- **`server/`** — FastAPI backend (`catalogcanvas` Python package, managed with `uv`). Serves the JSON API, the built React app, and public portfolio pages. Persists data to a SQLite database and stores uploaded item assets on disk.
+- **`server/`** — FastAPI backend (`cataloguecanvas` Python package, managed with `uv`). Serves the JSON API, the built React app, and public portfolio pages. Persists data to a SQLite database and stores uploaded item assets on disk.
 - **`web/`** — React + TypeScript admin UI (Vite). Built to static assets and served by the FastAPI app.
 - **`legacy/`** — deprecated static-site pipeline, unsupported.
 
-### Backend modules (`server/src/catalogcanvas/`)
+### Backend modules (`server/src/cataloguecanvas/`)
 
 - `main.py` — app factory, mounts routers and serves the SPA.
 - `routers/` — API endpoints, grouped by resource:
@@ -59,7 +59,7 @@ Backend:
 ```bash
 cd server
 uv sync
-uv run uvicorn catalogcanvas.main:app --reload
+uv run uvicorn cataloguecanvas.main:app --reload
 ```
 
 Frontend:
@@ -80,10 +80,10 @@ Environment variables (set via `docker-compose.yml` or your shell):
 |---|---|---|
 | `CC_ADMIN_PASSWORD` | _(empty)_ | Admin login password — required to log in |
 | `CC_SECRET_KEY` | `dev-secret-change-me` | Session signing key — set a random value in production |
-| `CC_SITE_TITLE` | `My Catalog` | Title shown in the UI and public portfolios |
+| `CC_SITE_TITLE` | `My Catalogue` | Title shown in the UI and public portfolios |
 | `CC_SITE_AUTHOR` | _(empty)_ | Author/owner name shown on public portfolios |
 | `CC_DATA_DIR` | `/data` | Base directory for the database and storage |
-| `CC_DB_PATH` | `<CC_DATA_DIR>/catalog.db` | SQLite database file path |
+| `CC_DB_PATH` | `<CC_DATA_DIR>/catalogue.db` | SQLite database file path |
 | `CC_STORAGE_DIR` | `<CC_DATA_DIR>/storage` | Directory for uploaded item assets |
 | `CC_STATIC_DIR` | `web/dist` | Directory of built frontend assets to serve |
 
@@ -91,7 +91,7 @@ Environment variables (set via `docker-compose.yml` or your shell):
 
 - Upload ZIP items from the dashboard, edit titles/tags/notes, and organize them into collections.
 - Generate per-item descriptions with a vision-capable LLM: in **Settings**, set an OpenAI-compatible `api_url` and model (an API key can also be entered per-request — used only for that request and never stored).
-  - If the LLM server (e.g. LM Studio, Ollama) runs on your host machine and CatalogCanvas runs in Docker, use `http://host.docker.internal:1234/v1/chat/completions` (not `localhost`) — `localhost` inside the container refers to the container itself, not your host.
+  - If the LLM server (e.g. LM Studio, Ollama) runs on your host machine and CatalogueCanvas runs in Docker, use `http://host.docker.internal:1234/v1/chat/completions` (not `localhost`) — `localhost` inside the container refers to the container itself, not your host.
 - Create a portfolio, select items, mark it **Public**, and share its `/p/<slug>` link — a slide-deck style presentation viewable without logging in.
 - Export the database or full data directory from **Settings**.
 

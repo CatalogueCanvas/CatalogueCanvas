@@ -5,7 +5,7 @@ export function Upload() {
     <div className="container">
       <div className="cc-page-header">
         <div>
-          <p className="cc-kicker">Catalog</p>
+          <p className="cc-kicker">Catalogue</p>
           <h1 className="cc-h1">Upload</h1>
         </div>
       </div>

@@ -35,4 +35,4 @@ VOLUME /data
 EXPOSE 8000
 
 WORKDIR /app/server
-CMD ["uv", "run", "uvicorn", "catalogcanvas.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "cataloguecanvas.main:app", "--host", "0.0.0.0", "--port", "8000"]
