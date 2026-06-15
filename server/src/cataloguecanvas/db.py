@@ -1,8 +1,11 @@
 from __future__ import annotations
 import json
 import sqlite3
+import uuid
 from pathlib import Path
 from typing import Any, Optional
+
+from .settings import settings
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS items (
@@ -59,6 +62,14 @@ CREATE TABLE IF NOT EXISTS app_settings (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS libraries (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    path       TEXT NOT NULL UNIQUE,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+);
 """
 
 
@@ -90,6 +101,22 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         INSERT OR IGNORE INTO collections (id, title, description, is_system)
         VALUES ('favorites', 'Favorites', '', 1)
     """)
+
+    if "library_id" not in existing_cols:
+        conn.execute("ALTER TABLE items ADD COLUMN library_id TEXT REFERENCES libraries(id)")
+
+    lib_count = conn.execute("SELECT COUNT(*) FROM libraries").fetchone()[0]
+    if lib_count == 0:
+        default_id = f"lib-{uuid.uuid4().hex[:12]}"
+        conn.execute(
+            "INSERT INTO libraries (id, name, path, is_default) VALUES (?, ?, ?, 1)",
+            (default_id, "Default", str(settings.storage_dir)),
+        )
+        conn.execute(
+            "UPDATE items SET library_id = ? WHERE library_id IS NULL",
+            (default_id,),
+        )
+
     conn.commit()
 
 
@@ -317,3 +344,58 @@ def get_db_stats(conn: sqlite3.Connection) -> dict[str, Any]:
     cols = conn.execute("SELECT COUNT(*) FROM collections").fetchone()[0]
     missing_preview = conn.execute("SELECT COUNT(*) FROM items WHERE preview_path IS NULL").fetchone()[0]
     return {"total_items": total, "total_collections": cols, "missing_preview": missing_preview}
+
+
+# --- libraries ---
+
+def create_library(conn: sqlite3.Connection, name: str, path: str, is_default: bool = False) -> dict[str, Any]:
+    lib_id = f"lib-{uuid.uuid4().hex[:12]}"
+    if is_default:
+        conn.execute("UPDATE libraries SET is_default = 0")
+    conn.execute(
+        "INSERT INTO libraries (id, name, path, is_default) VALUES (?, ?, ?, ?)",
+        (lib_id, name, path, 1 if is_default else 0),
+    )
+    conn.commit()
+    return get_library(conn, lib_id)
+
+
+def get_library(conn: sqlite3.Connection, lib_id: str) -> Optional[dict[str, Any]]:
+    row = conn.execute("SELECT * FROM libraries WHERE id = ?", (lib_id,)).fetchone()
+    return _row_to_dict(row) if row else None
+
+
+def get_all_libraries(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows = conn.execute("SELECT * FROM libraries ORDER BY created_at").fetchall()
+    return [_row_to_dict(r) for r in rows]
+
+
+def get_default_library(conn: sqlite3.Connection) -> Optional[dict[str, Any]]:
+    row = conn.execute("SELECT * FROM libraries WHERE is_default = 1").fetchone()
+    return _row_to_dict(row) if row else None
+
+
+def update_library(conn: sqlite3.Connection, lib_id: str, fields: dict[str, Any]) -> Optional[dict[str, Any]]:
+    allowed = {"name", "path"}
+    fields = {k: v for k, v in fields.items() if k in allowed and v is not None}
+    if fields:
+        set_clause = ", ".join(f"{k} = ?" for k in fields)
+        conn.execute(f"UPDATE libraries SET {set_clause} WHERE id = ?", (*fields.values(), lib_id))
+        conn.commit()
+    return get_library(conn, lib_id)
+
+
+def set_default_library(conn: sqlite3.Connection, lib_id: str) -> Optional[dict[str, Any]]:
+    conn.execute("UPDATE libraries SET is_default = 0")
+    conn.execute("UPDATE libraries SET is_default = 1 WHERE id = ?", (lib_id,))
+    conn.commit()
+    return get_library(conn, lib_id)
+
+
+def library_item_count(conn: sqlite3.Connection, lib_id: str) -> int:
+    return conn.execute("SELECT COUNT(*) FROM items WHERE library_id = ?", (lib_id,)).fetchone()[0]
+
+
+def delete_library(conn: sqlite3.Connection, lib_id: str) -> None:
+    conn.execute("DELETE FROM libraries WHERE id = ?", (lib_id,))
+    conn.commit()

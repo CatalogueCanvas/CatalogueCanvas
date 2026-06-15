@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import lz4.frame
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
@@ -18,7 +18,9 @@ from ..db import (
     add_item_to_collection,
     delete_item,
     get_all_items,
+    get_default_library,
     get_item,
+    get_library,
     remove_item_from_collection,
     set_item_collections,
     update_item_meta,
@@ -64,15 +66,17 @@ def _enrich(item: dict[str, Any]) -> dict[str, Any]:
     other_files = _json_field(item.get("other_files"))
     item["other_files"] = other_files
 
+    library_id = item.get("library_id")
+
     if item.get("preview_path"):
-        item["preview_url"] = f"/storage/{item['preview_path']}"
+        item["preview_url"] = f"/storage/{library_id}/{item['preview_path']}"
     else:
         item["preview_url"] = None
 
     item["download_urls"] = [
         {
             "name": Path(f[:-4] if f.lower().endswith(".lz4") else f).name,
-            "url": f"/api/items/{item['id']}/raw/{Path(f).name}" if f.lower().endswith(".lz4") else f"/storage/{f}",
+            "url": f"/api/items/{item['id']}/raw/{Path(f).name}" if f.lower().endswith(".lz4") else f"/storage/{library_id}/{f}",
             "type": _file_type(f),
         }
         for f in other_files
@@ -159,7 +163,8 @@ def bulk_archive_items(body: BulkIds, conn: sqlite3.Connection = Depends(get_db)
         for item_id in body.item_ids:
             item = get_item(conn, item_id)
             if item:
-                _write_item_to_zip(zf, item, prefix=f"{item_id}/")
+                root = _library_root(conn, item)
+                _write_item_to_zip(zf, item, root, prefix=f"{item_id}/")
     buffer.seek(0)
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -178,6 +183,16 @@ def get_item_endpoint(item_id: str, conn: sqlite3.Connection = Depends(get_db), 
     return _enrich(item)
 
 
+def _library_root(conn: sqlite3.Connection, item: dict[str, Any]) -> Path:
+    lib = get_library(conn, item.get("library_id"))
+    if not lib:
+        raise HTTPException(status_code=404, detail="library not found for item")
+    root = Path(lib["path"])
+    if not root.exists():
+        raise HTTPException(status_code=404, detail="library path is not accessible")
+    return root
+
+
 @router.get("/{item_id}/raw/{filename}")
 def raw_file(item_id: str, filename: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
     item = get_item(conn, item_id)
@@ -187,7 +202,8 @@ def raw_file(item_id: str, filename: str, conn: sqlite3.Connection = Depends(get
     match = next((f for f in other_files if f.lower().endswith(".lz4") and Path(f).name == f"{filename}.lz4"), None)
     if not match:
         raise HTTPException(status_code=404, detail="file not found")
-    file_path = settings.storage_dir / match
+    root = _library_root(conn, item)
+    file_path = root / match
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="file not found")
     data = lz4.frame.decompress(file_path.read_bytes())
@@ -195,14 +211,14 @@ def raw_file(item_id: str, filename: str, conn: sqlite3.Connection = Depends(get
     return Response(content=data, media_type=media_type or "application/octet-stream")
 
 
-def _write_item_to_zip(zf: zipfile.ZipFile, item: dict[str, Any], prefix: str = "") -> None:
+def _write_item_to_zip(zf: zipfile.ZipFile, item: dict[str, Any], root: Path, prefix: str = "") -> None:
     other_files = _json_field(item.get("other_files"))
     if item.get("preview_path"):
-        preview_path = settings.storage_dir / item["preview_path"]
+        preview_path = root / item["preview_path"]
         if preview_path.exists():
             zf.write(preview_path, f"{prefix}{Path(item['preview_path']).name}")
     for f in other_files:
-        file_path = settings.storage_dir / f
+        file_path = root / f
         if not file_path.exists():
             continue
         if f.lower().endswith(".lz4"):
@@ -217,9 +233,10 @@ def archive_item(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: No
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
 
+    root = _library_root(conn, item)
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        _write_item_to_zip(zf, item)
+        _write_item_to_zip(zf, item, root)
     buffer.seek(0)
 
     return StreamingResponse(
@@ -232,6 +249,7 @@ def archive_item(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: No
 @router.post("/upload")
 async def upload_item(
     file: UploadFile = File(...),
+    library_id: Optional[str] = Form(None),
     conn: sqlite3.Connection = Depends(get_db),
     _: None = Depends(require_admin),
 ):
@@ -242,13 +260,23 @@ async def upload_item(
     if len(data) > settings.max_upload_bytes:
         raise HTTPException(status_code=413, detail=f"upload exceeds max size of {settings.max_upload_bytes} bytes")
 
+    if library_id:
+        lib = get_library(conn, library_id)
+        if not lib:
+            raise HTTPException(status_code=400, detail="unknown library")
+    else:
+        lib = get_default_library(conn)
+        if not lib:
+            raise HTTPException(status_code=500, detail="no default library configured")
+
     import_dt = datetime.now(timezone.utc).isoformat(timespec="seconds")
     try:
         result = ingest_zip_bytes(
             data,
             file.filename,
             conn,
-            settings.storage_dir,
+            lib["id"],
+            Path(lib["path"]),
             import_dt=import_dt,
         )
     except ValueError as exc:
@@ -333,7 +361,8 @@ def describe_item(
     if not item.get("preview_path"):
         raise HTTPException(status_code=400, detail="item has no preview image")
 
-    preview_path = settings.storage_dir / item["preview_path"]
+    root = _library_root(conn, item)
+    preview_path = root / item["preview_path"]
     if not preview_path.exists():
         raise HTTPException(status_code=404, detail="preview image not found on disk")
 

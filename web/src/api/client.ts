@@ -15,6 +15,17 @@ export interface Item {
   imported_at: string | null
   width: number | null
   height: number | null
+  library_id: string
+}
+
+export interface Library {
+  id: string
+  name: string
+  path: string
+  is_default: boolean
+  created_at: string
+  item_count: number
+  path_ok: boolean
 }
 
 export interface Collection {
@@ -123,9 +134,10 @@ export const unfavoriteItem = (id: string) => request<Item>(`/api/items/${id}/fa
 
 export const deleteItem = (id: string) => request<{ ok: boolean }>(`/api/items/${id}`, { method: 'DELETE' })
 
-export const uploadItem = async (file: File): Promise<{ item: Item | null; created: boolean; note: string | null }> => {
+export const uploadItem = async (file: File, libraryId?: string): Promise<{ item: Item | null; created: boolean; note: string | null }> => {
   const form = new FormData()
   form.append('file', file)
+  if (libraryId) form.append('library_id', libraryId)
   const res = await fetch('/api/items/upload', { method: 'POST', credentials: 'include', body: form })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -188,6 +200,21 @@ export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' |
   request<AppSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(fields) })
 
 export const itemArchiveUrl = (id: string) => `/api/items/${id}/archive`
+
+// --- libraries ---
+export const listLibraries = () => request<Library[]>('/api/libraries')
+
+export const createLibrary = (data: { name: string; path: string; is_default?: boolean }) =>
+  request<Library>('/api/libraries', { method: 'POST', body: JSON.stringify(data) })
+
+export const updateLibrary = (id: string, fields: Partial<Pick<Library, 'name' | 'path'>>) =>
+  request<Library>(`/api/libraries/${id}`, { method: 'PUT', body: JSON.stringify(fields) })
+
+export const setDefaultLibrary = (id: string) =>
+  request<Library>(`/api/libraries/${id}/default`, { method: 'POST' })
+
+export const deleteLibrary = (id: string) =>
+  request<{ ok: boolean }>(`/api/libraries/${id}`, { method: 'DELETE' })
 
 // --- bulk item actions ---
 export const bulkClearNotes = (item_ids: string[]) =>

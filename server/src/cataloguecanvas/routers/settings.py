@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from ..auth import require_admin
-from ..db import get_db_stats, get_settings, set_settings
+from ..db import get_all_libraries, get_db_stats, get_settings, set_settings
 from ..llm import default_prompt_template
 from ..settings import settings
 from .auth import get_db
@@ -110,26 +110,28 @@ def export_db(_: None = Depends(require_admin)):
 
 
 @router.get("/export/all")
-def export_all(_: None = Depends(require_admin)):
+def export_all(conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
     tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
     tmp_path = Path(tmp.name)
     tmp.close()
 
-    conn = sqlite3.connect(str(settings.db_path))
+    db_conn = sqlite3.connect(str(settings.db_path))
     try:
-        conn.execute(f"VACUUM INTO '{tmp_path}'")
+        db_conn.execute(f"VACUUM INTO '{tmp_path}'")
     finally:
-        conn.close()
+        db_conn.close()
 
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.write(tmp_path, "catalogue.db")
-        if settings.storage_dir.exists():
-            for path in settings.storage_dir.rglob("*"):
-                if path.is_file():
-                    zf.write(path, Path("storage") / path.relative_to(settings.storage_dir))
+        for lib in get_all_libraries(conn):
+            lib_root = Path(lib["path"])
+            if lib_root.exists():
+                for path in lib_root.rglob("*"):
+                    if path.is_file():
+                        zf.write(path, Path("storage") / lib["id"] / path.relative_to(lib_root))
     tmp_path.unlink(missing_ok=True)
     buffer.seek(0)
 

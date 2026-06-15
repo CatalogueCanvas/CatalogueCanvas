@@ -1,5 +1,6 @@
-import { useRef, useState, type DragEvent } from 'react'
-import { uploadItem, ApiError } from '../api/client'
+import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { listLibraries, uploadItem, ApiError } from '../api/client'
+import type { Library } from '../api/client'
 
 type FileStatus = 'pending' | 'uploading' | 'done' | 'skipped' | 'error'
 
@@ -13,6 +14,16 @@ export function Uploader({ onUploaded }: { onUploaded: () => void }) {
   const [dragOver, setDragOver] = useState(false)
   const [queue, setQueue] = useState<FileEntry[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
+  const [libraries, setLibraries] = useState<Library[]>([])
+  const [libraryId, setLibraryId] = useState('')
+
+  useEffect(() => {
+    listLibraries().then((libs) => {
+      setLibraries(libs)
+      const def = libs.find((l) => l.is_default)
+      if (def) setLibraryId(def.id)
+    }).catch(() => {})
+  }, [])
 
   const updateEntry = (name: string, fields: Partial<FileEntry>) => {
     setQueue((prev) => prev.map((e) => (e.name === name ? { ...e, ...fields } : e)))
@@ -28,7 +39,7 @@ export function Uploader({ onUploaded }: { onUploaded: () => void }) {
     for (const file of zipFiles) {
       updateEntry(file.name, { status: 'uploading' })
       try {
-        const res = await uploadItem(file)
+        const res = await uploadItem(file, libraryId || undefined)
         if (res.created) {
           const detail = res.note ? `→ ${res.item?.id} (${res.note})` : `→ ${res.item?.id}`
           updateEntry(file.name, { status: 'done', detail })
@@ -50,6 +61,16 @@ export function Uploader({ onUploaded }: { onUploaded: () => void }) {
 
   return (
     <div>
+      {libraries.length > 1 && (
+        <div className="cc-row-tight" style={{ marginBottom: 'var(--space-3)' }}>
+          <label className="cc-label" htmlFor="upload-library">Library</label>
+          <select id="upload-library" className="cc-input" value={libraryId} onChange={(e) => setLibraryId(e.target.value)}>
+            {libraries.map((lib) => (
+              <option key={lib.id} value={lib.id}>{lib.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
       <div
         className={`cc-dropzone${dragOver ? ' cc-dropzone--over' : ''}`}
         onClick={() => inputRef.current?.click()}

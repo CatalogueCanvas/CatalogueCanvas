@@ -28,9 +28,9 @@ def _mime_type(name: str) -> Optional[str]:
     return mime
 
 
-def _write_other_file(other_dir: Path, base_name: str, data: bytes, storage_dir: Path) -> str:
+def _write_other_file(other_dir: Path, base_name: str, data: bytes, library_path: Path) -> str:
     """Write a file into other_dir, lz4-compressing SVGs, and return its
-    storage-relative path."""
+    library-relative path."""
     other_dir.mkdir(parents=True, exist_ok=True)
     if base_name.lower().endswith(".svg"):
         out_file = other_dir / f"{base_name}.lz4"
@@ -38,7 +38,7 @@ def _write_other_file(other_dir: Path, base_name: str, data: bytes, storage_dir:
     else:
         out_file = other_dir / base_name
         out_file.write_bytes(data)
-    return str(out_file.relative_to(storage_dir))
+    return str(out_file.relative_to(library_path))
 
 
 def _select_preview(members: list[str]) -> tuple[Optional[tuple[str, str]], list[str]]:
@@ -66,7 +66,8 @@ def ingest_zip_bytes(
     data: bytes,
     filename: str,
     conn: sqlite3.Connection,
-    storage_dir: Path,
+    library_id: str,
+    library_path: Path,
     image_scale: float = 2.5,
     force: bool = False,
     import_dt: Optional[str] = None,
@@ -110,7 +111,7 @@ def ingest_zip_bytes(
             )
 
         item_id = existing or generate_item_id(conn)
-        items_dir = storage_dir / "items" / item_id
+        items_dir = library_path / "items" / item_id
         other_dir = items_dir / "other"
 
         preview_path: Optional[str] = None
@@ -129,11 +130,11 @@ def ingest_zip_bytes(
                 preview_mime = preview_choice[1]
                 out_file = items_dir / "preview.webp"
                 to_webp(member_data, preview_mime, out_file, scale=image_scale)
-                preview_path = str(out_file.relative_to(storage_dir))
+                preview_path = str(out_file.relative_to(library_path))
                 with Image.open(out_file) as img:
                     preview_width, preview_height = img.size
                 if preview_mime == "image/svg+xml":
-                    other_files.append(_write_other_file(other_dir, base_name, member_data, storage_dir))
+                    other_files.append(_write_other_file(other_dir, base_name, member_data, library_path))
                     svg_compressed = True
                 continue
 
@@ -147,7 +148,7 @@ def ingest_zip_bytes(
                 except (json.JSONDecodeError, tomllib.TOMLDecodeError):
                     raw_meta = {}
 
-            other_files.append(_write_other_file(other_dir, base_name, member_data, storage_dir))
+            other_files.append(_write_other_file(other_dir, base_name, member_data, library_path))
             if base_name.lower().endswith(".svg"):
                 svg_compressed = True
 
@@ -168,6 +169,7 @@ def ingest_zip_bytes(
         "tags": [],
         "raw_meta": raw_meta,
         "imported_at": import_dt,
+        "library_id": library_id,
     }
     upsert_item(conn, record)
     return IngestResult(item=get_item(conn, item_id), created=True, note=note)

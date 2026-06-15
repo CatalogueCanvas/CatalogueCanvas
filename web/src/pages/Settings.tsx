@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import * as api from '../api/client'
-import type { Accent, AppSettings, Density, NavLayout, Theme } from '../api/client'
+import type { Accent, AppSettings, Density, Library, NavLayout, Theme } from '../api/client'
 import { ApiError } from '../api/client'
 import { ACCENT_PRESETS, useAppearance } from '../api/appearance'
 
@@ -47,6 +47,48 @@ export function Settings() {
       setError(err instanceof ApiError ? err.message : 'failed to load settings')
     })
   }, [])
+
+  const [libraries, setLibraries] = useState<Library[]>([])
+  const [libName, setLibName] = useState('')
+  const [libPath, setLibPath] = useState('')
+  const [libError, setLibError] = useState('')
+
+  const refreshLibraries = () => api.listLibraries().then(setLibraries).catch(() => {})
+  useEffect(() => { refreshLibraries() }, [])
+
+  const createLib = async () => {
+    if (!libName.trim() || !libPath.trim()) return
+    setLibError('')
+    try {
+      await api.createLibrary({ name: libName.trim(), path: libPath.trim() })
+      setLibName('')
+      setLibPath('')
+      refreshLibraries()
+    } catch (err) {
+      setLibError(err instanceof ApiError ? err.message : 'failed to create library')
+    }
+  }
+
+  const setLibDefault = async (id: string) => {
+    setLibError('')
+    try {
+      await api.setDefaultLibrary(id)
+      refreshLibraries()
+    } catch (err) {
+      setLibError(err instanceof ApiError ? err.message : 'failed to set default library')
+    }
+  }
+
+  const removeLib = async (id: string) => {
+    if (!confirm('Delete this library?')) return
+    setLibError('')
+    try {
+      await api.deleteLibrary(id)
+      refreshLibraries()
+    } catch (err) {
+      setLibError(err instanceof ApiError ? err.message : 'failed to delete library')
+    }
+  }
 
   if (!settings) return <div className="container"><div className="cc-empty"><p className="cc-empty__title">{error || 'Loading...'}</p></div></div>
 
@@ -293,6 +335,55 @@ export function Settings() {
             >
               Reset to default
             </button>
+          </div>
+        </section>
+
+        <section className="cc-panel">
+          <h2 className="cc-h2" style={{ marginBottom: 'var(--space-4)' }}>Libraries</h2>
+          <p className="cc-hint" style={{ marginBottom: 'var(--space-4)' }}>
+            Storage locations for uploaded items. Paths must already be mounted into the container.
+          </p>
+          {libraries.length > 0 && (
+            <div className="cc-list" style={{ marginBottom: 'var(--space-4)' }}>
+              {libraries.map((lib) => (
+                <div className="cc-row" key={lib.id}>
+                  <div className="cc-row__main">
+                    <h3 className="cc-row__title">
+                      {lib.name}
+                      {lib.is_default && <span className="cc-count">(default)</span>}
+                      {!lib.path_ok && <span className="error-text"> path unavailable</span>}
+                    </h3>
+                    <div className="cc-row__meta">
+                      <span>{lib.path}</span>
+                      <span>{lib.item_count} items</span>
+                    </div>
+                  </div>
+                  <div className="cc-row__actions">
+                    {!lib.is_default && (
+                      <button className="cc-btn cc-btn--sm" onClick={() => setLibDefault(lib.id)}>Set default</button>
+                    )}
+                    {!lib.is_default && lib.item_count === 0 && (
+                      <button className="cc-btn cc-btn--danger cc-btn--sm" onClick={() => removeLib(lib.id)}>Delete</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="cc-form">
+            <div className="cc-field">
+              <label className="cc-label" htmlFor="lib-name">Name</label>
+              <input id="lib-name" className="cc-input" value={libName} onChange={(e) => setLibName(e.target.value)} />
+            </div>
+            <div className="cc-field">
+              <label className="cc-label" htmlFor="lib-path">Path</label>
+              <input id="lib-path" className="cc-input" value={libPath} onChange={(e) => setLibPath(e.target.value)} placeholder="/data/storage2" />
+              <p className="cc-hint">Must be an existing, writable directory inside the container.</p>
+            </div>
+            <div className="cc-row-tight">
+              <button className="cc-btn cc-btn--primary" type="button" onClick={createLib}>Add library</button>
+            </div>
+            {libError && <div className="error-text">{libError}</div>}
           </div>
         </section>
 
