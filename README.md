@@ -1,5 +1,11 @@
 # CatalogueCanvas
 
+<img src="logo_dark.png" align="right" width="150"/>
+<p></p>
+
+
+
+
 A domain-agnostic catalogue server: ingest ZIP items into a SQLite-backed FastAPI app with a React admin UI, organize them into collections, and share public portfolios.
 
 ## Architecture
