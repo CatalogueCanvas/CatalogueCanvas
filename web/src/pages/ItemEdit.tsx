@@ -6,6 +6,7 @@ import { LLMButton } from '../components/LLMButton'
 import { MetadataForm } from '../components/MetadataForm'
 import { NotesPanel } from '../components/NotesPanel'
 import { Icon } from '../components/Icon'
+import { useAppearance } from '../api/appearance'
 
 export function ItemEdit() {
   const { id } = useParams<{ id: string }>()
@@ -14,6 +15,7 @@ export function ItemEdit() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [itemIds, setItemIds] = useState<string[]>([])
   const navigate = useNavigate()
+  const { appearance } = useAppearance()
 
   useEffect(() => {
     if (id) api.getItem(id).then(setItem)
@@ -58,6 +60,12 @@ export function ItemEdit() {
     navigate('/')
   }
 
+  const toggleFavorite = async () => {
+    const isFavorite = item.collection_ids.includes('favorites')
+    const updated = isFavorite ? await api.unfavoriteItem(item.id) : await api.favoriteItem(item.id)
+    setItem(updated)
+  }
+
   return (
     <div className="container">
       {prevId && (
@@ -71,6 +79,16 @@ export function ItemEdit() {
           <p className="cc-kicker">Catalogue</p>
           <h1 className="cc-h1">{item.title}</h1>
         </div>
+        {appearance.favoritesEnabled && (
+          <button
+            className="cc-btn"
+            onClick={toggleFavorite}
+            aria-pressed={item.collection_ids.includes('favorites')}
+          >
+            <Icon name={item.collection_ids.includes('favorites') ? 'heartFilled' : 'heart'} size={15} />
+            {item.collection_ids.includes('favorites') ? 'Favorited' : 'Favorite'}
+          </button>
+        )}
         <button className="cc-btn cc-btn--danger" onClick={remove}><Icon name="delete" size={15} />Delete</button>
       </div>
       <div className="cc-itemedit">

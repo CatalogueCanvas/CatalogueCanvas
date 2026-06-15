@@ -3,13 +3,16 @@ import { Link } from 'react-router-dom'
 import * as api from '../api/client'
 import type { Collection } from '../api/client'
 import { Icon } from '../components/Icon'
+import { useAppearance } from '../api/appearance'
 
 export function Collections() {
   const [collections, setCollections] = useState<Collection[]>([])
   const [title, setTitle] = useState('')
+  const { appearance } = useAppearance()
 
-  const refresh = () => api.listCollections().then(setCollections)
-  useEffect(() => { refresh() }, [])
+  const refresh = () => api.listCollections().then((cols) =>
+    setCollections(cols.filter((c) => !c.is_system || appearance.favoritesEnabled)))
+  useEffect(() => { refresh() }, [appearance.favoritesEnabled])
 
   const create = async () => {
     if (!title.trim()) return
@@ -49,8 +52,14 @@ export function Collections() {
                 <div className="cc-row__meta"><span>{c.id}</span></div>
               </div>
               <div className="cc-row__actions">
-                <Link className="cc-btn cc-btn--sm" to={`/collections/${c.id}`}><Icon name="edit" size={14} />Edit</Link>
-                <button className="cc-btn cc-btn--danger cc-btn--sm" onClick={() => remove(c.id)}><Icon name="delete" size={14} />Delete</button>
+                {c.is_system ? (
+                  <Link className="cc-btn cc-btn--sm" to={`/collections/${c.id}`}><Icon name="view" size={14} />Open</Link>
+                ) : (
+                  <>
+                    <Link className="cc-btn cc-btn--sm" to={`/collections/${c.id}`}><Icon name="edit" size={14} />Edit</Link>
+                    <button className="cc-btn cc-btn--danger cc-btn--sm" onClick={() => remove(c.id)}><Icon name="delete" size={14} />Delete</button>
+                  </>
+                )}
               </div>
             </div>
           ))}

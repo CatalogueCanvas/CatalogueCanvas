@@ -25,8 +25,20 @@ CREATE TABLE IF NOT EXISTS collections (
     title         TEXT,
     description   TEXT,
     cover_item_id TEXT,
+    is_system     INTEGER NOT NULL DEFAULT 0,
     created_at    TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS item_collections (
+    item_id       TEXT NOT NULL,
+    collection_id TEXT NOT NULL,
+    added_at      TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (item_id, collection_id),
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
+    FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_item_collections_collection ON item_collections(collection_id);
 
 CREATE TABLE IF NOT EXISTS portfolios (
     id          TEXT PRIMARY KEY,
@@ -65,6 +77,19 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     for col in ("width", "height"):
         if col not in existing_cols:
             conn.execute(f"ALTER TABLE items ADD COLUMN {col} INTEGER")
+
+    collection_cols = {row["name"] for row in conn.execute("PRAGMA table_info(collections)")}
+    if "is_system" not in collection_cols:
+        conn.execute("ALTER TABLE collections ADD COLUMN is_system INTEGER NOT NULL DEFAULT 0")
+
+    conn.execute("""
+        INSERT OR IGNORE INTO item_collections (item_id, collection_id)
+        SELECT id, collection_id FROM items WHERE collection_id IS NOT NULL
+    """)
+    conn.execute("""
+        INSERT OR IGNORE INTO collections (id, title, description, is_system)
+        VALUES ('favorites', 'Favorites', '', 1)
+    """)
     conn.commit()
 
 
@@ -106,18 +131,28 @@ def upsert_item(conn: sqlite3.Connection, record: dict[str, Any]) -> None:
 
 def get_item(conn: sqlite3.Connection, item_id: str) -> Optional[dict[str, Any]]:
     row = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
-    return _row_to_dict(row) if row else None
+    if not row:
+        return None
+    item = _row_to_dict(row)
+    item["collection_ids"] = get_item_collection_ids(conn, item_id)
+    return item
 
 
 def get_all_items(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     rows = conn.execute("SELECT * FROM items ORDER BY ingested_at DESC").fetchall()
-    return [_row_to_dict(r) for r in rows]
+    items = [_row_to_dict(r) for r in rows]
+    membership: dict[str, list[str]] = {}
+    for row in conn.execute("SELECT item_id, collection_id FROM item_collections"):
+        membership.setdefault(row["item_id"], []).append(row["collection_id"])
+    for item in items:
+        item["collection_ids"] = membership.get(item["id"], [])
+    return items
 
 
 def update_item_meta(conn: sqlite3.Connection, item_id: str, fields: dict[str, Any]) -> Optional[dict[str, Any]]:
     if not fields:
         return get_item(conn, item_id)
-    allowed = {"title", "note", "tags", "collection_id", "raw_meta"}
+    allowed = {"title", "note", "tags", "raw_meta"}
     fields = {k: v for k, v in fields.items() if k in allowed}
     if not fields:
         return get_item(conn, item_id)
@@ -133,17 +168,62 @@ def delete_item(conn: sqlite3.Connection, item_id: str) -> None:
     conn.commit()
 
 
+# --- item collections (junction) ---
+
+def get_item_collection_ids(conn: sqlite3.Connection, item_id: str) -> list[str]:
+    rows = conn.execute("SELECT collection_id FROM item_collections WHERE item_id = ?", (item_id,)).fetchall()
+    return [r["collection_id"] for r in rows]
+
+
+def set_item_collections(conn: sqlite3.Connection, item_id: str, collection_ids: list[str]) -> None:
+    conn.execute("DELETE FROM item_collections WHERE item_id = ?", (item_id,))
+    conn.executemany(
+        "INSERT OR IGNORE INTO item_collections (item_id, collection_id) VALUES (?, ?)",
+        [(item_id, cid) for cid in collection_ids],
+    )
+    conn.commit()
+
+
+def add_item_to_collection(conn: sqlite3.Connection, item_id: str, collection_id: str) -> None:
+    conn.execute(
+        "INSERT OR IGNORE INTO item_collections (item_id, collection_id) VALUES (?, ?)",
+        (item_id, collection_id),
+    )
+    conn.commit()
+
+
+def remove_item_from_collection(conn: sqlite3.Connection, item_id: str, collection_id: str) -> None:
+    conn.execute(
+        "DELETE FROM item_collections WHERE item_id = ? AND collection_id = ?",
+        (item_id, collection_id),
+    )
+    conn.commit()
+
+
+def get_collection_items(conn: sqlite3.Connection, col_id: str) -> list[dict[str, Any]]:
+    rows = conn.execute("""
+        SELECT i.* FROM items i
+        JOIN item_collections ic ON ic.item_id = i.id
+        WHERE ic.collection_id = ?
+        ORDER BY i.ingested_at DESC
+    """, (col_id,)).fetchall()
+    items = [_row_to_dict(r) for r in rows]
+    for item in items:
+        item["collection_ids"] = get_item_collection_ids(conn, item["id"])
+    return items
+
+
 # --- collections ---
 
 def upsert_collection(conn: sqlite3.Connection, col: dict[str, Any]) -> None:
     conn.execute("""
-        INSERT INTO collections (id, title, description, cover_item_id)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO collections (id, title, description, cover_item_id, is_system)
+        VALUES (?, ?, ?, ?, ?)
         ON CONFLICT (id) DO UPDATE SET
             title = excluded.title,
             description = excluded.description,
             cover_item_id = excluded.cover_item_id
-    """, (col["id"], col.get("title", ""), col.get("description", ""), col.get("cover_item_id")))
+    """, (col["id"], col.get("title", ""), col.get("description", ""), col.get("cover_item_id"), col.get("is_system", 0)))
     conn.commit()
 
 
@@ -158,7 +238,6 @@ def get_collection(conn: sqlite3.Connection, col_id: str) -> Optional[dict[str, 
 
 
 def delete_collection(conn: sqlite3.Connection, col_id: str) -> None:
-    conn.execute("UPDATE items SET collection_id = NULL WHERE collection_id = ?", (col_id,))
     conn.execute("DELETE FROM collections WHERE id = ?", (col_id,))
     conn.commit()
 

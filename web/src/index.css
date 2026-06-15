@@ -300,6 +300,13 @@ button, input, textarea, select {
   content: ""; width: 9px; height: 5px; border: 2px solid var(--accent-contrast);
   border-top: 0; border-right: 0; transform: rotate(-45deg) translateY(-1px);
 }
+.cc-card__favorite {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  background: color-mix(in oklab, var(--surface) 80%, transparent);
+  border: none; border-radius: var(--radius-input); padding: 4px;
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; cursor: pointer;
+}
 .cc-card__body { padding: var(--pad-card); display: flex; flex-direction: column; gap: 8px; }
 .cc-card__title {
   font-family: var(--font-head); font-weight: var(--head-weight);
@@ -368,6 +375,8 @@ button, input, textarea, select {
   background-position: calc(100% - 18px) 52%, calc(100% - 13px) 52%;
   background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 34px; color: var(--text);
 }
+
+.cc-checklist { display: flex; flex-direction: column; gap: 8px; }
 
 /* checkbox */
 .cc-check { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; user-select: none; font-size: 14px; }

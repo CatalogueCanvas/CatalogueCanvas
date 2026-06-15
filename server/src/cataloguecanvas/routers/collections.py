@@ -7,8 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ..auth import require_admin
-from ..db import delete_collection, get_all_collections, get_collection, upsert_collection
+from ..db import delete_collection, get_all_collections, get_collection, get_collection_items, upsert_collection
 from .auth import get_db
+from .items import _enrich
 
 router = APIRouter(prefix="/api/collections", tags=["collections"])
 
@@ -65,6 +66,8 @@ def update_collection(col_id: str, body: CollectionUpdate, conn: sqlite3.Connect
     existing = get_collection(conn, col_id)
     if not existing:
         raise HTTPException(status_code=404, detail="collection not found")
+    if existing["is_system"]:
+        raise HTTPException(status_code=403, detail="system collection cannot be edited")
     merged = {**existing, **{k: v for k, v in body.model_dump().items() if v is not None}}
     upsert_collection(conn, {
         "id": col_id,
@@ -77,7 +80,17 @@ def update_collection(col_id: str, body: CollectionUpdate, conn: sqlite3.Connect
 
 @router.delete("/{col_id}")
 def delete_collection_endpoint(col_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
-    if not get_collection(conn, col_id):
+    existing = get_collection(conn, col_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="collection not found")
+    if existing["is_system"]:
+        raise HTTPException(status_code=403, detail="system collection cannot be deleted")
     delete_collection(conn, col_id)
     return {"ok": True}
+
+
+@router.get("/{col_id}/items")
+def list_collection_items(col_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+    if not get_collection(conn, col_id):
+        raise HTTPException(status_code=404, detail="collection not found")
+    return [_enrich(i) for i in get_collection_items(conn, col_id)]

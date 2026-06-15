@@ -156,7 +156,6 @@ def ingest_zip_bytes(
         "height": preview_height,
         "other_files": other_files,
         "tags": [],
-        "collection_id": None,
         "raw_meta": raw_meta,
         "imported_at": import_dt,
     }

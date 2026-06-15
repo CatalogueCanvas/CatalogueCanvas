@@ -14,7 +14,7 @@ export function CollectionEdit() {
   useEffect(() => {
     if (!id) return
     api.getCollection(id).then(setCollection)
-    api.listItems().then((all) => setItems(all.filter((i) => i.collection_id === id)))
+    api.getCollectionItems(id).then(setItems)
   }, [id])
 
   if (!collection) return <div className="container"><div className="cc-empty"><p className="cc-empty__title">Loading...</p></div></div>
@@ -40,21 +40,25 @@ export function CollectionEdit() {
           <p className="cc-kicker">Organize</p>
           <h1 className="cc-h1">{collection.title}</h1>
         </div>
-        <button className="cc-btn cc-btn--danger" onClick={remove}><Icon name="delete" size={15} />Delete</button>
+        {!collection.is_system && (
+          <button className="cc-btn cc-btn--danger" onClick={remove}><Icon name="delete" size={15} />Delete</button>
+        )}
       </div>
-      <div className="cc-panel cc-stack">
-        <div className="cc-field">
-          <label className="cc-label" htmlFor="title">Title</label>
-          <input id="title" className="cc-input" value={collection.title} onChange={(e) => setCollection({ ...collection, title: e.target.value })} />
+      {!collection.is_system && (
+        <div className="cc-panel cc-stack">
+          <div className="cc-field">
+            <label className="cc-label" htmlFor="title">Title</label>
+            <input id="title" className="cc-input" value={collection.title} onChange={(e) => setCollection({ ...collection, title: e.target.value })} />
+          </div>
+          <div className="cc-field">
+            <label className="cc-label" htmlFor="description">Description (markdown)</label>
+            <textarea id="description" className="cc-textarea" rows={4} value={collection.description} onChange={(e) => setCollection({ ...collection, description: e.target.value })} />
+          </div>
+          <div>
+            <button className="cc-btn cc-btn--primary" onClick={save}><Icon name="save" size={15} />Save</button>
+          </div>
         </div>
-        <div className="cc-field">
-          <label className="cc-label" htmlFor="description">Description (markdown)</label>
-          <textarea id="description" className="cc-textarea" rows={4} value={collection.description} onChange={(e) => setCollection({ ...collection, description: e.target.value })} />
-        </div>
-        <div>
-          <button className="cc-btn cc-btn--primary" onClick={save}><Icon name="save" size={15} />Save</button>
-        </div>
-      </div>
+      )}
 
       <div className="cc-section">
         <div className="cc-section__head">

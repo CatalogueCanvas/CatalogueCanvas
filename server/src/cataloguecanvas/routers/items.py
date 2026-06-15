@@ -14,7 +14,15 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from ..auth import require_admin
-from ..db import delete_item, get_all_items, get_item, update_item_meta
+from ..db import (
+    add_item_to_collection,
+    delete_item,
+    get_all_items,
+    get_item,
+    remove_item_from_collection,
+    set_item_collections,
+    update_item_meta,
+)
 from ..ingest import ingest_zip_bytes
 from ..llm import LLMError, describe
 from ..settings import settings
@@ -117,6 +125,30 @@ def bulk_add_tags(body: BulkTags, conn: sqlite3.Connection = Depends(get_db), _:
                 merged.append(tag)
         update_item_meta(conn, item_id, {"tags": merged})
         updated.append(item_id)
+    return {"updated": updated, "missing": missing}
+
+
+@router.post("/bulk/favorite")
+def bulk_favorite(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+    updated, missing = [], []
+    for item_id in body.item_ids:
+        if get_item(conn, item_id):
+            add_item_to_collection(conn, item_id, "favorites")
+            updated.append(item_id)
+        else:
+            missing.append(item_id)
+    return {"updated": updated, "missing": missing}
+
+
+@router.post("/bulk/unfavorite")
+def bulk_unfavorite(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+    updated, missing = [], []
+    for item_id in body.item_ids:
+        if get_item(conn, item_id):
+            remove_item_from_collection(conn, item_id, "favorites")
+            updated.append(item_id)
+        else:
+            missing.append(item_id)
     return {"updated": updated, "missing": missing}
 
 
@@ -226,7 +258,7 @@ class ItemUpdate(BaseModel):
     title: Optional[str] = None
     note: Optional[str] = None
     tags: Optional[list[str]] = None
-    collection_id: Optional[str] = None
+    collection_ids: Optional[list[str]] = None
     raw_meta: Optional[dict] = None
 
 
@@ -240,8 +272,27 @@ def update_item(
     if not get_item(conn, item_id):
         raise HTTPException(status_code=404, detail="item not found")
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
+    collection_ids = fields.pop("collection_ids", None)
+    if collection_ids is not None:
+        set_item_collections(conn, item_id, collection_ids)
     updated = update_item_meta(conn, item_id, fields)
     return _enrich(updated)
+
+
+@router.post("/{item_id}/favorite")
+def favorite_item(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+    if not get_item(conn, item_id):
+        raise HTTPException(status_code=404, detail="item not found")
+    add_item_to_collection(conn, item_id, "favorites")
+    return _enrich(get_item(conn, item_id))
+
+
+@router.delete("/{item_id}/favorite")
+def unfavorite_item(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+    if not get_item(conn, item_id):
+        raise HTTPException(status_code=404, detail="item not found")
+    remove_item_from_collection(conn, item_id, "favorites")
+    return _enrich(get_item(conn, item_id))
 
 
 @router.delete("/{item_id}")

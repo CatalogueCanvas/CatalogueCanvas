@@ -35,6 +35,7 @@ APPEARANCE_DEFAULTS = {
     "accent": "default",
     "nav": "top",
     "density": "balanced",
+    "favorites_enabled": "true",
 }
 
 
@@ -73,6 +74,7 @@ class SettingsUpdate(BaseModel):
     accent: Optional[str] = None
     nav: Optional[str] = None
     density: Optional[str] = None
+    favorites_enabled: Optional[str] = None
 
 
 @router.put("")

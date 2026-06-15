@@ -155,6 +155,23 @@ export function Settings() {
               ))}
             </div>
           </div>
+          <div className="cc-aprow">
+            <div className="cc-aprow__txt">
+              <span className="cc-label">Favorites</span>
+            </div>
+            <div className="cc-seg">
+              {([[true, 'On'], [false, 'Off']] as const).map(([value, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={draft.favoritesEnabled === value}
+                  onClick={() => setDraft({ ...draft, favoritesEnabled: value })}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="cc-row-tight" style={{ marginTop: 'var(--space-4)' }}>
             <button className="cc-btn cc-btn--primary" onClick={saveAppearance} disabled={appearanceBusy} type="button">
               {appearanceBusy ? 'Saving...' : 'Save'}

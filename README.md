@@ -40,6 +40,13 @@ For local development without Docker:
 - Python 3.11+ and [`uv`](https://docs.astral.sh/uv/) for the backend
 - Node.js 22+ for the frontend
 
+### Deployment footprint
+
+- Docker image size: ~436 MB
+- RAM: ~256 MB sufficient for light use; more if the LLM describe feature or large ZIP ingests are used heavily
+- Disk: depends on uploaded item assets — size `CC_DATA_DIR` volume accordingly
+- CPU: single core sufficient (image conversion/ingest is the main CPU cost)
+
 ## Installation / Running
 
 ### With Docker (recommended)

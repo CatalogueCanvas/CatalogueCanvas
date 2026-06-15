@@ -22,9 +22,10 @@ export interface Appearance {
   accent: Accent
   nav: NavLayout
   density: Density
+  favoritesEnabled: boolean
 }
 
-const DEFAULT_APPEARANCE: Appearance = { theme: 'light', accent: 'default', nav: 'top', density: 'balanced' }
+const DEFAULT_APPEARANCE: Appearance = { theme: 'light', accent: 'default', nav: 'top', density: 'balanced', favoritesEnabled: true }
 
 interface AppearanceContextValue {
   appearance: Appearance
@@ -40,14 +41,23 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     api.getAppearance()
-      .then((s) => setAppearanceState({ theme: s.theme, accent: s.accent, nav: s.nav, density: s.density }))
+      .then((s) => setAppearanceState({
+        theme: s.theme,
+        accent: s.accent,
+        nav: s.nav,
+        density: s.density,
+        favoritesEnabled: s.favorites_enabled !== 'false',
+      }))
       .catch(() => { /* use defaults */ })
       .finally(() => setLoading(false))
   }, [])
 
   const setAppearance = async (changes: Partial<Appearance>) => {
     setAppearanceState((prev) => ({ ...prev, ...changes }))
-    await api.updateSettings(changes)
+    const { favoritesEnabled, ...rest } = changes
+    const payload: Record<string, string> = { ...rest } as Record<string, string>
+    if (favoritesEnabled !== undefined) payload.favorites_enabled = favoritesEnabled ? 'true' : 'false'
+    await api.updateSettings(payload)
   }
 
   return (

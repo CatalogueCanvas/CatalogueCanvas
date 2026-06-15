@@ -9,7 +9,7 @@ export interface Item {
   other_files: string[]
   download_urls: { name: string; url: string; type: 'image' | 'text' | 'other' }[]
   tags: string[]
-  collection_id: string | null
+  collection_ids: string[]
   raw_meta: Record<string, unknown>
   ingested_at: string
   imported_at: string | null
@@ -22,6 +22,7 @@ export interface Collection {
   title: string
   description: string
   cover_item_id: string | null
+  is_system: boolean
   created_at: string
 }
 
@@ -66,6 +67,7 @@ export interface AppSettings {
   accent: Accent
   nav: NavLayout
   density: Density
+  favorites_enabled: string
   stats: { total_items: number; total_collections: number; missing_preview: number }
 }
 
@@ -112,8 +114,12 @@ export const listItems = () => request<Item[]>('/api/items')
 
 export const getItem = (id: string) => request<Item>(`/api/items/${id}`)
 
-export const updateItem = (id: string, fields: Partial<Pick<Item, 'title' | 'note' | 'tags' | 'collection_id' | 'raw_meta'>>) =>
+export const updateItem = (id: string, fields: Partial<Pick<Item, 'title' | 'note' | 'tags' | 'collection_ids' | 'raw_meta'>>) =>
   request<Item>(`/api/items/${id}`, { method: 'PATCH', body: JSON.stringify(fields) })
+
+export const favoriteItem = (id: string) => request<Item>(`/api/items/${id}/favorite`, { method: 'POST' })
+
+export const unfavoriteItem = (id: string) => request<Item>(`/api/items/${id}/favorite`, { method: 'DELETE' })
 
 export const deleteItem = (id: string) => request<{ ok: boolean }>(`/api/items/${id}`, { method: 'DELETE' })
 
@@ -155,6 +161,8 @@ export const updateCollection = (id: string, fields: Partial<Pick<Collection, 't
 
 export const deleteCollection = (id: string) => request<{ ok: boolean }>(`/api/collections/${id}`, { method: 'DELETE' })
 
+export const getCollectionItems = (id: string) => request<Item[]>(`/api/collections/${id}/items`)
+
 // --- portfolios ---
 export const listPortfolios = () => request<Portfolio[]>('/api/portfolios')
 
@@ -174,9 +182,9 @@ export const getPublicPortfolio = (slug: string) => request<PublicPortfolio>(`/a
 export const getSettings = () => request<AppSettings>('/api/settings')
 
 export const getAppearance = () =>
-  request<Pick<AppSettings, 'theme' | 'accent' | 'nav' | 'density'>>('/api/settings/appearance')
+  request<Pick<AppSettings, 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled'>>('/api/settings/appearance')
 
-export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' | 'llm_model' | 'llm_item_type' | 'llm_summary_focus' | 'llm_bullet_count' | 'llm_bullet_max_words' | 'llm_auto_generate' | 'llm_prompt_template' | 'theme' | 'accent' | 'nav' | 'density'>>) =>
+export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' | 'llm_model' | 'llm_item_type' | 'llm_summary_focus' | 'llm_bullet_count' | 'llm_bullet_max_words' | 'llm_auto_generate' | 'llm_prompt_template' | 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled'>>) =>
   request<AppSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(fields) })
 
 export const itemArchiveUrl = (id: string) => `/api/items/${id}/archive`
@@ -187,6 +195,12 @@ export const bulkClearNotes = (item_ids: string[]) =>
 
 export const bulkAddTags = (item_ids: string[], tags: string[]) =>
   request<{ updated: string[]; missing: string[] }>('/api/items/bulk/tags', { method: 'POST', body: JSON.stringify({ item_ids, tags }) })
+
+export const bulkFavorite = (item_ids: string[]) =>
+  request<{ updated: string[]; missing: string[] }>('/api/items/bulk/favorite', { method: 'POST', body: JSON.stringify({ item_ids }) })
+
+export const bulkUnfavorite = (item_ids: string[]) =>
+  request<{ updated: string[]; missing: string[] }>('/api/items/bulk/unfavorite', { method: 'POST', body: JSON.stringify({ item_ids }) })
 
 export const updatePortfolioItems = (p_id: string, item_ids: string[], action: 'add' | 'remove') =>
   request<Portfolio>(`/api/portfolios/${p_id}/items`, { method: 'POST', body: JSON.stringify({ item_ids, action }) })

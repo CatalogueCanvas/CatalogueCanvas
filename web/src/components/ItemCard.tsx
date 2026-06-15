@@ -1,13 +1,17 @@
 import { Link } from 'react-router-dom'
 import type { Item } from '../api/client'
+import { Icon } from './Icon'
 
 interface Props {
   item: Item
   selected?: boolean
   onToggle?: (id: string) => void
+  favoritesEnabled?: boolean
+  onToggleFavorite?: (item: Item) => void
 }
 
-export function ItemCard({ item, selected, onToggle }: Props) {
+export function ItemCard({ item, selected, onToggle, favoritesEnabled, onToggleFavorite }: Props) {
+  const isFavorite = item.collection_ids.includes('favorites')
   return (
     <Link to={`/items/${item.id}`} className="cc-card" data-selected={selected || undefined}>
       <div className="cc-thumb">
@@ -21,6 +25,17 @@ export function ItemCard({ item, selected, onToggle }: Props) {
           >
             <span className="cc-check__box" />
           </div>
+        )}
+        {favoritesEnabled && onToggleFavorite && (
+          <button
+            type="button"
+            className="cc-card__favorite"
+            aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            aria-pressed={isFavorite}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(item) }}
+          >
+            <Icon name={isFavorite ? 'heartFilled' : 'heart'} size={18} />
+          </button>
         )}
         {item.preview_url ? (
           <img src={item.preview_url} alt={item.title} loading="lazy" />

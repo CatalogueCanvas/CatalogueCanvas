@@ -5,6 +5,7 @@ import { ItemCard } from '../components/ItemCard'
 import { BulkToolbar } from '../components/BulkToolbar'
 import { Icon } from '../components/Icon'
 import { useSelection } from '../api/selection'
+import { useAppearance } from '../api/appearance'
 
 type SortBy = 'date-new' | 'date-old' | 'title-asc' | 'title-desc' | 'note' | 'no-note'
 
@@ -17,6 +18,7 @@ export function Dashboard() {
   const [tagFilter, setTagFilter] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const { batchMode, selected, toggleSelect, selectAll, clear } = useSelection()
+  const { appearance } = useAppearance()
 
   const refresh = useCallback(() => {
     api.listItems().then(setItems).finally(() => setLoading(false))
@@ -66,6 +68,12 @@ export function Dashboard() {
   const onBulkDone = () => {
     clear()
     refresh()
+  }
+
+  const toggleFavorite = async (item: Item) => {
+    const isFavorite = item.collection_ids.includes('favorites')
+    const updated = isFavorite ? await api.unfavoriteItem(item.id) : await api.favoriteItem(item.id)
+    setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
   }
 
   return (
@@ -137,6 +145,8 @@ export function Dashboard() {
               item={item}
               selected={batchMode ? selected.has(item.id) : undefined}
               onToggle={batchMode ? toggleSelect : undefined}
+              favoritesEnabled={appearance.favoritesEnabled}
+              onToggleFavorite={toggleFavorite}
             />
           ))}
         </div>

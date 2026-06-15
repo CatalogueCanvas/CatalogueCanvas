@@ -5,27 +5,32 @@ import type { Collection, Item } from '../api/client'
 export function MetadataForm({ item, onSaved }: { item: Item; onSaved: (item: Item) => void }) {
   const [title, setTitle] = useState(item.title)
   const [tags, setTags] = useState(item.tags.join(', '))
-  const [collectionId, setCollectionId] = useState(item.collection_id ?? '')
+  const [collectionIds, setCollectionIds] = useState<string[]>(item.collection_ids.filter((id) => id !== 'favorites'))
   const [collections, setCollections] = useState<Collection[]>([])
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    api.listCollections().then(setCollections).catch(() => {})
+    api.listCollections().then((cols) => setCollections(cols.filter((c) => !c.is_system))).catch(() => {})
   }, [])
 
   useEffect(() => {
     setTitle(item.title)
     setTags(item.tags.join(', '))
-    setCollectionId(item.collection_id ?? '')
+    setCollectionIds(item.collection_ids.filter((id) => id !== 'favorites'))
   }, [item])
+
+  const toggleCollection = (id: string) => {
+    setCollectionIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))
+  }
 
   const save = async () => {
     setSaving(true)
     try {
+      const isFavorite = item.collection_ids.includes('favorites')
       const updated = await api.updateItem(item.id, {
         title,
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
-        collection_id: collectionId || null,
+        collection_ids: isFavorite ? [...collectionIds, 'favorites'] : collectionIds,
       })
       onSaved(updated)
     } finally {
@@ -44,13 +49,24 @@ export function MetadataForm({ item, onSaved }: { item: Item; onSaved: (item: It
         <input id="tags" className="cc-input" value={tags} onChange={(e) => setTags(e.target.value)} />
       </div>
       <div className="cc-field">
-        <label className="cc-label" htmlFor="collection">Collection</label>
-        <select id="collection" className="cc-select" value={collectionId} onChange={(e) => setCollectionId(e.target.value)}>
-          <option value="">None</option>
-          {collections.map((c) => (
-            <option key={c.id} value={c.id}>{c.title}</option>
-          ))}
-        </select>
+        <label className="cc-label">Collections</label>
+        {collections.length === 0 ? (
+          <p className="cc-empty__sub">No collections yet.</p>
+        ) : (
+          <div className="cc-checklist">
+            {collections.map((c) => (
+              <label className="cc-check" key={c.id}>
+                <input
+                  type="checkbox"
+                  checked={collectionIds.includes(c.id)}
+                  onChange={() => toggleCollection(c.id)}
+                />
+                <span className="cc-check__box" />
+                {c.title}
+              </label>
+            ))}
+          </div>
+        )}
       </div>
       <button className="cc-btn cc-btn--primary" onClick={save} disabled={saving}>
         {saving ? 'Saving...' : 'Save'}

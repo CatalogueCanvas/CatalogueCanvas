@@ -38,6 +38,8 @@ const ICONS: Record<string, string> = {
     <path class="cc-ico-ink" d="M17.6 14 18.3 16.2 20.5 16.9 18.3 17.6 17.6 19.8 16.9 17.6 14.7 16.9 16.9 16.2z"/>`,
   filter: `<path class="cc-ico-ink" d="M3.4 4.2h17.2L14 12.4v6.4l-4 2v-8.4z"/>`,
   chevronDown: `<path class="cc-ico-ink" d="M5 9 12 16 19 9" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+  heart: `<path class="cc-ico-ink" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 20.2 4.6 13C2.6 11 2.6 7.7 4.6 5.7c2-2 5.1-2 7 0L12 6l.4-.3c2-2 5.1-2 7 0 2 2 2 5.3 0 7.3z"/>`,
+  heartFilled: `<path class="cc-ico-acc" d="M12 20.2 4.6 13C2.6 11 2.6 7.7 4.6 5.7c2-2 5.1-2 7 0L12 6l.4-.3c2-2 5.1-2 7 0 2 2 2 5.3 0 7.3z"/>`,
 }
 
 export function Icon({ name, size = 18, className = '' }: { name: string; size?: number; className?: string }) {

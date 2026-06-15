@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import * as api from '../api/client'
 import type { Item, Portfolio } from '../api/client'
 import { Icon } from './Icon'
+import { useAppearance } from '../api/appearance'
 
 interface Props {
   selectedIds: string[]
@@ -22,6 +23,7 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
   const [progress, setProgress] = useState('')
   const [errors, setErrors] = useState<string[]>([])
   const cancelRef = useRef(false)
+  const { appearance } = useAppearance()
 
   const selectedItems = items.filter((i) => selectedIds.includes(i.id))
 
@@ -52,6 +54,26 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
     try {
       await api.bulkAddTags(selectedIds, tags)
       setTagsInput('')
+      onDone()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const addFavorites = async () => {
+    setBusy(true)
+    try {
+      await api.bulkFavorite(selectedIds)
+      onDone()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const removeFavorites = async () => {
+    setBusy(true)
+    try {
+      await api.bulkUnfavorite(selectedIds)
       onDone()
     } finally {
       setBusy(false)
@@ -112,6 +134,12 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
         <button className="cc-btn" onClick={onClear} disabled={busy}>Clear selection</button>
         <button className="cc-btn cc-btn--danger" onClick={clearNotes} disabled={busy}><Icon name="delete" size={15} />Clear notes</button>
         <button className="cc-btn" onClick={download} disabled={busy}><Icon name="download" size={15} />Download zip</button>
+        {appearance.favoritesEnabled && (
+          <>
+            <button className="cc-btn" onClick={addFavorites} disabled={busy}><Icon name="heart" size={15} />Add to Favorites</button>
+            <button className="cc-btn" onClick={removeFavorites} disabled={busy}><Icon name="heartFilled" size={15} />Remove from Favorites</button>
+          </>
+        )}
         <input
           className="cc-input"
           placeholder="tag1, tag2..."
