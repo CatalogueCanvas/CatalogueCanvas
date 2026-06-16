@@ -1,10 +1,10 @@
 # CatalogueCanvas
 
-<img src="logo_dark.png" align="right" width="150"/>
+<img src="media/logo_dark.png" align="right" width="150"/>
 <p></p>
 
 
-
+     
 
 A domain-agnostic catalogue server: ingest ZIP items into a SQLite-backed FastAPI app with a React admin UI, organize them into collections, and share public portfolios.
 
@@ -121,5 +121,4 @@ Environment variables (set via `docker-compose.yml` or your shell):
 ```
 server/                  FastAPI backend (SQLite db, ingestion, LLM descriptions, auth)
 web/                     React admin UI + public portfolio pages
-legacy/                  deprecated static-site-generator pipeline (unsupported, kept for reference)
 ```
