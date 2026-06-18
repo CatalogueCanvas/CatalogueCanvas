@@ -1,6 +1,5 @@
 from __future__ import annotations
 import json
-import mimetypes
 import sqlite3
 import zipfile
 from datetime import datetime, timezone
@@ -41,8 +40,11 @@ TEXT_EXTS = {
 
 
 def _file_type(path: str) -> str:
-    name = path[:-4] if path.lower().endswith(".lz4") else path
-    ext = Path(name).suffix.lower()
+    # Compressed files are served raw and are download-only — never rendered
+    # in-browser, regardless of the inner extension.
+    if path.lower().endswith(".lz4"):
+        return "other"
+    ext = Path(path).suffix.lower()
     if ext in IMAGE_EXTS:
         return "image"
     if ext in TEXT_EXTS:
@@ -75,7 +77,8 @@ def _enrich(item: dict[str, Any]) -> dict[str, Any]:
 
     item["download_urls"] = [
         {
-            "name": Path(f[:-4] if f.lower().endswith(".lz4") else f).name,
+            # Compressed files download as-is, so show the full stored name.
+            "name": Path(f).name,
             "url": f"/api/items/{item['id']}/raw/{Path(f).name}" if f.lower().endswith(".lz4") else f"/storage/{library_id}/{f}",
             "type": _file_type(f),
         }
@@ -199,16 +202,19 @@ def raw_file(item_id: str, filename: str, conn: sqlite3.Connection = Depends(get
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
     other_files = _json_field(item.get("other_files"))
-    match = next((f for f in other_files if f.lower().endswith(".lz4") and Path(f).name == f"{filename}.lz4"), None)
+    match = next((f for f in other_files if f.lower().endswith(".lz4") and Path(f).name == filename), None)
     if not match:
         raise HTTPException(status_code=404, detail="file not found")
     root = _library_root(conn, item)
     file_path = root / match
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="file not found")
-    data = lz4.frame.decompress(file_path.read_bytes())
-    media_type, _ = mimetypes.guess_type(filename)
-    return Response(content=data, media_type=media_type or "application/octet-stream")
+    # Served raw, as stored (no decompression) — download-only.
+    return Response(
+        content=file_path.read_bytes(),
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 def _write_item_to_zip(zf: zipfile.ZipFile, item: dict[str, Any], root: Path, prefix: str = "") -> None:

@@ -2,9 +2,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .auth import ensure_admin
@@ -27,6 +28,37 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+_NOT_FOUND_HTML = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>404 — Not found</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; text-align: center;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #fafaf8; color: #2a2a28;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #16161a; color: #e8e8e6; } }
+  .code { font-size: 56px; font-weight: 700; line-height: 1; color: #d6432a; margin-bottom: 4px; }
+  .title { font-size: 18px; font-weight: 600; }
+  .sub { font-size: 14px; opacity: 0.7; max-width: 42ch; }
+  a { margin-top: 12px; font-size: 14px; color: inherit; }
+</style>
+</head>
+<body>
+  <div class="code">404</div>
+  <div class="title">Page not found</div>
+  <div class="sub">The page you’re looking for doesn’t exist or has been moved.</div>
+  <a href="/">Back to catalogue</a>
+</body>
+</html>"""
+
+
 def create_app() -> FastAPI:
     settings.ensure_dirs()
 
@@ -37,6 +69,13 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="CatalogueCanvas")
     app.add_middleware(SecurityHeadersMiddleware)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+        accepts_html = "text/html" in request.headers.get("accept", "")
+        if exc.status_code == 404 and accepts_html:
+            return HTMLResponse(_NOT_FOUND_HTML, status_code=404)
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
 
     app.include_router(auth.router)
     app.include_router(items.router)
