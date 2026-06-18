@@ -9,7 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from .auth import ensure_admin
 from .db import ensure_schema, get_connection, get_library
-from .routers import auth, collections, items, libraries, portfolios, settings as settings_router
+from .routers import auth, collections, items, libraries, portfolios, settings as settings_router, users
 from .settings import settings
 
 
@@ -44,6 +44,7 @@ def create_app() -> FastAPI:
     app.include_router(portfolios.router)
     app.include_router(libraries.router)
     app.include_router(settings_router.router)
+    app.include_router(users.router)
 
     @app.get("/storage/{library_id}/{rel_path:path}")
     def serve_storage_file(library_id: str, rel_path: str):

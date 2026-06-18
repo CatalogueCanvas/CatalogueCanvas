@@ -3,6 +3,7 @@ import * as api from '../api/client'
 import type { Accent, AppSettings, Density, Library, NavLayout, Theme } from '../api/client'
 import { ApiError } from '../api/client'
 import { ACCENT_PRESETS, useAppearance } from '../api/appearance'
+import { UsersPanel } from '../components/UsersPanel'
 
 const ACCENT_LABELS: Record<Accent, string> = {
   default: 'Default',
@@ -87,6 +88,17 @@ export function Settings() {
       refreshLibraries()
     } catch (err) {
       setLibError(err instanceof ApiError ? err.message : 'failed to delete library')
+    }
+  }
+
+  const setMultiUser = async (value: boolean) => {
+    if (!settings) return
+    setError('')
+    try {
+      const updated = await api.updateSettings({ multi_user_enabled: value ? 'true' : 'false' })
+      setSettings(updated)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'failed to update multi-user setting')
     }
   }
 
@@ -221,6 +233,33 @@ export function Settings() {
             {appearanceSaved && <span className="cc-saved">Saved</span>}
           </div>
           {appearanceError && <div className="error-text">{appearanceError}</div>}
+        </section>
+
+        <section className="cc-panel">
+          <h2 className="cc-h2" style={{ marginBottom: 'var(--space-4)' }}>Multi-user access</h2>
+          <div className="cc-aprow">
+            <div className="cc-aprow__txt">
+              <span className="cc-label">Multi-user mode</span>
+              <p className="cc-hint">When on, each person logs in with a username and password. Readers can view everything but cannot make changes.</p>
+            </div>
+            <div className="cc-seg">
+              {([[true, 'On'], [false, 'Off']] as const).map(([value, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={(settings.multi_user_enabled === 'true') === value}
+                  onClick={() => setMultiUser(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {settings.multi_user_enabled === 'true' && (
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <UsersPanel />
+            </div>
+          )}
         </section>
 
         <section className="cc-panel">

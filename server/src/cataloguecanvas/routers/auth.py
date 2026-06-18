@@ -1,6 +1,7 @@
 from __future__ import annotations
 import sqlite3
 import time
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
@@ -9,8 +10,9 @@ from ..auth import (
     SESSION_COOKIE,
     SESSION_MAX_AGE,
     create_session_token,
-    is_valid_session,
-    verify_admin_password,
+    multi_user_enabled,
+    session_role,
+    verify_login,
 )
 from ..db import get_connection
 from ..settings import settings
@@ -32,6 +34,7 @@ def get_db():
 
 class LoginRequest(BaseModel):
     password: str
+    username: Optional[str] = None
 
 
 @router.post("/login")
@@ -43,14 +46,15 @@ def login(body: LoginRequest, request: Request, response: Response, conn: sqlite
     if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
         raise HTTPException(status_code=429, detail="too many login attempts, try again later")
 
-    if not verify_admin_password(conn, body.password):
+    role = verify_login(conn, body.username, body.password)
+    if role is None:
         attempts.append(now)
         _failed_attempts[client_ip] = attempts
-        raise HTTPException(status_code=401, detail="invalid password")
+        raise HTTPException(status_code=401, detail="invalid credentials")
 
     _failed_attempts.pop(client_ip, None)
 
-    token = create_session_token()
+    token = create_session_token(role)
     response.set_cookie(
         SESSION_COOKIE,
         token,
@@ -59,7 +63,7 @@ def login(body: LoginRequest, request: Request, response: Response, conn: sqlite
         samesite="strict",
         secure=settings.cookie_secure,
     )
-    return {"ok": True}
+    return {"ok": True, "role": role}
 
 
 @router.post("/logout")
@@ -69,6 +73,10 @@ def logout(response: Response):
 
 
 @router.get("/me")
-def me(request: Request):
-    token = request.cookies.get(SESSION_COOKIE)
-    return {"authenticated": is_valid_session(token)}
+def me(request: Request, conn: sqlite3.Connection = Depends(get_db)):
+    role = session_role(request.cookies.get(SESSION_COOKIE))
+    return {
+        "authenticated": role is not None,
+        "role": role,
+        "multi_user": multi_user_enabled(conn),
+    }

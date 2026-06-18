@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import * as api from '../api/client'
 import type { Item } from '../api/client'
 
-export function NotesPanel({ item, onSaved }: { item: Item; onSaved: (item: Item) => void }) {
+export function NotesPanel({ item, onSaved, readOnly = false }: { item: Item; onSaved: (item: Item) => void; readOnly?: boolean }) {
   const [editing, setEditing] = useState(false)
   const [note, setNote] = useState(item.note)
   const [saving, setSaving] = useState(false)
@@ -28,7 +28,7 @@ export function NotesPanel({ item, onSaved }: { item: Item; onSaved: (item: Item
     <div className="cc-panel cc-notes">
       <div className="cc-notes__head">
         <h2 className="cc-h2">Notes</h2>
-        {editing ? (
+        {readOnly ? null : editing ? (
           <div className="cc-row-tight">
             <button className="cc-btn" type="button" onClick={cancel} disabled={saving}>Cancel</button>
             <button className="cc-btn cc-btn--primary" type="button" onClick={save} disabled={saving}>

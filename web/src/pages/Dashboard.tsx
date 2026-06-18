@@ -6,6 +6,7 @@ import { BulkToolbar } from '../components/BulkToolbar'
 import { Icon } from '../components/Icon'
 import { useSelection } from '../api/selection'
 import { useAppearance } from '../api/appearance'
+import { useAuth } from '../api/auth'
 
 type SortBy = 'date-new' | 'date-old' | 'title-asc' | 'title-desc' | 'note' | 'no-note'
 
@@ -19,6 +20,7 @@ export function Dashboard() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const { batchMode, selected, toggleSelect, selectAll, clear } = useSelection()
   const { appearance } = useAppearance()
+  const { isAdmin } = useAuth()
 
   const refresh = useCallback(() => {
     api.listItems().then(setItems).finally(() => setLoading(false))
@@ -145,8 +147,8 @@ export function Dashboard() {
               item={item}
               selected={batchMode ? selected.has(item.id) : undefined}
               onToggle={batchMode ? toggleSelect : undefined}
-              favoritesEnabled={appearance.favoritesEnabled}
-              onToggleFavorite={toggleFavorite}
+              favoritesEnabled={isAdmin && appearance.favoritesEnabled}
+              onToggleFavorite={isAdmin ? toggleFavorite : undefined}
             />
           ))}
         </div>

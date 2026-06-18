@@ -4,11 +4,13 @@ import * as api from '../api/client'
 import type { Collection } from '../api/client'
 import { Icon } from '../components/Icon'
 import { useAppearance } from '../api/appearance'
+import { useAuth } from '../api/auth'
 
 export function Collections() {
   const [collections, setCollections] = useState<Collection[]>([])
   const [title, setTitle] = useState('')
   const { appearance } = useAppearance()
+  const { isAdmin } = useAuth()
 
   const refresh = () => api.listCollections().then((cols) =>
     setCollections(cols.filter((c) => !c.is_system || appearance.favoritesEnabled)))
@@ -35,10 +37,12 @@ export function Collections() {
           <h1 className="cc-h1">Collections<span className="cc-count">({collections.length})</span></h1>
         </div>
       </div>
-      <div className="cc-createbar">
-        <input className="cc-input" placeholder="New collection title" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <button className="cc-btn cc-btn--primary" onClick={create}><Icon name="create" size={15} />Create</button>
-      </div>
+      {isAdmin && (
+        <div className="cc-createbar">
+          <input className="cc-input" placeholder="New collection title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <button className="cc-btn cc-btn--primary" onClick={create}><Icon name="create" size={15} />Create</button>
+        </div>
+      )}
       {collections.length === 0 ? (
         <div className="cc-empty">
           <p className="cc-empty__title">No collections yet</p>
@@ -52,7 +56,7 @@ export function Collections() {
                 <div className="cc-row__meta"><span>{c.id}</span></div>
               </div>
               <div className="cc-row__actions">
-                {c.is_system ? (
+                {c.is_system || !isAdmin ? (
                   <Link className="cc-btn cc-btn--sm" to={`/collections/${c.id}`}><Icon name="view" size={14} />Open</Link>
                 ) : (
                   <>

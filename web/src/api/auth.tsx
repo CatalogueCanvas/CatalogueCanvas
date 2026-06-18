@@ -1,10 +1,14 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import * as api from './client'
+import type { Role } from './client'
 
 interface AuthContextValue {
   authenticated: boolean
+  role: Role | null
+  multiUser: boolean
+  isAdmin: boolean
   loading: boolean
-  login: (password: string) => Promise<void>
+  login: (password: string, username?: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -12,23 +16,39 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authenticated, setAuthenticated] = useState(false)
+  const [role, setRole] = useState<Role | null>(null)
+  const [multiUser, setMultiUser] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.me().then((res) => setAuthenticated(res.authenticated)).finally(() => setLoading(false))
+    api.me()
+      .then((res) => {
+        setAuthenticated(res.authenticated)
+        setRole(res.role)
+        setMultiUser(res.multi_user)
+      })
+      .finally(() => setLoading(false))
   }, [])
 
-  const login = async (password: string) => {
-    await api.login(password)
+  const login = async (password: string, username?: string) => {
+    const res = await api.login(password, username)
     setAuthenticated(true)
+    setRole(res.role)
   }
 
   const logout = async () => {
     await api.logout()
     setAuthenticated(false)
+    setRole(null)
   }
 
-  return <AuthContext.Provider value={{ authenticated, loading, login, logout }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider
+      value={{ authenticated, role, multiUser, isAdmin: role === 'admin', loading, login, logout }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

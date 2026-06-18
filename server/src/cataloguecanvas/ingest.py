@@ -20,6 +20,9 @@ from .settings import settings
 # Priority order for selecting which image becomes the webp preview.
 PREVIEW_MIME_PRIORITY = ["image/png", "image/jpeg", "image/tiff", "image/svg+xml"]
 
+# OS/editor noise that should never be stored as an item file.
+NOISE_BASENAMES = {".ds_store", "thumbs.db", "thumbnails.db", "desktop.ini"}
+
 
 def _mime_type(name: str) -> Optional[str]:
     mime, _ = mimetypes.guess_type(name)
@@ -28,15 +31,29 @@ def _mime_type(name: str) -> Optional[str]:
     return mime
 
 
+def _unique_name(other_dir: Path, name: str) -> str:
+    """Return `name`, or a de-duplicated variant if a file with that name already
+    exists in other_dir (collision from flattening ZIP subfolders)."""
+    if not (other_dir / name).exists():
+        return name
+    stem, suffix = Path(name).stem, Path(name).suffix
+    i = 1
+    while (other_dir / f"{stem}_{i}{suffix}").exists():
+        i += 1
+    return f"{stem}_{i}{suffix}"
+
+
 def _write_other_file(other_dir: Path, base_name: str, data: bytes, library_path: Path) -> str:
     """Write a file into other_dir, lz4-compressing SVGs, and return its
-    library-relative path."""
+    library-relative path. De-duplicates basenames that collide after flattening."""
     other_dir.mkdir(parents=True, exist_ok=True)
     if base_name.lower().endswith(".svg"):
-        out_file = other_dir / f"{base_name}.lz4"
+        target = _unique_name(other_dir, f"{base_name}.lz4")
+        out_file = other_dir / target
         out_file.write_bytes(lz4.frame.compress(data))
     else:
-        out_file = other_dir / base_name
+        target = _unique_name(other_dir, base_name)
+        out_file = other_dir / target
         out_file.write_bytes(data)
     return str(out_file.relative_to(library_path))
 
@@ -90,7 +107,9 @@ def ingest_zip_bytes(
     with zipfile.ZipFile(BytesIO(data)) as zf:
         members = [
             n for n in zf.namelist()
-            if not n.startswith("__MACOSX/") and not n.endswith("/")
+            if not n.startswith("__MACOSX/")
+            and not n.endswith("/")
+            and Path(n).name.lower() not in NOISE_BASENAMES
         ]
 
         total_size = 0

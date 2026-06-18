@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import * as api from '../api/client'
 import type { Collection, Item } from '../api/client'
 
-export function MetadataForm({ item, onSaved }: { item: Item; onSaved: (item: Item) => void }) {
+export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; onSaved: (item: Item) => void; readOnly?: boolean }) {
   const [title, setTitle] = useState(item.title)
   const [tags, setTags] = useState(item.tags.join(', '))
   const [collectionIds, setCollectionIds] = useState<string[]>(item.collection_ids.filter((id) => id !== 'favorites'))
@@ -42,11 +42,11 @@ export function MetadataForm({ item, onSaved }: { item: Item; onSaved: (item: It
     <div className="cc-form">
       <div className="cc-field">
         <label className="cc-label" htmlFor="title">Title</label>
-        <input id="title" className="cc-input" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input id="title" className="cc-input" value={title} onChange={(e) => setTitle(e.target.value)} disabled={readOnly} />
       </div>
       <div className="cc-field">
         <label className="cc-label" htmlFor="tags">Tags (comma separated)</label>
-        <input id="tags" className="cc-input" value={tags} onChange={(e) => setTags(e.target.value)} />
+        <input id="tags" className="cc-input" value={tags} onChange={(e) => setTags(e.target.value)} disabled={readOnly} />
       </div>
       <div className="cc-field">
         <label className="cc-label">Collections</label>
@@ -60,6 +60,7 @@ export function MetadataForm({ item, onSaved }: { item: Item; onSaved: (item: It
                   type="checkbox"
                   checked={collectionIds.includes(c.id)}
                   onChange={() => toggleCollection(c.id)}
+                  disabled={readOnly}
                 />
                 <span className="cc-check__box" />
                 {c.title}
@@ -68,9 +69,11 @@ export function MetadataForm({ item, onSaved }: { item: Item; onSaved: (item: It
           </div>
         )}
       </div>
-      <button className="cc-btn cc-btn--primary" onClick={save} disabled={saving}>
-        {saving ? 'Saving...' : 'Save'}
-      </button>
+      {!readOnly && (
+        <button className="cc-btn cc-btn--primary" onClick={save} disabled={saving}>
+          {saving ? 'Saving...' : 'Save'}
+        </button>
+      )}
     </div>
   )
 }

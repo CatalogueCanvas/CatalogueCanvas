@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from ..auth import require_admin
+from ..auth import require_admin, require_session
 from ..db import delete_collection, get_all_collections, get_collection, get_collection_items, upsert_collection
 from .auth import get_db
 from .items import _enrich
@@ -22,12 +22,12 @@ def _slugify(text: str) -> str:
 
 
 @router.get("")
-def list_collections(conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def list_collections(conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     return get_all_collections(conn)
 
 
 @router.get("/{col_id}")
-def get_collection_endpoint(col_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def get_collection_endpoint(col_id: str, conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     col = get_collection(conn, col_id)
     if not col:
         raise HTTPException(status_code=404, detail="collection not found")
@@ -90,7 +90,7 @@ def delete_collection_endpoint(col_id: str, conn: sqlite3.Connection = Depends(g
 
 
 @router.get("/{col_id}/items")
-def list_collection_items(col_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def list_collection_items(col_id: str, conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     if not get_collection(conn, col_id):
         raise HTTPException(status_code=404, detail="collection not found")
     return [_enrich(i) for i in get_collection_items(conn, col_id)]

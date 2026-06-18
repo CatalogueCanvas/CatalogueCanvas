@@ -7,7 +7,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from ..auth import require_admin
+from ..auth import require_admin, require_session
 from ..db import (
     delete_portfolio,
     get_all_portfolios,
@@ -42,12 +42,12 @@ def _enrich_portfolio(p: dict[str, Any]) -> dict[str, Any]:
 # --- Admin endpoints ---
 
 @router.get("/api/portfolios")
-def list_portfolios(conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def list_portfolios(conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     return [_enrich_portfolio(p) for p in get_all_portfolios(conn)]
 
 
 @router.get("/api/portfolios/{p_id}")
-def get_portfolio_endpoint(p_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def get_portfolio_endpoint(p_id: str, conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     p = get_portfolio(conn, p_id)
     if not p:
         raise HTTPException(status_code=404, detail="portfolio not found")
