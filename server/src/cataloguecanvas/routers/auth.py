@@ -12,6 +12,7 @@ from ..auth import (
     create_session_token,
     multi_user_enabled,
     session_role,
+    session_username,
     verify_login,
 )
 from ..db import get_connection
@@ -54,7 +55,8 @@ def login(body: LoginRequest, request: Request, response: Response, conn: sqlite
 
     _failed_attempts.pop(client_ip, None)
 
-    token = create_session_token(role)
+    username = body.username if multi_user_enabled(conn) else settings.admin_username
+    token = create_session_token(role, username)
     response.set_cookie(
         SESSION_COOKIE,
         token,
@@ -63,7 +65,7 @@ def login(body: LoginRequest, request: Request, response: Response, conn: sqlite
         samesite="strict",
         secure=settings.cookie_secure,
     )
-    return {"ok": True, "role": role}
+    return {"ok": True, "role": role, "username": username}
 
 
 @router.post("/logout")
@@ -74,9 +76,11 @@ def logout(response: Response):
 
 @router.get("/me")
 def me(request: Request, conn: sqlite3.Connection = Depends(get_db)):
-    role = session_role(request.cookies.get(SESSION_COOKIE))
+    token = request.cookies.get(SESSION_COOKIE)
+    role = session_role(token)
     return {
         "authenticated": role is not None,
         "role": role,
+        "username": session_username(token) if role is not None else None,
         "multi_user": multi_user_enabled(conn),
     }

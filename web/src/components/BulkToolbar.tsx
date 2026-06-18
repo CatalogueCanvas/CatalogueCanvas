@@ -3,6 +3,7 @@ import * as api from '../api/client'
 import type { Item, Portfolio } from '../api/client'
 import { Icon } from './Icon'
 import { useAppearance } from '../api/appearance'
+import { useAuth } from '../api/auth'
 
 interface Props {
   selectedIds: string[]
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone, onClear, onSelectAll }: Props) {
+  const { isAdmin } = useAuth()
   const [tagsInput, setTagsInput] = useState('')
   const [portfolioId, setPortfolioId] = useState('')
   const [portfolioAction, setPortfolioAction] = useState<'add' | 'remove'>('add')
@@ -132,45 +134,53 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
         <span className="cc-bulk-toolbar__count">{selectedIds.length} selected</span>
         <button className="cc-btn" onClick={onSelectAll} disabled={busy}>Select all ({totalCount})</button>
         <button className="cc-btn" onClick={onClear} disabled={busy}>Clear selection</button>
-        <button className="cc-btn cc-btn--danger" onClick={clearNotes} disabled={busy}><Icon name="delete" size={15} />Clear notes</button>
+        {isAdmin && (
+          <button className="cc-btn cc-btn--danger" onClick={clearNotes} disabled={busy}><Icon name="delete" size={15} />Clear notes</button>
+        )}
         <button className="cc-btn" onClick={download} disabled={busy}><Icon name="download" size={15} />Download zip</button>
-        {appearance.favoritesEnabled && (
+        {isAdmin && appearance.favoritesEnabled && (
           <>
             <button className="cc-btn" onClick={addFavorites} disabled={busy}><Icon name="heart" size={15} />Add to Favorites</button>
             <button className="cc-btn" onClick={removeFavorites} disabled={busy}><Icon name="heartFilled" size={15} />Remove from Favorites</button>
           </>
         )}
-        <input
-          className="cc-input"
-          placeholder="tag1, tag2..."
-          value={tagsInput}
-          onChange={(e) => setTagsInput(e.target.value)}
-          disabled={busy}
-        />
-        <button className="cc-btn" onClick={addTags} disabled={busy || !tagsInput.trim()}>Add tags</button>
-        <select className="cc-input" value={portfolioId} onChange={(e) => setPortfolioId(e.target.value)} disabled={busy}>
-          <option value="">Portfolio...</option>
-          {portfolios.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-        </select>
-        <select className="cc-input" value={portfolioAction} onChange={(e) => setPortfolioAction(e.target.value as 'add' | 'remove')} disabled={busy}>
-          <option value="add">Add to</option>
-          <option value="remove">Remove from</option>
-        </select>
-        <button className="cc-btn" onClick={applyPortfolio} disabled={busy || !portfolioId}>Apply</button>
-      </div>
-      <div className="cc-bulk-toolbar__row">
-        <label className="cc-check">
-          <input type="checkbox" checked={skipExisting} onChange={(e) => setSkipExisting(e.target.checked)} disabled={busy} />
-          <span className="cc-check__box" />
-          Skip items that already have a note
-        </label>
-        <button className="cc-btn cc-btn--primary" onClick={generateDescriptions} disabled={busy}>
-          {busy && progress ? progress : <><Icon name="generate" size={15} />Generate descriptions (LLM)</>}
-        </button>
-        {busy && progress && (
-          <button className="cc-btn" onClick={() => { cancelRef.current = true }}>Cancel</button>
+        {isAdmin && (
+          <>
+            <input
+              className="cc-input"
+              placeholder="tag1, tag2..."
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              disabled={busy}
+            />
+            <button className="cc-btn" onClick={addTags} disabled={busy || !tagsInput.trim()}>Add tags</button>
+            <select className="cc-input" value={portfolioId} onChange={(e) => setPortfolioId(e.target.value)} disabled={busy}>
+              <option value="">Portfolio...</option>
+              {portfolios.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+            </select>
+            <select className="cc-input" value={portfolioAction} onChange={(e) => setPortfolioAction(e.target.value as 'add' | 'remove')} disabled={busy}>
+              <option value="add">Add to</option>
+              <option value="remove">Remove from</option>
+            </select>
+            <button className="cc-btn" onClick={applyPortfolio} disabled={busy || !portfolioId}>Apply</button>
+          </>
         )}
       </div>
+      {isAdmin && (
+        <div className="cc-bulk-toolbar__row">
+          <label className="cc-check">
+            <input type="checkbox" checked={skipExisting} onChange={(e) => setSkipExisting(e.target.checked)} disabled={busy} />
+            <span className="cc-check__box" />
+            Skip items that already have a note
+          </label>
+          <button className="cc-btn cc-btn--primary" onClick={generateDescriptions} disabled={busy}>
+            {busy && progress ? progress : <><Icon name="generate" size={15} />Generate descriptions (LLM)</>}
+          </button>
+          {busy && progress && (
+            <button className="cc-btn" onClick={() => { cancelRef.current = true }}>Cancel</button>
+          )}
+        </div>
+      )}
       {errors.length > 0 && (
         <div className="error-text">
           {errors.map((e) => <div key={e}>{e}</div>)}

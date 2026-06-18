@@ -19,7 +19,7 @@ function NavItem({ to, end, label, icon }: { to: string; end?: boolean; label: s
 }
 
 export function Nav() {
-  const { authenticated, isAdmin, logout } = useAuth()
+  const { authenticated, isAdmin, username, logout } = useAuth()
   const { appearance, setAppearance } = useAppearance()
   const { batchMode, toggleBatchMode } = useSelection()
   const isDark = appearance.theme === 'dark'
@@ -43,16 +43,14 @@ export function Nav() {
       <div className="cc-nav-spacer" />
       {authenticated && (
         <div className="cc-nav__foot">
-          {isAdmin && (
-            <button
-              className="cc-mode-btn"
-              type="button"
-              data-active={batchMode || undefined}
-              onClick={toggleBatchMode}
-            >
-              Batch edit
-            </button>
-          )}
+          <button
+            className="cc-mode-btn"
+            type="button"
+            data-active={batchMode || undefined}
+            onClick={toggleBatchMode}
+          >
+            {isAdmin ? 'Batch edit' : 'Select'}
+          </button>
           <button
             className="cc-mode-btn"
             type="button"
@@ -61,6 +59,7 @@ export function Nav() {
             <span className="cc-mode-ind" />
             {isDark ? 'Dark' : 'Light'}
           </button>
+          {username && <span className="cc-nav__user" title={username}><Icon name="user" size={14} />{username}</span>}
           <button className="cc-btn cc-btn--ghost cc-btn--sm" onClick={() => logout()}><Icon name="logout" size={15} />Log out</button>
         </div>
       )}

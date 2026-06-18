@@ -59,22 +59,35 @@ def verify_login(conn: sqlite3.Connection, username: Optional[str], password: st
     return "admin" if verify_admin_password(conn, password) else None
 
 
-def create_session_token(role: str = "admin") -> str:
-    return _serializer().dumps({"role": role})
+def create_session_token(role: str = "admin", username: Optional[str] = None) -> str:
+    return _serializer().dumps({"role": role, "username": username})
 
 
-def session_role(token: str | None) -> Optional[str]:
+def _session_data(token: str | None) -> Optional[dict]:
     if not token:
         return None
     try:
-        data = _serializer().loads(token, max_age=SESSION_MAX_AGE)
+        return _serializer().loads(token, max_age=SESSION_MAX_AGE)
     except BadSignature:
+        return None
+
+
+def session_role(token: str | None) -> Optional[str]:
+    data = _session_data(token)
+    if data is None:
         return None
     # Backwards-compat with legacy {"admin": True} tokens.
     if data.get("admin") is True and "role" not in data:
         return "admin"
     role = data.get("role")
     return role if role in ("admin", "reader") else None
+
+
+def session_username(token: str | None) -> Optional[str]:
+    data = _session_data(token)
+    if data is None:
+        return None
+    return data.get("username")
 
 
 def is_valid_session(token: str | None) -> bool:

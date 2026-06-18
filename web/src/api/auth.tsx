@@ -5,6 +5,7 @@ import type { Role } from './client'
 interface AuthContextValue {
   authenticated: boolean
   role: Role | null
+  username: string | null
   multiUser: boolean
   isAdmin: boolean
   loading: boolean
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authenticated, setAuthenticated] = useState(false)
   const [role, setRole] = useState<Role | null>(null)
+  const [username, setUsername] = useState<string | null>(null)
   const [multiUser, setMultiUser] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -25,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((res) => {
         setAuthenticated(res.authenticated)
         setRole(res.role)
+        setUsername(res.username)
         setMultiUser(res.multi_user)
       })
       .finally(() => setLoading(false))
@@ -34,17 +37,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.login(password, username)
     setAuthenticated(true)
     setRole(res.role)
+    setUsername(res.username)
   }
 
   const logout = async () => {
     await api.logout()
     setAuthenticated(false)
     setRole(null)
+    setUsername(null)
   }
 
   return (
     <AuthContext.Provider
-      value={{ authenticated, role, multiUser, isAdmin: role === 'admin', loading, login, logout }}
+      value={{ authenticated, role, username, multiUser, isAdmin: role === 'admin', loading, login, logout }}
     >
       {children}
     </AuthContext.Provider>

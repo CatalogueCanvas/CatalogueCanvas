@@ -13,6 +13,7 @@ import { Portfolios } from './pages/Portfolios'
 import { PortfolioEdit } from './pages/PortfolioEdit'
 import { Settings } from './pages/Settings'
 import { Upload } from './pages/Upload'
+import { NotFound } from './pages/NotFound'
 import { Deck } from './portfolio/Deck'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -72,6 +73,7 @@ function App() {
           <Route path="/portfolios/:id" element={<AdminLayout><AdminRoute><PortfolioEdit /></AdminRoute></AdminLayout>} />
           <Route path="/upload" element={<AdminLayout><AdminRoute><Upload /></AdminRoute></AdminLayout>} />
           <Route path="/settings" element={<AdminLayout><AdminRoute><Settings /></AdminRoute></AdminLayout>} />
+          <Route path="*" element={<AdminLayout><NotFound /></AdminLayout>} />
         </Routes>
       </SelectionProvider>
     </div>

@@ -157,7 +157,7 @@ def bulk_unfavorite(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _
 
 
 @router.post("/archive")
-def bulk_archive_items(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def bulk_archive_items(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         for item_id in body.item_ids:

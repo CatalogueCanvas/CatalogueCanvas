@@ -88,6 +88,7 @@ export type Role = 'admin' | 'reader'
 export interface MeResponse {
   authenticated: boolean
   role: Role | null
+  username: string | null
   multi_user: boolean
 }
 
@@ -130,7 +131,7 @@ export { ApiError }
 
 // --- auth ---
 export const login = (password: string, username?: string) =>
-  request<{ ok: boolean; role: Role }>('/api/login', {
+  request<{ ok: boolean; role: Role; username: string | null }>('/api/login', {
     method: 'POST',
     body: JSON.stringify(username ? { username, password } : { password }),
   })

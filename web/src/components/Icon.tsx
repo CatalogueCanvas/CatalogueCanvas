@@ -40,6 +40,8 @@ const ICONS: Record<string, string> = {
   chevronDown: `<path class="cc-ico-ink" d="M5 9 12 16 19 9" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
   heart: `<path class="cc-ico-ink" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 20.2 4.6 13C2.6 11 2.6 7.7 4.6 5.7c2-2 5.1-2 7 0L12 6l.4-.3c2-2 5.1-2 7 0 2 2 2 5.3 0 7.3z"/>`,
   heartFilled: `<path class="cc-ico-acc" d="M12 20.2 4.6 13C2.6 11 2.6 7.7 4.6 5.7c2-2 5.1-2 7 0L12 6l.4-.3c2-2 5.1-2 7 0 2 2 2 5.3 0 7.3z"/>`,
+  user: `<circle class="cc-ico-acc" cx="12" cy="8" r="4"/>
+    <path class="cc-ico-ink" fill="none" stroke-width="1.8" stroke-linecap="round" d="M4.5 20a7.5 7.5 0 0 1 15 0"/>`,
 }
 
 export function Icon({ name, size = 18, className = '' }: { name: string; size?: number; className?: string }) {

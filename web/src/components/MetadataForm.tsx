@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as api from '../api/client'
 import type { Collection, Item } from '../api/client'
 
@@ -8,6 +8,10 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
   const [collectionIds, setCollectionIds] = useState<string[]>(item.collection_ids.filter((id) => id !== 'favorites'))
   const [collections, setCollections] = useState<Collection[]>([])
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current) }, [])
 
   useEffect(() => {
     api.listCollections().then((cols) => setCollections(cols.filter((c) => !c.is_system))).catch(() => {})
@@ -33,6 +37,9 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
         collection_ids: isFavorite ? [...collectionIds, 'favorites'] : collectionIds,
       })
       onSaved(updated)
+      setSaved(true)
+      if (savedTimer.current) clearTimeout(savedTimer.current)
+      savedTimer.current = setTimeout(() => setSaved(false), 1800)
     } finally {
       setSaving(false)
     }
@@ -47,6 +54,13 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
       <div className="cc-field">
         <label className="cc-label" htmlFor="tags">Tags (comma separated)</label>
         <input id="tags" className="cc-input" value={tags} onChange={(e) => setTags(e.target.value)} disabled={readOnly} />
+        {item.tags.length > 0 ? (
+          <div className="cc-card__tags cc-form__tags">
+            {item.tags.map((t) => <span className="cc-tag" key={t}>{t}</span>)}
+          </div>
+        ) : (
+          <p className="cc-empty__sub">No tags yet.</p>
+        )}
       </div>
       <div className="cc-field">
         <label className="cc-label">Collections</label>
@@ -71,7 +85,7 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
       </div>
       {!readOnly && (
         <button className="cc-btn cc-btn--primary" onClick={save} disabled={saving}>
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? 'Saving...' : saved ? 'Saved ✓' : 'Save'}
         </button>
       )}
     </div>
