@@ -114,7 +114,7 @@ def describe(
     bullet_max_words: int = 50,
     prompt_template: str | None = None,
     api_key: str | None = None,
-    timeout: float = 60.0,
+    timeout: float = 90.0,
 ) -> dict[str, Any]:
     """Call an OpenAI-compatible vision chat completions API for a single image.
 
