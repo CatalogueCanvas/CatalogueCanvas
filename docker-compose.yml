@@ -1,6 +1,10 @@
 services:
   cataloguecanvas:
-    build: .
+    build:
+      context: .
+      args:
+        CC_GIT_SHA: ${CC_GIT_SHA:-unknown}
+        CC_BUILD_DATE: ${CC_BUILD_DATE:-unknown}
     ports:
       - "8000:8000"
     environment:

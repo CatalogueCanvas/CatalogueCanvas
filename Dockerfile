@@ -30,8 +30,13 @@ COPY --from=web-build /app/web/dist /app/web/dist
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+ARG CC_GIT_SHA=unknown
+ARG CC_BUILD_DATE=unknown
+
 ENV CC_DATA_DIR=/data \
     CC_STATIC_DIR=/app/web/dist \
+    CC_GIT_SHA=${CC_GIT_SHA} \
+    CC_BUILD_DATE=${CC_BUILD_DATE} \
     PATH="/app/server/.venv/bin:${PATH}"
 
 VOLUME /data

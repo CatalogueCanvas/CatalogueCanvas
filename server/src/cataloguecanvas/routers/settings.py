@@ -9,7 +9,7 @@ from typing import Optional
 
 from starlette.background import BackgroundTask
 from fastapi import APIRouter, Depends
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 from ..auth import require_admin
@@ -88,6 +88,19 @@ def update_settings_endpoint(
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
     set_settings(conn, fields)
     return _settings_response(conn)
+
+
+@router.get("/diagnostics")
+def diagnostics(_: None = Depends(require_admin)):
+    from ..diagnostics import build_report
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    report = build_report()
+    return Response(
+        content=report,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="cataloguecanvas-diagnostics-{timestamp}.md"'},
+    )
 
 
 @router.get("/export/db")

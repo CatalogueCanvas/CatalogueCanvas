@@ -447,7 +447,9 @@ export function Settings() {
           <div className="cc-row-tight" style={{ marginTop: 'var(--space-4)' }}>
             <a className="cc-btn" href="/api/settings/export/db" download>Download database backup</a>
             <a className="cc-btn" href="/api/settings/export/all" download>Download full backup (db + storage)</a>
+            <a className="cc-btn" href="/api/settings/diagnostics" download>Download diagnostic report</a>
           </div>
+          <p className="cc-hint">Diagnostic report is a redacted Markdown summary (versions, masked config, database counts) for attaching to a GitHub issue. No secrets are included.</p>
         </section>
       </div>
     </div>
