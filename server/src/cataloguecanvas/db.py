@@ -58,6 +58,14 @@ CREATE TABLE IF NOT EXISTS admin (
     password_hash TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL CHECK (role IN ('admin', 'reader')),
+    created_at    TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS app_settings (
     key   TEXT PRIMARY KEY,
     value TEXT
@@ -116,6 +124,17 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
             "UPDATE items SET library_id = ? WHERE library_id IS NULL",
             (default_id,),
         )
+
+    # Seed the admin user from the legacy single-admin hash so existing
+    # deployments keep working when multi-user mode is later enabled.
+    user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    if user_count == 0:
+        admin_hash = conn.execute("SELECT password_hash FROM admin WHERE id = 1").fetchone()
+        if admin_hash:
+            conn.execute(
+                "INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'admin')",
+                (settings.admin_username, admin_hash["password_hash"]),
+            )
 
     conn.commit()
 
@@ -319,6 +338,75 @@ def set_admin_hash(conn: sqlite3.Connection, password_hash: str) -> None:
         ON CONFLICT (id) DO UPDATE SET password_hash = excluded.password_hash
     """, (password_hash,))
     conn.commit()
+
+
+# --- users ---
+
+def get_user_by_username(conn: sqlite3.Connection, username: str) -> Optional[dict[str, Any]]:
+    row = conn.execute(
+        "SELECT id, username, password_hash, role, created_at FROM users WHERE username = ?",
+        (username,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def get_user(conn: sqlite3.Connection, user_id: int) -> Optional[dict[str, Any]]:
+    row = conn.execute(
+        "SELECT id, username, password_hash, role, created_at FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def list_users(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT id, username, role, created_at FROM users ORDER BY id"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def create_user(conn: sqlite3.Connection, username: str, password_hash: str, role: str) -> int:
+    cur = conn.execute(
+        "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+        (username, password_hash, role),
+    )
+    conn.commit()
+    return int(cur.lastrowid)
+
+
+def update_user(
+    conn: sqlite3.Connection,
+    user_id: int,
+    *,
+    username: Optional[str] = None,
+    password_hash: Optional[str] = None,
+    role: Optional[str] = None,
+) -> None:
+    sets: list[str] = []
+    params: list[Any] = []
+    if username is not None:
+        sets.append("username = ?")
+        params.append(username)
+    if password_hash is not None:
+        sets.append("password_hash = ?")
+        params.append(password_hash)
+    if role is not None:
+        sets.append("role = ?")
+        params.append(role)
+    if not sets:
+        return
+    params.append(user_id)
+    conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = ?", params)
+    conn.commit()
+
+
+def delete_user(conn: sqlite3.Connection, user_id: int) -> None:
+    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+
+
+def count_admins(conn: sqlite3.Connection) -> int:
+    return conn.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'").fetchone()[0]
 
 
 # --- app settings ---

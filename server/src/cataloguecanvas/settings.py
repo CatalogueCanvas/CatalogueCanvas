@@ -9,6 +9,7 @@ class Settings:
         self.db_path = Path(os.environ.get("CC_DB_PATH", str(self.data_dir / "catalogue.db")))
         self.storage_dir = Path(os.environ.get("CC_STORAGE_DIR", str(self.data_dir / "storage")))
         self.admin_password = os.environ.get("CC_ADMIN_PASSWORD", "")
+        self.admin_username = os.environ.get("CC_ADMIN_USERNAME", "admin")
         secret_key_file = os.environ.get("CC_SECRET_KEY_FILE")
         if secret_key_file:
             self.secret_key = Path(secret_key_file).read_text().strip()

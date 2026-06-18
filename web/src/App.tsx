@@ -22,6 +22,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { authenticated, isAdmin, loading } = useAuth()
+  if (loading) return null
+  if (!authenticated) return <Navigate to="/login" replace />
+  if (!isAdmin) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
 function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
@@ -61,9 +69,9 @@ function App() {
           <Route path="/collections" element={<AdminLayout><Collections /></AdminLayout>} />
           <Route path="/collections/:id" element={<AdminLayout><CollectionEdit /></AdminLayout>} />
           <Route path="/portfolios" element={<AdminLayout><Portfolios /></AdminLayout>} />
-          <Route path="/portfolios/:id" element={<AdminLayout><PortfolioEdit /></AdminLayout>} />
-          <Route path="/upload" element={<AdminLayout><Upload /></AdminLayout>} />
-          <Route path="/settings" element={<AdminLayout><Settings /></AdminLayout>} />
+          <Route path="/portfolios/:id" element={<AdminLayout><AdminRoute><PortfolioEdit /></AdminRoute></AdminLayout>} />
+          <Route path="/upload" element={<AdminLayout><AdminRoute><Upload /></AdminRoute></AdminLayout>} />
+          <Route path="/settings" element={<AdminLayout><AdminRoute><Settings /></AdminRoute></AdminLayout>} />
         </Routes>
       </SelectionProvider>
     </div>

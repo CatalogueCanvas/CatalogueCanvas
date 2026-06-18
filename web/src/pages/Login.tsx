@@ -4,10 +4,11 @@ import { useAuth } from '../api/auth'
 import { ApiError } from '../api/client'
 
 export function Login() {
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const { login } = useAuth()
+  const { login, multiUser } = useAuth()
   const navigate = useNavigate()
 
   const onSubmit = async (e: FormEvent) => {
@@ -15,7 +16,7 @@ export function Login() {
     setError('')
     setBusy(true)
     try {
-      await login(password)
+      await login(password, multiUser ? username : undefined)
       navigate('/')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'login failed')
@@ -34,15 +35,30 @@ export function Login() {
           </svg>
           CatalogueCanvas
         </div>
+        {multiUser && (
+          <div className="cc-field">
+            <label className="cc-label" htmlFor="username">Username</label>
+            <input
+              id="username"
+              className="cc-input"
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoFocus
+            />
+          </div>
+        )}
         <div className="cc-field">
-          <label className="cc-label" htmlFor="password">Admin password</label>
+          <label className="cc-label" htmlFor="password">{multiUser ? 'Password' : 'Admin password'}</label>
           <input
             id="password"
             className="cc-input"
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoFocus
+            autoFocus={!multiUser}
           />
         </div>
         <button className="cc-btn cc-btn--primary" type="submit" disabled={busy} style={{ width: '100%' }}>

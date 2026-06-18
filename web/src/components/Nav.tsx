@@ -19,7 +19,7 @@ function NavItem({ to, end, label, icon }: { to: string; end?: boolean; label: s
 }
 
 export function Nav() {
-  const { authenticated, logout } = useAuth()
+  const { authenticated, isAdmin, logout } = useAuth()
   const { appearance, setAppearance } = useAppearance()
   const { batchMode, toggleBatchMode } = useSelection()
   const isDark = appearance.theme === 'dark'
@@ -37,20 +37,22 @@ export function Nav() {
         <NavItem to="/" end label="Items" icon="items" />
         <NavItem to="/collections" label="Collections" icon="collections" />
         <NavItem to="/portfolios" label="Portfolios" icon="portfolios" />
-        <NavItem to="/upload" label="Upload" icon="upload" />
-        <NavItem to="/settings" label="Settings" icon="settings" />
+        {isAdmin && <NavItem to="/upload" label="Upload" icon="upload" />}
+        {isAdmin && <NavItem to="/settings" label="Settings" icon="settings" />}
       </div>
       <div className="cc-nav-spacer" />
       {authenticated && (
         <div className="cc-nav__foot">
-          <button
-            className="cc-mode-btn"
-            type="button"
-            data-active={batchMode || undefined}
-            onClick={toggleBatchMode}
-          >
-            Batch edit
-          </button>
+          {isAdmin && (
+            <button
+              className="cc-mode-btn"
+              type="button"
+              data-active={batchMode || undefined}
+              onClick={toggleBatchMode}
+            >
+              Batch edit
+            </button>
+          )}
           <button
             className="cc-mode-btn"
             type="button"

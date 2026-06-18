@@ -7,6 +7,7 @@ import { MetadataForm } from '../components/MetadataForm'
 import { NotesPanel } from '../components/NotesPanel'
 import { Icon } from '../components/Icon'
 import { useAppearance } from '../api/appearance'
+import { useAuth } from '../api/auth'
 
 export function ItemEdit() {
   const { id } = useParams<{ id: string }>()
@@ -16,14 +17,15 @@ export function ItemEdit() {
   const [itemIds, setItemIds] = useState<string[]>([])
   const navigate = useNavigate()
   const { appearance } = useAppearance()
+  const { isAdmin } = useAuth()
 
   useEffect(() => {
     if (id) api.getItem(id).then(setItem)
   }, [id])
 
   useEffect(() => {
-    api.getSettings().then(setSettings)
-  }, [])
+    if (isAdmin) api.getSettings().then(setSettings)
+  }, [isAdmin])
 
   useEffect(() => {
     api.listItems().then((items) => setItemIds(items.map((i) => i.id)))
@@ -79,7 +81,7 @@ export function ItemEdit() {
           <p className="cc-kicker">Catalogue</p>
           <h1 className="cc-h1">{item.title}</h1>
         </div>
-        {appearance.favoritesEnabled && (
+        {isAdmin && appearance.favoritesEnabled && (
           <button
             className="cc-btn"
             onClick={toggleFavorite}
@@ -89,7 +91,9 @@ export function ItemEdit() {
             {item.collection_ids.includes('favorites') ? 'Favorited' : 'Favorite'}
           </button>
         )}
-        <button className="cc-btn cc-btn--danger" onClick={remove}><Icon name="delete" size={15} />Delete</button>
+        {isAdmin && (
+          <button className="cc-btn cc-btn--danger" onClick={remove}><Icon name="delete" size={15} />Delete</button>
+        )}
       </div>
       <div className="cc-itemedit">
         <div className="cc-itemedit__media">
@@ -132,9 +136,9 @@ export function ItemEdit() {
             <a className="cc-btn" href={api.itemArchiveUrl(item.id)} download><Icon name="download" size={15} />Download all as ZIP</a>
           </div>
           <div className="cc-panel">
-            <MetadataForm item={item} onSaved={setItem} />
+            <MetadataForm item={item} onSaved={setItem} readOnly={!isAdmin} />
           </div>
-          {settings?.llm_auto_generate === 'true' && <LLMButton itemId={item.id} onResult={setLlmResult} />}
+          {isAdmin && settings?.llm_auto_generate === 'true' && <LLMButton itemId={item.id} onResult={setLlmResult} />}
           {llmResult && (
             <div className="cc-llm__result">
               <strong>Summary:</strong> {llmResult.summary}
@@ -146,7 +150,7 @@ export function ItemEdit() {
           )}
         </div>
       </div>
-      <NotesPanel item={item} onSaved={setItem} />
+      <NotesPanel item={item} onSaved={setItem} readOnly={!isAdmin} />
     </div>
   )
 }

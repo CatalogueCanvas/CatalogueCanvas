@@ -36,6 +36,7 @@ APPEARANCE_DEFAULTS = {
     "nav": "top",
     "density": "balanced",
     "favorites_enabled": "true",
+    "multi_user_enabled": "false",
 }
 
 
@@ -75,6 +76,7 @@ class SettingsUpdate(BaseModel):
     nav: Optional[str] = None
     density: Optional[str] = None
     favorites_enabled: Optional[str] = None
+    multi_user_enabled: Optional[str] = None
 
 
 @router.put("")

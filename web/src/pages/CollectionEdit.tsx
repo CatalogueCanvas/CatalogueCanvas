@@ -4,12 +4,14 @@ import * as api from '../api/client'
 import type { Collection, Item } from '../api/client'
 import { ItemCard } from '../components/ItemCard'
 import { Icon } from '../components/Icon'
+import { useAuth } from '../api/auth'
 
 export function CollectionEdit() {
   const { id } = useParams<{ id: string }>()
   const [collection, setCollection] = useState<Collection | null>(null)
   const [items, setItems] = useState<Item[]>([])
   const navigate = useNavigate()
+  const { isAdmin } = useAuth()
 
   useEffect(() => {
     if (!id) return
@@ -40,11 +42,11 @@ export function CollectionEdit() {
           <p className="cc-kicker">Organize</p>
           <h1 className="cc-h1">{collection.title}</h1>
         </div>
-        {!collection.is_system && (
+        {isAdmin && !collection.is_system && (
           <button className="cc-btn cc-btn--danger" onClick={remove}><Icon name="delete" size={15} />Delete</button>
         )}
       </div>
-      {!collection.is_system && (
+      {isAdmin && !collection.is_system && (
         <div className="cc-panel cc-stack">
           <div className="cc-field">
             <label className="cc-label" htmlFor="title">Title</label>

@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
-from ..auth import require_admin
+from ..auth import require_admin, require_session
 from ..db import (
     add_item_to_collection,
     delete_item,
@@ -89,7 +89,7 @@ def _enrich(item: dict[str, Any]) -> dict[str, Any]:
 
 
 @router.get("")
-def list_items(conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def list_items(conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     return [_enrich(i) for i in get_all_items(conn)]
 
 
@@ -176,7 +176,7 @@ def bulk_archive_items(body: BulkIds, conn: sqlite3.Connection = Depends(get_db)
 
 
 @router.get("/{item_id}")
-def get_item_endpoint(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def get_item_endpoint(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     item = get_item(conn, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
@@ -194,7 +194,7 @@ def _library_root(conn: sqlite3.Connection, item: dict[str, Any]) -> Path:
 
 
 @router.get("/{item_id}/raw/{filename}")
-def raw_file(item_id: str, filename: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def raw_file(item_id: str, filename: str, conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     item = get_item(conn, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
@@ -228,7 +228,7 @@ def _write_item_to_zip(zf: zipfile.ZipFile, item: dict[str, Any], root: Path, pr
 
 
 @router.get("/{item_id}/archive")
-def archive_item(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def archive_item(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     item = get_item(conn, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="item not found")

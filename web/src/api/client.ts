@@ -79,7 +79,23 @@ export interface AppSettings {
   nav: NavLayout
   density: Density
   favorites_enabled: string
+  multi_user_enabled: string
   stats: { total_items: number; total_collections: number; missing_preview: number }
+}
+
+export type Role = 'admin' | 'reader'
+
+export interface MeResponse {
+  authenticated: boolean
+  role: Role | null
+  multi_user: boolean
+}
+
+export interface User {
+  id: number
+  username: string
+  role: Role
+  created_at: string
 }
 
 class ApiError extends Error {
@@ -113,12 +129,27 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export { ApiError }
 
 // --- auth ---
-export const login = (password: string) =>
-  request<{ ok: boolean }>('/api/login', { method: 'POST', body: JSON.stringify({ password }) })
+export const login = (password: string, username?: string) =>
+  request<{ ok: boolean; role: Role }>('/api/login', {
+    method: 'POST',
+    body: JSON.stringify(username ? { username, password } : { password }),
+  })
 
 export const logout = () => request<{ ok: boolean }>('/api/logout', { method: 'POST' })
 
-export const me = () => request<{ authenticated: boolean }>('/api/me')
+export const me = () => request<MeResponse>('/api/me')
+
+// --- users ---
+export const listUsers = () => request<User[]>('/api/users')
+
+export const createUser = (data: { username: string; password: string; role: Role }) =>
+  request<User>('/api/users', { method: 'POST', body: JSON.stringify(data) })
+
+export const updateUser = (id: number, fields: { username?: string; password?: string; role?: Role }) =>
+  request<User>(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(fields) })
+
+export const deleteUser = (id: number) =>
+  request<{ ok: boolean }>(`/api/users/${id}`, { method: 'DELETE' })
 
 // --- items ---
 export const listItems = () => request<Item[]>('/api/items')
@@ -194,9 +225,9 @@ export const getPublicPortfolio = (slug: string) => request<PublicPortfolio>(`/a
 export const getSettings = () => request<AppSettings>('/api/settings')
 
 export const getAppearance = () =>
-  request<Pick<AppSettings, 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled'>>('/api/settings/appearance')
+  request<Pick<AppSettings, 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled' | 'multi_user_enabled'>>('/api/settings/appearance')
 
-export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' | 'llm_model' | 'llm_item_type' | 'llm_summary_focus' | 'llm_bullet_count' | 'llm_bullet_max_words' | 'llm_auto_generate' | 'llm_prompt_template' | 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled'>>) =>
+export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' | 'llm_model' | 'llm_item_type' | 'llm_summary_focus' | 'llm_bullet_count' | 'llm_bullet_max_words' | 'llm_auto_generate' | 'llm_prompt_template' | 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled' | 'multi_user_enabled'>>) =>
   request<AppSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(fields) })
 
 export const itemArchiveUrl = (id: string) => `/api/items/${id}/archive`
