@@ -21,6 +21,7 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
   const [portfolioId, setPortfolioId] = useState('')
   const [portfolioAction, setPortfolioAction] = useState<'add' | 'remove'>('add')
   const [skipExisting, setSkipExisting] = useState(true)
+  const [apiKey, setApiKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState('')
   const [errors, setErrors] = useState<string[]>([])
@@ -114,6 +115,7 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
             bullet_count: Number(settings.llm_bullet_count) || 3,
             bullet_max_words: Number(settings.llm_bullet_max_words) || 50,
             prompt_template: settings.llm_prompt_template,
+            api_key: apiKey || undefined,
           })
           await api.updateItem(item.id, { note: result.summary })
         } catch (err) {
@@ -125,6 +127,8 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
     } finally {
       setBusy(false)
       setProgress('')
+      // Never persist the key beyond this run.
+      setApiKey('')
     }
   }
 
@@ -173,6 +177,14 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
             <span className="cc-check__box" />
             Skip items that already have a note
           </label>
+          <input
+            className="cc-input"
+            type="password"
+            placeholder="API key (optional, never stored)"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            disabled={busy}
+          />
           <button className="cc-btn cc-btn--primary" onClick={generateDescriptions} disabled={busy}>
             {busy && progress ? progress : <><Icon name="generate" size={15} />Generate descriptions (LLM)</>}
           </button>

@@ -8,7 +8,6 @@ export function Footer() {
         Open Source · AGPL-3.0
       </a>
       <span>v{__APP_VERSION__}</span>
-      <span>Instance Details (more to come)</span>
       <a href="https://github.com/ToledoEM/CatalogueCanvas/issues" target="_blank" rel="noreferrer">
         Report Problem
       </a>

@@ -1,4 +1,5 @@
-import { Link, NavLink } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../api/auth'
 import { useAppearance } from '../api/appearance'
 import { useSelection } from '../api/selection'
@@ -22,7 +23,15 @@ export function Nav() {
   const { authenticated, isAdmin, username, logout } = useAuth()
   const { appearance, setAppearance } = useAppearance()
   const { batchMode, toggleBatchMode } = useSelection()
+  const location = useLocation()
+  const onItemsPage = location.pathname === '/'
   const isDark = appearance.theme === 'dark'
+
+  // Batch mode only applies on the Items page; leaving it resets any active
+  // selection so no invisible stale state lingers.
+  useEffect(() => {
+    if (!onItemsPage && batchMode) toggleBatchMode()
+  }, [onItemsPage, batchMode, toggleBatchMode])
 
   return (
     <nav className="cc-nav">
@@ -43,14 +52,16 @@ export function Nav() {
       <div className="cc-nav-spacer" />
       {authenticated && (
         <div className="cc-nav__foot">
-          <button
-            className="cc-mode-btn"
-            type="button"
-            data-active={batchMode || undefined}
-            onClick={toggleBatchMode}
-          >
-            {isAdmin ? 'Batch edit' : 'Select'}
-          </button>
+          {onItemsPage && (
+            <button
+              className="cc-mode-btn"
+              type="button"
+              data-active={batchMode || undefined}
+              onClick={toggleBatchMode}
+            >
+              {isAdmin ? 'Batch edit' : 'Select'}
+            </button>
+          )}
           <button
             className="cc-mode-btn"
             type="button"
