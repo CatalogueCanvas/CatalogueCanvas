@@ -155,6 +155,9 @@ export const deleteUser = (id: number) =>
 // --- items ---
 export const listItems = () => request<Item[]>('/api/items')
 
+export const searchItems = (q: string) =>
+  request<Item[]>(`/api/items/search?q=${encodeURIComponent(q)}`)
+
 export const getItem = (id: string) => request<Item>(`/api/items/${id}`)
 
 export const updateItem = (id: string, fields: Partial<Pick<Item, 'title' | 'note' | 'tags' | 'collection_ids' | 'raw_meta'>>) =>
@@ -232,6 +235,8 @@ export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' |
   request<AppSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(fields) })
 
 export const itemArchiveUrl = (id: string) => `/api/items/${id}/archive`
+
+export const itemMetadataUrl = (id: string) => `/api/items/${id}/metadata`
 
 // --- libraries ---
 export const listLibraries = () => request<Library[]>('/api/libraries')

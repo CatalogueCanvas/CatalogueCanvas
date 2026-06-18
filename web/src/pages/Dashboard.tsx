@@ -22,24 +22,30 @@ export function Dashboard() {
   const { appearance } = useAppearance()
   const { isAdmin } = useAuth()
 
-  const refresh = useCallback(() => {
-    api.listItems().then(setItems).finally(() => setLoading(false))
-    api.listPortfolios().then(setPortfolios)
-  }, [])
+  const [allItems, setAllItems] = useState<Item[]>([])
 
-  useEffect(() => { refresh() }, [refresh])
+  const refresh = useCallback(() => {
+    const q = query.trim()
+    const load = q ? api.searchItems(q) : api.listItems()
+    load.then(setItems).finally(() => setLoading(false))
+    api.listItems().then(setAllItems)
+    api.listPortfolios().then(setPortfolios)
+  }, [query])
+
+  // Debounce the server-side search so we don't fire a request per keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => refresh(), 200)
+    return () => clearTimeout(t)
+  }, [refresh])
 
   const allTags = useMemo(() => {
     const tags = new Set<string>()
-    items.forEach((i) => i.tags.forEach((t) => tags.add(t)))
+    allItems.forEach((i) => i.tags.forEach((t) => tags.add(t)))
     return [...tags].sort((a, b) => a.localeCompare(b))
-  }, [items])
+  }, [allItems])
 
   const filtered = useMemo(() => {
-    const q = query.toLowerCase()
-    let result = items.filter((i) => {
-      return !q || i.title.toLowerCase().includes(q) || i.id.includes(q) || i.tags.some((t) => t.toLowerCase().includes(q))
-    })
+    let result = items
     if (tagFilter) {
       result = result.filter((i) => i.tags.includes(tagFilter))
     }
@@ -65,7 +71,7 @@ export function Dashboard() {
         break
     }
     return result
-  }, [items, query, tagFilter, sortBy])
+  }, [items, tagFilter, sortBy])
 
   const onBulkDone = () => {
     clear()
@@ -83,7 +89,7 @@ export function Dashboard() {
       <div className="cc-page-header">
         <div>
           <p className="cc-kicker">Catalogue</p>
-          <h1 className="cc-h1">Items<span className="cc-count">({items.length})</span></h1>
+          <h1 className="cc-h1">Items<span className="cc-count">({filtered.length})</span></h1>
         </div>
         <div className="cc-search">
           <span className="cc-search__icon" />

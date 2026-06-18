@@ -111,7 +111,10 @@ export function ItemEdit() {
           )}
         </div>
         <div className="cc-stack">
-          <div className="cc-row__meta"><span className="cc-mono">ID: {item.id}</span></div>
+          <div className="cc-row__meta">
+            <span className="cc-mono">ID: {item.id}</span>
+            <a className="cc-mono" href={api.itemMetadataUrl(item.id)} target="_blank" rel="noreferrer">Metadata (JSON-LD)</a>
+          </div>
           {item.download_urls.length > 0 && (
             <div className="cc-field">
               <label className="cc-label">Files</label>

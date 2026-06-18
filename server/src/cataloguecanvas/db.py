@@ -23,6 +23,11 @@ CREATE TABLE IF NOT EXISTS items (
     imported_at   TEXT
 );
 
+CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
+    item_id UNINDEXED, title, note, tags, meta,
+    tokenize = 'unicode61 remove_diacritics 2'
+);
+
 CREATE TABLE IF NOT EXISTS collections (
     id            TEXT PRIMARY KEY,
     title         TEXT,
@@ -136,6 +141,13 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
                 (settings.admin_username, admin_hash["password_hash"]),
             )
 
+    # Backfill the FTS index for pre-existing items (migration for older DBs).
+    fts_count = conn.execute("SELECT COUNT(*) FROM items_fts").fetchone()[0]
+    item_count = conn.execute("SELECT COUNT(*) FROM items").fetchone()[0]
+    if fts_count == 0 and item_count > 0:
+        for row in conn.execute("SELECT * FROM items").fetchall():
+            index_item(conn, _row_to_dict(row))
+
     conn.commit()
 
 
@@ -147,6 +159,91 @@ def _dump(v: Any) -> Any:
 
 def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     return dict(row)
+
+
+# --- full-text search ---
+
+def flatten_meta(value: Any) -> str:
+    """Recursively collect keys and scalar values from a nested dict/list into a
+    single space-joined string, so arbitrary metadata.json content is searchable."""
+    parts: list[str] = []
+
+    def walk(v: Any) -> None:
+        if isinstance(v, dict):
+            for k, sub in v.items():
+                parts.append(str(k))
+                walk(sub)
+        elif isinstance(v, list):
+            for sub in v:
+                walk(sub)
+        elif v is not None:
+            parts.append(str(v))
+
+    walk(value)
+    return " ".join(parts)
+
+
+def _coerce(value: Any) -> Any:
+    """Decode a possibly JSON-encoded column into a Python object."""
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return value
+    return value
+
+
+def index_item(conn: sqlite3.Connection, item: dict[str, Any]) -> None:
+    """Upsert the FTS row for an item (delete-then-insert; FTS5 has no UPSERT)."""
+    item_id = item["id"]
+    tags = _coerce(item.get("tags")) or []
+    tags_text = " ".join(str(t) for t in tags) if isinstance(tags, list) else str(tags)
+    meta_text = flatten_meta(_coerce(item.get("raw_meta")) or {})
+    conn.execute("DELETE FROM items_fts WHERE item_id = ?", (item_id,))
+    conn.execute(
+        "INSERT INTO items_fts (item_id, title, note, tags, meta) VALUES (?, ?, ?, ?, ?)",
+        (item_id, item.get("title") or "", item.get("note") or "", tags_text, meta_text),
+    )
+
+
+def unindex_item(conn: sqlite3.Connection, item_id: str) -> None:
+    conn.execute("DELETE FROM items_fts WHERE item_id = ?", (item_id,))
+
+
+def _fts_query(raw: str) -> str:
+    """Turn free user input into a safe FTS5 MATCH expression: each token is
+    quoted (so punctuation can't break syntax) with a prefix wildcard."""
+    tokens = [t for t in raw.replace('"', " ").split() if t]
+    return " ".join(f'"{t}"*' for t in tokens)
+
+
+def search_items(conn: sqlite3.Connection, query: str) -> list[dict[str, Any]]:
+    """Full-text search across title/note/tags/flattened raw_meta, ranked by
+    relevance. Empty query returns all items (same shape as get_all_items)."""
+    match = _fts_query(query)
+    if not match:
+        return get_all_items(conn)
+    rows = conn.execute(
+        """
+        SELECT i.* FROM items i
+        JOIN items_fts f ON f.item_id = i.id
+        WHERE items_fts MATCH ?
+        ORDER BY f.rank
+        """,
+        (match,),
+    ).fetchall()
+    items = [_row_to_dict(r) for r in rows]
+    membership = _collection_membership(conn)
+    for item in items:
+        item["collection_ids"] = membership.get(item["id"], [])
+    return items
+
+
+def _collection_membership(conn: sqlite3.Connection) -> dict[str, list[str]]:
+    membership: dict[str, list[str]] = {}
+    for row in conn.execute("SELECT item_id, collection_id FROM item_collections"):
+        membership.setdefault(row["item_id"], []).append(row["collection_id"])
+    return membership
 
 
 # --- items ---
@@ -172,6 +269,7 @@ def upsert_item(conn: sqlite3.Connection, record: dict[str, Any]) -> None:
     """
     values = [_dump(v) for v in record.values()]
     conn.execute(sql, values)
+    index_item(conn, record)
     conn.commit()
 
 
@@ -187,9 +285,7 @@ def get_item(conn: sqlite3.Connection, item_id: str) -> Optional[dict[str, Any]]
 def get_all_items(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     rows = conn.execute("SELECT * FROM items ORDER BY ingested_at DESC").fetchall()
     items = [_row_to_dict(r) for r in rows]
-    membership: dict[str, list[str]] = {}
-    for row in conn.execute("SELECT item_id, collection_id FROM item_collections"):
-        membership.setdefault(row["item_id"], []).append(row["collection_id"])
+    membership = _collection_membership(conn)
     for item in items:
         item["collection_ids"] = membership.get(item["id"], [])
     return items
@@ -205,12 +301,16 @@ def update_item_meta(conn: sqlite3.Connection, item_id: str, fields: dict[str, A
     set_clause = ", ".join(f"{k} = ?" for k in fields)
     values = [_dump(v) for v in fields.values()]
     conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", (*values, item_id))
+    updated = get_item(conn, item_id)
+    if updated:
+        index_item(conn, updated)
     conn.commit()
-    return get_item(conn, item_id)
+    return updated
 
 
 def delete_item(conn: sqlite3.Connection, item_id: str) -> None:
     conn.execute("DELETE FROM items WHERE id = ?", (item_id,))
+    unindex_item(conn, item_id)
     conn.commit()
 
 

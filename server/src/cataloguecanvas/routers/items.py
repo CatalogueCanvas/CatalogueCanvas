@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import lz4.frame
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
@@ -21,6 +21,7 @@ from ..db import (
     get_item,
     get_library,
     remove_item_from_collection,
+    search_items,
     set_item_collections,
     update_item_meta,
 )
@@ -94,6 +95,17 @@ def _enrich(item: dict[str, Any]) -> dict[str, Any]:
 @router.get("")
 def list_items(conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     return [_enrich(i) for i in get_all_items(conn)]
+
+
+@router.get("/search")
+def search_items_endpoint(
+    q: str = "",
+    conn: sqlite3.Connection = Depends(get_db),
+    _: str = Depends(require_session),
+):
+    """Full-text search across title, note, tags and flattened raw_meta.
+    An empty query returns all items, matching list_items behavior."""
+    return [_enrich(i) for i in search_items(conn, q)]
 
 
 class BulkIds(BaseModel):
@@ -184,6 +196,52 @@ def get_item_endpoint(item_id: str, conn: sqlite3.Connection = Depends(get_db), 
     if not item:
         raise HTTPException(status_code=404, detail="item not found")
     return _enrich(item)
+
+
+@router.get("/{item_id}/metadata")
+def item_metadata(
+    item_id: str,
+    request: Request,
+    conn: sqlite3.Connection = Depends(get_db),
+    _: str = Depends(require_session),
+):
+    """Machine-readable schema.org/Dublin Core metadata (JSON-LD) for an item.
+    The persistent item id is embedded as @id/identifier (FAIR F1+F3). Gated
+    behind a session for now; can be exposed publicly for open harvesting later."""
+    item = get_item(conn, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="item not found")
+    item = _enrich(item)
+
+    base = str(request.base_url).rstrip("/")
+    item_url = f"{base}/api/items/{item_id}"
+    raw_meta = item.get("raw_meta") or {}
+
+    doc: dict[str, Any] = {
+        "@context": "https://schema.org",
+        "@type": "VisualArtwork",
+        "@id": item_url,
+        "identifier": item_id,
+        "name": item.get("title"),
+        "description": item.get("note") or None,
+        "keywords": item.get("tags") or [],
+        "dateModified": item.get("ingested_at"),
+        "datePublished": item.get("ingested_at"),
+    }
+    if item.get("imported_at"):
+        doc["dateCreated"] = item["imported_at"]
+    if item.get("preview_url"):
+        doc["image"] = f"{base}{item['preview_url']}"
+    if isinstance(raw_meta, dict) and raw_meta:
+        doc["additionalProperty"] = [
+            {"@type": "PropertyValue", "name": str(k), "value": v}
+            for k, v in raw_meta.items()
+        ]
+
+    return Response(
+        content=json.dumps(doc, ensure_ascii=False, indent=2),
+        media_type="application/ld+json",
+    )
 
 
 def _library_root(conn: sqlite3.Connection, item: dict[str, Any]) -> Path:
