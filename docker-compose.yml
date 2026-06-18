@@ -1,7 +1,3 @@
-secrets:
-  cc_secret_key:
-    file: ./secrets/cc_secret_key.txt
-
 services:
   cataloguecanvas:
     build: .
@@ -9,10 +5,7 @@ services:
       - "8000:8000"
     environment:
       CC_ADMIN_PASSWORD: ${CC_ADMIN_PASSWORD:-changeme}
-      CC_SECRET_KEY_FILE: /run/secrets/cc_secret_key
       CC_SITE_TITLE: ${CC_SITE_TITLE:-CatalogueCanvas}
       CC_SITE_AUTHOR: ${CC_SITE_AUTHOR:-}
     volumes:
       - ./data:/data
-    secrets:
-      - cc_secret_key

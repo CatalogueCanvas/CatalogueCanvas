@@ -26,6 +26,34 @@ class LLMError(Exception):
     pass
 
 
+def _snippet(text: str, limit: int = 300) -> str:
+    text = (text or "").strip()
+    return text if len(text) <= limit else text[:limit] + "…"
+
+
+def _normalize_api_url(api_url: str) -> str:
+    """Allow users to enter just a host/port and fill in the OpenAI path.
+
+    A bare base URL (``http://host:1234``) or a ``/v1`` root is completed to
+    ``/v1/chat/completions``. A URL that already targets the completions
+    endpoint, or carries any other deliberate path, is left untouched.
+    """
+    api_url = (api_url or "").strip().rstrip("/")
+    parsed = urlparse(api_url)
+    path = parsed.path
+
+    if "/chat/completions" in path:
+        return api_url
+    if path in ("", "/"):
+        suffix = "/v1/chat/completions"
+    elif path == "/v1":
+        suffix = "/chat/completions"
+    else:
+        # Some other explicit path — respect it rather than guessing.
+        return api_url
+    return api_url + suffix
+
+
 def _validate_api_url(api_url: str) -> None:
     parsed = urlparse(api_url)
     if parsed.scheme not in ("http", "https"):
@@ -93,6 +121,7 @@ def describe(
     The api_key, if provided, is used only for this request's Authorization
     header and is never persisted.
     """
+    api_url = _normalize_api_url(api_url)
     _validate_api_url(api_url)
 
     try:
@@ -122,11 +151,29 @@ def describe(
 
     try:
         resp = httpx.post(api_url, json=payload, headers=headers, timeout=timeout, follow_redirects=False)
-        resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise LLMError(f"LLM request failed: could not reach {api_url}: {exc}") from exc
+
+    if resp.status_code >= 400:
+        raise LLMError(f"LLM request failed: HTTP {resp.status_code} from {api_url}: {_snippet(resp.text)}")
+
+    try:
         data = resp.json()
-        content = data["choices"][0]["message"]["content"].strip()
-    except (httpx.HTTPError, KeyError, IndexError) as exc:
-        raise LLMError(f"LLM request failed: {exc}") from exc
+    except ValueError as exc:
+        raise LLMError(f"LLM request failed: response was not JSON: {_snippet(resp.text)}") from exc
+
+    choices = data.get("choices") if isinstance(data, dict) else None
+    if not choices:
+        # A 200 with no choices usually means the endpoint returned an error
+        # object (model not loaded, bad request) or is the wrong URL/shape.
+        api_error = data.get("error") if isinstance(data, dict) else None
+        detail = api_error if api_error is not None else data
+        raise LLMError(f"LLM request failed: response has no 'choices': {_snippet(json.dumps(detail))}")
+
+    try:
+        content = choices[0]["message"]["content"].strip()
+    except (KeyError, IndexError, TypeError, AttributeError) as exc:
+        raise LLMError(f"LLM request failed: unexpected choices shape: {_snippet(json.dumps(choices))}") from exc
 
     if content.startswith("```"):
         content = "\n".join(line for line in content.splitlines() if not line.startswith("```"))

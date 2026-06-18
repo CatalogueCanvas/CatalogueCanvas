@@ -286,9 +286,11 @@ export function Settings() {
               <input
                 id="set-llm-api-url"
                 className="cc-input"
+                placeholder="http://host.docker.internal:1234"
                 value={settings.llm_api_url}
                 onChange={(e) => setSettings({ ...settings, llm_api_url: e.target.value })}
               />
+              <p className="cc-hint">Enter just the server host and port — the <code>/v1/chat/completions</code> path is added automatically. A full URL works too.</p>
             </div>
             <div className="cc-field">
               <label className="cc-label" htmlFor="set-llm-model">Model</label>

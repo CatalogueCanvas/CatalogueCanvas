@@ -57,20 +57,13 @@ For local development without Docker:
 
 ### With Docker (recommended)
 
-Generate the session secret key once (stored as a Docker Compose secret file, not an env var):
-
-```bash
-mkdir -p secrets
-openssl rand -hex 32 > secrets/cc_secret_key.txt
-```
-
 ```bash
 CC_ADMIN_PASSWORD=mysecretpassword docker compose up --build
 ```
 
 Then open `http://localhost:8000` and log in with `CC_ADMIN_PASSWORD`.
 
-All data (the SQLite database and uploaded item assets) is persisted in the `cc-data` Docker volume under `/data`.
+On first boot the container generates a random session signing key at `/data/cc_secret_key.txt` and reuses it on subsequent starts — no manual setup needed. All data (the SQLite database, uploaded item assets, and the session key) is persisted in the `./data` directory mounted into the container at `/data`.
 
 ### Local development (without Docker)
 
@@ -99,8 +92,8 @@ Environment variables (set via `docker-compose.yml` or your shell):
 | Variable | Default | Description |
 |---|---|---|
 | `CC_ADMIN_PASSWORD` | _(empty)_ | Admin login password — required to log in |
-| `CC_SECRET_KEY` | `dev-secret-change-me` | Session signing key — set a random value in production (local dev only; in Docker use `CC_SECRET_KEY_FILE`) |
-| `CC_SECRET_KEY_FILE` | _(unset)_ | Path to a file containing the session signing key — takes precedence over `CC_SECRET_KEY` (used by Docker Compose secrets) |
+| `CC_SECRET_KEY` | `dev-secret-change-me` | Session signing key — set a random value for local dev. In Docker, the key is auto-generated and persisted at `<CC_DATA_DIR>/cc_secret_key.txt`, so this is not needed. |
+| `CC_SECRET_KEY_FILE` | _(unset)_ | Path to a file containing the session signing key — takes precedence over `CC_SECRET_KEY`. The Docker entrypoint sets this automatically. |
 | `CC_SITE_TITLE` | `My Catalogue` | Title shown in the UI and public portfolios |
 | `CC_SITE_AUTHOR` | _(empty)_ | Author/owner name shown on public portfolios |
 | `CC_DATA_DIR` | `/data` | Base directory for the database and storage |

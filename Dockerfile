@@ -27,6 +27,9 @@ RUN cd server && uv sync --frozen --no-dev
 
 COPY --from=web-build /app/web/dist /app/web/dist
 
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 ENV CC_DATA_DIR=/data \
     CC_STATIC_DIR=/app/web/dist \
     PATH="/app/server/.venv/bin:${PATH}"
@@ -35,4 +38,5 @@ VOLUME /data
 EXPOSE 8000
 
 WORKDIR /app/server
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["uv", "run", "uvicorn", "cataloguecanvas.main:app", "--host", "0.0.0.0", "--port", "8000"]
