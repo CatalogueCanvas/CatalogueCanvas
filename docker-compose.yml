@@ -11,5 +11,6 @@ services:
       CC_ADMIN_PASSWORD: ${CC_ADMIN_PASSWORD:-changeme}
       CC_SITE_TITLE: ${CC_SITE_TITLE:-CatalogueCanvas}
       CC_SITE_AUTHOR: ${CC_SITE_AUTHOR:-}
+      CC_COOKIE_SECURE: ${CC_COOKIE_SECURE:-false}
     volumes:
       - ./data:/data
