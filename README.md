@@ -6,7 +6,11 @@
 
      
 
-A domain-agnostic catalogue server: ingest ZIP items into a SQLite-backed FastAPI app with a React admin UI, organize them into collections, and share public portfolios.
+CatalogueCanvas is a self-hosted catalogue server for organizing and sharing collections of digital work. You upload items as ZIP files, sort them into collections, enrich them with tags, notes, and AI-generated descriptions, and publish curated selections as shareable, slide-deck portfolios.
+
+It is domain-agnostic — equally at home cataloguing generative art, illustrations, code sketches, design assets, photographs, or any mixed-media archive — and runs from a single Docker container with no external services required.
+
+Under the hood it is a FastAPI backend with a SQLite database and a React admin UI, serving both the management interface and the public portfolio pages.
 
 ## Architecture
 
