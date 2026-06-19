@@ -636,6 +636,67 @@ button, input, textarea, select {
   to { transform: rotate(360deg); }
 }
 
+/* ---- Activity tray (floating background-work log) ---------------------- */
+.cc-activity-tray {
+  position: fixed; right: 16px; bottom: 16px; z-index: 50;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  max-width: min(420px, calc(100vw - 32px));
+}
+.cc-activity-tray__pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  color: var(--text-sec); font-size: 13px; font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+.cc-activity-tray__dot {
+  width: 9px; height: 9px; border-radius: 50%; flex: none;
+  background: var(--text-ter);
+}
+.cc-activity-tray__dot--busy {
+  background: var(--accent);
+  animation: cc-pulse 1.2s ease-in-out infinite;
+}
+@keyframes cc-pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }
+.cc-activity-tray__chev--open { transform: rotate(180deg); }
+.cc-activity-tray__panel {
+  width: 380px; max-width: min(420px, calc(100vw - 32px));
+  max-height: min(60vh, 520px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-card); padding: var(--space-3);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+}
+.cc-activity-tray__panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; font-weight: 600; color: var(--text-sec);
+  margin-bottom: var(--space-3);
+}
+.cc-activity-tray__clear {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-ter); font-size: 12px; padding: 0;
+}
+.cc-activity-tray__clear:hover { color: var(--text-sec); }
+.cc-activity-tray__tasks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.cc-activity-tray__task { border-top: 1px solid var(--border); padding-top: var(--space-3); }
+.cc-activity-tray__task:first-child { border-top: none; padding-top: 0; }
+.cc-activity-tray__task-head { display: flex; align-items: center; gap: 8px; }
+.cc-activity-tray__task-title {
+  flex: 1; font-size: 13px; font-weight: 600; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cc-activity-tray__task-summary { font-size: 12px; color: var(--text-ter); flex: none; }
+.cc-activity-tray__cancel {
+  background: none; border: 1px solid var(--border-strong); border-radius: var(--radius-thumb);
+  cursor: pointer; color: var(--text-sec); font-size: 12px; padding: 2px 8px; flex: none;
+}
+.cc-activity-tray__dismiss {
+  background: none; border: none; cursor: pointer; flex: none;
+  color: var(--text-ter); font-size: 18px; line-height: 1; padding: 0 4px;
+}
+.cc-activity-tray__dismiss:hover { color: var(--text-sec); }
+.cc-activity-tray__items { margin-top: 8px; max-height: 200px; overflow-y: auto; }
+.cc-activity-tray__task--error .cc-activity-tray__task-summary { color: #d33; }
+
 /* ---- Share link box ---------------------------------------------------- */
 .cc-sharebox {
   display: flex; align-items: center; gap: 10px; justify-content: space-between;
