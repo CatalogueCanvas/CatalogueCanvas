@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import * as api from '../api/client'
 import type { Item, Portfolio } from '../api/client'
 import { Icon } from './Icon'
 import { useAppearance } from '../api/appearance'
 import { useAuth } from '../api/auth'
+import { useActivity } from '../api/activity'
 
 interface Props {
   selectedIds: string[]
@@ -23,10 +25,10 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
   const [skipExisting, setSkipExisting] = useState(true)
   const [apiKey, setApiKey] = useState('')
   const [busy, setBusy] = useState(false)
-  const [progress, setProgress] = useState('')
-  const [errors, setErrors] = useState<string[]>([])
   const cancelRef = useRef(false)
   const { appearance } = useAppearance()
+  const { startTask, updateItem, finishTask } = useActivity()
+  const location = useLocation()
 
   const selectedItems = items.filter((i) => selectedIds.includes(i.id))
 
@@ -96,16 +98,26 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
 
   const generateDescriptions = async () => {
     setBusy(true)
-    setErrors([])
     cancelRef.current = false
+    const key = apiKey
+    // Never persist the key in component state beyond this run.
+    setApiKey('')
+    const targets = skipExisting ? selectedItems.filter((i) => !i.note) : selectedItems
+    const taskId = startTask({
+      kind: 'describe',
+      title: `Describing ${targets.length} item${targets.length === 1 ? '' : 's'}`,
+      origin: location.pathname,
+      items: targets.map((it) => ({ label: it.title || it.id, status: 'pending' as const })),
+      cancel: () => { cancelRef.current = true },
+    })
+    let failed = false
     try {
       const settings = await api.getSettings()
-      const targets = skipExisting ? selectedItems.filter((i) => !i.note) : selectedItems
-      const newErrors: string[] = []
       for (let i = 0; i < targets.length; i++) {
         if (cancelRef.current) break
         const item = targets[i]
-        setProgress(`Processing ${i + 1}/${targets.length}...`)
+        const label = item.title || item.id
+        updateItem(taskId, label, { status: 'uploading' })
         try {
           const result = await api.describeItem(item.id, {
             api_url: settings.llm_api_url,
@@ -115,20 +127,19 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
             bullet_count: Number(settings.llm_bullet_count) || 3,
             bullet_max_words: Number(settings.llm_bullet_max_words) || 50,
             prompt_template: settings.llm_prompt_template,
-            api_key: apiKey || undefined,
+            api_key: key || undefined,
           })
           await api.updateItem(item.id, { note: result.summary })
+          updateItem(taskId, label, { status: 'done' })
         } catch (err) {
-          newErrors.push(`${item.title}: ${err instanceof Error ? err.message : 'failed'}`)
+          failed = true
+          updateItem(taskId, label, { status: 'error', detail: err instanceof Error ? err.message : 'failed' })
         }
       }
-      setErrors(newErrors)
       onDone()
     } finally {
       setBusy(false)
-      setProgress('')
-      // Never persist the key beyond this run.
-      setApiKey('')
+      finishTask(taskId, failed ? 'error' : 'done')
     }
   }
 
@@ -186,16 +197,8 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
             disabled={busy}
           />
           <button className="cc-btn cc-btn--primary" onClick={generateDescriptions} disabled={busy}>
-            {busy && progress ? progress : <><Icon name="generate" size={15} />Generate descriptions (LLM)</>}
+            <Icon name="generate" size={15} />Generate descriptions (LLM)
           </button>
-          {busy && progress && (
-            <button className="cc-btn" onClick={() => { cancelRef.current = true }}>Cancel</button>
-          )}
-        </div>
-      )}
-      {errors.length > 0 && (
-        <div className="error-text">
-          {errors.map((e) => <div key={e}>{e}</div>)}
         </div>
       )}
     </div>

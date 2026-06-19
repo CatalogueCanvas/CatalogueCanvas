@@ -141,7 +141,7 @@ export function ItemEdit() {
           <div className="cc-panel">
             <MetadataForm item={item} onSaved={setItem} readOnly={!isAdmin} />
           </div>
-          {isAdmin && settings?.llm_auto_generate === 'true' && <LLMButton itemId={item.id} onResult={setLlmResult} />}
+          {isAdmin && settings?.llm_auto_generate === 'true' && <LLMButton itemId={item.id} itemTitle={item.title} onResult={setLlmResult} />}
           {llmResult && (
             <div className="cc-llm__result">
               <strong>Summary:</strong> {llmResult.summary}

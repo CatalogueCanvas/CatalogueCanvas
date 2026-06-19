@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './api/auth'
 import { ACCENT_PRESETS, useAppearance } from './api/appearance'
 import { SelectionProvider } from './api/selection'
+import { ActivityProvider } from './api/activity'
+import { ActivityTray } from './components/ActivityTray'
 import { Nav } from './components/Nav'
 import { Footer } from './components/Footer'
 import { Login } from './pages/Login'
@@ -62,6 +64,7 @@ function App() {
       style={accentStyle}
     >
       <SelectionProvider>
+        <ActivityProvider>
         <Routes>
           <Route path="/login" element={<><Login /><Footer /></>} />
           <Route path="/p/:slug" element={<Deck />} />
@@ -75,6 +78,8 @@ function App() {
           <Route path="/settings" element={<AdminLayout><AdminRoute><Settings /></AdminRoute></AdminLayout>} />
           <Route path="*" element={<AdminLayout><NotFound /></AdminLayout>} />
         </Routes>
+        <ActivityTray />
+        </ActivityProvider>
       </SelectionProvider>
     </div>
   )

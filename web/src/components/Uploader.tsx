@@ -1,21 +1,14 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { listLibraries, uploadItem, ApiError } from '../api/client'
 import type { Library } from '../api/client'
-
-type FileStatus = 'pending' | 'uploading' | 'done' | 'skipped' | 'error'
-
-interface FileEntry {
-  name: string
-  status: FileStatus
-  detail?: string
-}
+import { useActivity } from '../api/activity'
 
 export function Uploader({ onUploaded }: { onUploaded: () => void }) {
   const [dragOver, setDragOver] = useState(false)
-  const [queue, setQueue] = useState<FileEntry[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const [libraries, setLibraries] = useState<Library[]>([])
   const [libraryId, setLibraryId] = useState('')
+  const { startTask, updateItem, finishTask } = useActivity()
 
   useEffect(() => {
     listLibraries().then((libs) => {
@@ -25,31 +18,35 @@ export function Uploader({ onUploaded }: { onUploaded: () => void }) {
     }).catch(() => {})
   }, [])
 
-  const updateEntry = (name: string, fields: Partial<FileEntry>) => {
-    setQueue((prev) => prev.map((e) => (e.name === name ? { ...e, ...fields } : e)))
-  }
-
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return
     const zipFiles = Array.from(files).filter((f) => f.name.toLowerCase().endsWith('.zip'))
     if (zipFiles.length === 0) return
 
-    setQueue((prev) => [...prev, ...zipFiles.map((f) => ({ name: f.name, status: 'pending' as FileStatus }))])
+    const taskId = startTask({
+      kind: 'upload',
+      title: `Uploading ${zipFiles.length} ZIP${zipFiles.length === 1 ? '' : 's'}`,
+      origin: '/upload',
+      items: zipFiles.map((f) => ({ label: f.name, status: 'pending' as const })),
+    })
 
+    let failed = false
     for (const file of zipFiles) {
-      updateEntry(file.name, { status: 'uploading' })
+      updateItem(taskId, file.name, { status: 'uploading' })
       try {
         const res = await uploadItem(file, libraryId || undefined)
         if (res.created) {
           const detail = res.note ? `→ ${res.item?.id} (${res.note})` : `→ ${res.item?.id}`
-          updateEntry(file.name, { status: 'done', detail })
+          updateItem(taskId, file.name, { status: 'done', detail })
         } else {
-          updateEntry(file.name, { status: 'skipped', detail: res.note ?? undefined })
+          updateItem(taskId, file.name, { status: 'skipped', detail: res.note ?? undefined })
         }
       } catch (err) {
-        updateEntry(file.name, { status: 'error', detail: err instanceof ApiError ? err.message : 'upload failed' })
+        failed = true
+        updateItem(taskId, file.name, { status: 'error', detail: err instanceof ApiError ? err.message : 'upload failed' })
       }
     }
+    finishTask(taskId, failed ? 'error' : 'done')
     onUploaded()
   }
 
@@ -89,17 +86,6 @@ export function Uploader({ onUploaded }: { onUploaded: () => void }) {
         />
         Drop ZIP files here or click to upload
       </div>
-      {queue.length > 0 && (
-        <ul className="cc-upload-queue">
-          {queue.map((entry) => (
-            <li key={entry.name} className={`cc-upload-queue__item cc-upload-queue__item--${entry.status}`}>
-              <span className="cc-upload-queue__status" />
-              <span className="cc-upload-queue__name">{entry.name}</span>
-              {entry.detail && <span className="cc-upload-queue__detail">{entry.detail}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   )
 }
