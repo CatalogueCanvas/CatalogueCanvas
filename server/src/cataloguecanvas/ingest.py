@@ -105,6 +105,9 @@ def ingest_zip_bytes(
     zip_stem = Path(filename).stem
 
     with zipfile.ZipFile(BytesIO(data)) as zf:
+        if len(zf.namelist()) > settings.max_zip_entries:
+            raise ValueError(f"zip has more than {settings.max_zip_entries} entries")
+
         members = [
             n for n in zf.namelist()
             if not n.startswith("__MACOSX/")

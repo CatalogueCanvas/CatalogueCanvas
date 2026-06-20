@@ -2,15 +2,17 @@ from __future__ import annotations
 import csv
 import json
 import sqlite3
+import tempfile
 import zipfile
 from datetime import datetime, timezone
-from io import BytesIO, StringIO
+from io import StringIO
 from pathlib import Path
 from typing import Any, Optional
 
 import lz4.frame
+from starlette.background import BackgroundTask
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 from ..auth import require_admin, require_session
@@ -204,12 +206,17 @@ def list_items(conn: sqlite3.Connection = Depends(get_db), _: str = Depends(requ
     return [_enrich(i) for i in get_all_items(conn)]
 
 
-@router.get("/export/csv")
+class CsvExportRequest(BaseModel):
+    q: str = ""
+
+
+@router.post("/export/csv")
 def export_csv(
-    q: str = "",
+    body: CsvExportRequest = CsvExportRequest(),
     conn: sqlite3.Connection = Depends(get_db),
     _: None = Depends(require_admin),
 ):
+    q = body.q
     """Export item metadata as CSV, honoring the same search filter the
     dashboard uses (empty q = all items). title/note/tags are editable on
     re-import; the remaining columns are reference-only."""
@@ -405,20 +412,22 @@ def bulk_unfavorite(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _
 
 @router.post("/archive")
 def bulk_archive_items(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
-    buffer = BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+    tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
+    tmp_path = Path(tmp.name)
+    tmp.close()
+    with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for item_id in body.item_ids:
             item = get_item(conn, item_id)
             if item:
                 root = _library_root(conn, item)
                 _write_item_to_zip(zf, item, root, prefix=f"{item_id}/")
-    buffer.seek(0)
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return StreamingResponse(
-        buffer,
+    return FileResponse(
+        tmp_path,
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="items_bulk_{timestamp}.zip"'},
+        filename=f"items_bulk_{timestamp}.zip",
+        background=BackgroundTask(tmp_path.unlink, missing_ok=True),
     )
 
 
@@ -507,6 +516,20 @@ def raw_file(item_id: str, filename: str, conn: sqlite3.Connection = Depends(get
     )
 
 
+_LZ4_CHUNK = 1024 * 1024  # 1 MiB
+
+
+def _write_lz4_decompressed(zf: zipfile.ZipFile, src: Path, arcname: str) -> None:
+    """Stream-decompress an lz4 file straight into a zip entry so neither the
+    compressed nor the decompressed payload is fully buffered in memory."""
+    with lz4.frame.open(src, "rb") as fin, zf.open(arcname, "w") as zout:
+        while True:
+            chunk = fin.read(_LZ4_CHUNK)
+            if not chunk:
+                break
+            zout.write(chunk)
+
+
 def _write_item_to_zip(zf: zipfile.ZipFile, item: dict[str, Any], root: Path, prefix: str = "") -> None:
     other_files = _json_field(item.get("other_files"))
     if item.get("preview_path"):
@@ -518,7 +541,7 @@ def _write_item_to_zip(zf: zipfile.ZipFile, item: dict[str, Any], root: Path, pr
         if not file_path.exists():
             continue
         if f.lower().endswith(".lz4"):
-            zf.writestr(f"{prefix}{Path(f[:-4]).name}", lz4.frame.decompress(file_path.read_bytes()))
+            _write_lz4_decompressed(zf, file_path, f"{prefix}{Path(f[:-4]).name}")
         else:
             zf.write(file_path, f"{prefix}{Path(f).name}")
 
@@ -530,15 +553,17 @@ def archive_item(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: st
         raise HTTPException(status_code=404, detail="item not found")
 
     root = _library_root(conn, item)
-    buffer = BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+    tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
+    tmp_path = Path(tmp.name)
+    tmp.close()
+    with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf:
         _write_item_to_zip(zf, item, root)
-    buffer.seek(0)
 
-    return StreamingResponse(
-        buffer,
+    return FileResponse(
+        tmp_path,
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{item_id}.zip"'},
+        filename=f"{item_id}.zip",
+        background=BackgroundTask(tmp_path.unlink, missing_ok=True),
     )
 
 

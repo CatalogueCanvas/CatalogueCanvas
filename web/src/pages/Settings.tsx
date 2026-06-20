@@ -511,9 +511,9 @@ export function Settings() {
             </div>
           </div>
           <div className="cc-row-tight" style={{ marginTop: 'var(--space-4)' }}>
-            <a className="cc-btn" href="/api/settings/export/db" download>Download database backup</a>
-            <a className="cc-btn" href="/api/settings/export/all" download>Download full backup (db + storage)</a>
-            <a className="cc-btn" href="/api/settings/diagnostics" download>Download diagnostic report</a>
+            <button type="button" className="cc-btn" onClick={() => api.exportDatabase().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download database backup</button>
+            <button type="button" className="cc-btn" onClick={() => api.exportFullBackup().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download full backup (db + storage)</button>
+            <button type="button" className="cc-btn" onClick={() => api.downloadDiagnostics().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download diagnostic report</button>
           </div>
           <p className="cc-hint">Diagnostic report is a redacted Markdown summary (versions, masked config, database counts) for attaching to a GitHub issue. No secrets are included.</p>
         </section>
@@ -527,7 +527,7 @@ export function Settings() {
           </p>
 
           <div className="cc-row-tight">
-            <a className="cc-btn" href={api.exportItemsCsvUrl()} download>Download metadata CSV</a>
+            <button type="button" className="cc-btn" onClick={() => api.exportItemsCsv().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download metadata CSV</button>
             <label className="cc-btn">
               Choose CSV to import…
               <input

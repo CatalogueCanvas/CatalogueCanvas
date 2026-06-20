@@ -28,6 +28,7 @@ class Settings:
         self.max_upload_bytes = int(os.environ.get("CC_MAX_UPLOAD_BYTES", str(1024 * 1024 * 1024)))
         self.max_zip_member_bytes = int(os.environ.get("CC_MAX_ZIP_MEMBER_BYTES", str(500 * 1024 * 1024)))
         self.max_zip_total_bytes = int(os.environ.get("CC_MAX_ZIP_TOTAL_BYTES", str(1024 * 1024 * 1024)))
+        self.max_zip_entries = int(os.environ.get("CC_MAX_ZIP_ENTRIES", "10000"))
         self.git_sha = os.environ.get("CC_GIT_SHA", "unknown")
         self.build_date = os.environ.get("CC_BUILD_DATE", "unknown")
 
