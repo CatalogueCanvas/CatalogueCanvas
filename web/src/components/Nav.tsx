@@ -47,7 +47,7 @@ export function Nav() {
         <NavItem to="/collections" label="Collections" icon="collections" />
         <NavItem to="/portfolios" label="Portfolios" icon="portfolios" />
         {isAdmin && <NavItem to="/upload" label="Upload" icon="upload" />}
-        {isAdmin && <NavItem to="/settings" label="Settings" icon="settings" />}
+        {isAdmin && <NavItem to="/settings" label="Settings/Admin" icon="settings" />}
       </div>
       <div className="cc-nav-spacer" />
       {authenticated && (

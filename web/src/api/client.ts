@@ -234,6 +234,70 @@ export const getAppearance = () =>
 export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' | 'llm_model' | 'llm_item_type' | 'llm_summary_focus' | 'llm_bullet_count' | 'llm_bullet_max_words' | 'llm_auto_generate' | 'llm_prompt_template' | 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled' | 'multi_user_enabled'>>) =>
   request<AppSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(fields) })
 
+// --- CSV batch metadata round-trip ---
+export interface CsvFieldChange<T> {
+  old: T
+  new: T
+}
+
+export interface CsvRowChange {
+  id: string
+  title?: CsvFieldChange<string>
+  note?: CsvFieldChange<string>
+  tags?: CsvFieldChange<string[]>
+}
+
+export interface CsvPreview {
+  to_update: CsvRowChange[]
+  skipped: string[]
+  unchanged: string[]
+  total_rows: number
+}
+
+export interface CsvApplyResult {
+  updated: string[]
+  skipped: string[]
+  unchanged: string[]
+  backup: string | null
+}
+
+export const exportItemsCsvUrl = (q?: string) =>
+  q ? `/api/items/export/csv?q=${encodeURIComponent(q)}` : '/api/items/export/csv'
+
+const postCsv = async <T>(path: string, file: File): Promise<T> => {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(path, { method: 'POST', credentials: 'include', body: form })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new ApiError(res.status, body.detail || res.statusText)
+  }
+  return res.json()
+}
+
+export const previewCsvImport = (file: File) =>
+  postCsv<CsvPreview>('/api/items/import/csv/preview', file)
+
+export const applyCsvImport = (file: File) =>
+  postCsv<CsvApplyResult>('/api/items/import/csv', file)
+
+export interface CsvBackup {
+  filename: string
+  size: number
+  created_at: string
+}
+
+export const DELETE_BACKUP_CONFIRM = 'delete metadata backup'
+
+export const listCsvBackups = () =>
+  request<{ backups: CsvBackup[] }>('/api/items/import/csv/backups')
+
+export const deleteCsvBackup = (filename: string, confirm: string) =>
+  request<{ ok: boolean }>(`/api/items/import/csv/backups/${encodeURIComponent(filename)}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ confirm }),
+  })
+
 export const itemArchiveUrl = (id: string) => `/api/items/${id}/archive`
 
 export const itemMetadataUrl = (id: string) => `/api/items/${id}/metadata`

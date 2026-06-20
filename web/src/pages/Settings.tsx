@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as api from '../api/client'
-import type { Accent, AppSettings, Density, Library, NavLayout, Theme } from '../api/client'
-import { ApiError } from '../api/client'
+import type { Accent, AppSettings, CsvApplyResult, CsvBackup, CsvPreview, Density, Library, NavLayout, Theme } from '../api/client'
+import { ApiError, DELETE_BACKUP_CONFIRM } from '../api/client'
 import { ACCENT_PRESETS, useAppearance } from '../api/appearance'
 import { UsersPanel } from '../components/UsersPanel'
 
@@ -56,6 +56,72 @@ export function Settings() {
 
   const refreshLibraries = () => api.listLibraries().then(setLibraries).catch(() => {})
   useEffect(() => { refreshLibraries() }, [])
+
+  // --- CSV batch metadata ---
+  const csvInputRef = useRef<HTMLInputElement>(null)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [csvPreview, setCsvPreview] = useState<CsvPreview | null>(null)
+  const [csvResult, setCsvResult] = useState<CsvApplyResult | null>(null)
+  const [csvBusy, setCsvBusy] = useState(false)
+  const [csvError, setCsvError] = useState('')
+  const [backups, setBackups] = useState<CsvBackup[]>([])
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+
+  const refreshBackups = () => api.listCsvBackups().then((r) => setBackups(r.backups)).catch(() => {})
+  useEffect(() => { refreshBackups() }, [])
+
+  const startDelete = (filename: string) => {
+    setDeleteTarget(filename)
+    setDeleteConfirm('')
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleteConfirm !== DELETE_BACKUP_CONFIRM) return
+    try {
+      await api.deleteCsvBackup(deleteTarget, deleteConfirm)
+      setDeleteTarget(null)
+      setDeleteConfirm('')
+      refreshBackups()
+    } catch (err) {
+      setCsvError(err instanceof ApiError ? err.message : 'delete failed')
+    }
+  }
+
+  const onCsvSelected = async (file: File | null) => {
+    setCsvFile(file)
+    setCsvPreview(null)
+    setCsvResult(null)
+    setCsvError('')
+    if (!file) return
+    setCsvBusy(true)
+    try {
+      setCsvPreview(await api.previewCsvImport(file))
+    } catch (err) {
+      setCsvError(err instanceof ApiError ? err.message : 'preview failed')
+    } finally {
+      setCsvBusy(false)
+    }
+  }
+
+  const applyCsv = async () => {
+    if (!csvFile) return
+    setCsvBusy(true)
+    setCsvError('')
+    try {
+      const result = await api.applyCsvImport(csvFile)
+      setCsvResult(result)
+      setCsvPreview(null)
+      setCsvFile(null)
+      if (csvInputRef.current) csvInputRef.current.value = ''
+      api.getSettings().then(setSettings).catch(() => {})
+      refreshBackups()
+    } catch (err) {
+      setCsvError(err instanceof ApiError ? err.message : 'import failed')
+    } finally {
+      setCsvBusy(false)
+    }
+  }
 
   const createLib = async () => {
     if (!libName.trim() || !libPath.trim()) return
@@ -133,7 +199,7 @@ export function Settings() {
       <div className="cc-page-header">
         <div>
           <p className="cc-kicker">Configure</p>
-          <h1 className="cc-h1">Settings</h1>
+          <h1 className="cc-h1">Settings/Admin</h1>
         </div>
       </div>
 
@@ -450,6 +516,164 @@ export function Settings() {
             <a className="cc-btn" href="/api/settings/diagnostics" download>Download diagnostic report</a>
           </div>
           <p className="cc-hint">Diagnostic report is a redacted Markdown summary (versions, masked config, database counts) for attaching to a GitHub issue. No secrets are included.</p>
+        </section>
+
+        <section className="cc-panel">
+          <h2 className="cc-h2" style={{ marginBottom: 'var(--space-2)' }}>Batch metadata (CSV)</h2>
+          <p className="cc-hint" style={{ marginBottom: 'var(--space-4)' }}>
+            Download a CSV of all item metadata, edit <strong>title</strong>, <strong>note</strong> and <strong>tags</strong> in
+            any spreadsheet, then re-upload to apply the changes. Other columns are for reference only and are ignored on import.
+            Tags are separated by <code>;</code>. Rows are matched by <code>id</code>; rows with an unknown or blank id are skipped.
+          </p>
+
+          <div className="cc-row-tight">
+            <a className="cc-btn" href={api.exportItemsCsvUrl()} download>Download metadata CSV</a>
+            <label className="cc-btn">
+              Choose CSV to import…
+              <input
+                ref={csvInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                style={{ display: 'none' }}
+                onChange={(e) => onCsvSelected(e.target.files?.[0] ?? null)}
+                disabled={csvBusy}
+              />
+            </label>
+            {csvFile && <span className="cc-hint">{csvFile.name}</span>}
+          </div>
+
+          {csvError && <div className="error-text">{csvError}</div>}
+
+          {csvPreview && (
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <p
+                style={{
+                  margin: '0 0 var(--space-3)',
+                  padding: 'var(--space-3)',
+                  borderRadius: 'var(--radius-btn)',
+                  border: '1px solid color-mix(in oklab, var(--danger) 40%, var(--border))',
+                  background: 'color-mix(in oklab, var(--danger) 8%, transparent)',
+                  color: 'var(--danger)',
+                  fontSize: '0.85rem',
+                }}
+              >
+                ⚠ This will overwrite title/note/tags on {csvPreview.to_update.length} matched item(s).
+                A compressed backup of the current values is saved before any changes are applied.
+              </p>
+              <p className="cc-hint">
+                {csvPreview.total_rows} row(s) read — {csvPreview.to_update.length} to update,
+                {' '}{csvPreview.unchanged.length} unchanged, {csvPreview.skipped.length} skipped (unknown/blank id).
+              </p>
+              {csvPreview.to_update.length > 0 && (
+                <table style={{ marginTop: 'var(--space-3)', width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                      <th>Item</th><th>Field</th><th>Old</th><th>New</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvPreview.to_update.flatMap((c) =>
+                      (['title', 'note', 'tags'] as const)
+                        .filter((f) => c[f])
+                        .map((f) => {
+                          const change = c[f]!
+                          const fmt = (v: string | string[]) => (Array.isArray(v) ? v.join(', ') : v) || '—'
+                          return (
+                            <tr key={`${c.id}-${f}`}>
+                              <td>{c.id}</td>
+                              <td>{f}</td>
+                              <td>{fmt(change.old)}</td>
+                              <td>{fmt(change.new)}</td>
+                            </tr>
+                          )
+                        })
+                    )}
+                  </tbody>
+                </table>
+              )}
+              <div className="cc-row-tight" style={{ marginTop: 'var(--space-4)' }}>
+                <button
+                  className="cc-btn cc-btn--primary"
+                  onClick={applyCsv}
+                  disabled={csvBusy || csvPreview.to_update.length === 0}
+                >
+                  Apply changes
+                </button>
+                <button className="cc-btn" onClick={() => onCsvSelected(null)} disabled={csvBusy}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {csvResult && (
+            <p className="cc-hint" style={{ marginTop: 'var(--space-4)' }}>
+              Applied: {csvResult.updated.length} updated, {csvResult.skipped.length} skipped.
+              {csvResult.backup && <> Backup saved to <code>backups/{csvResult.backup}</code>.</>}
+            </p>
+          )}
+
+          {backups.length > 0 && (
+            <div style={{ marginTop: 'var(--space-5)' }}>
+              <span className="cc-label" style={{ display: 'block', marginBottom: 'var(--space-2)' }}>Metadata backups</span>
+              <p className="cc-hint" style={{ marginBottom: 'var(--space-3)' }}>
+                Compressed snapshots taken before each import (most recent {backups.length}). Keep these until you are sure an import is correct.
+              </p>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                    <th>Backup</th><th>Created</th><th>Size</th><th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {backups.map((b) => (
+                    <tr key={b.filename} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td><code>{b.filename}</code></td>
+                      <td>{new Date(b.created_at).toLocaleString()}</td>
+                      <td>{(b.size / 1024).toFixed(1)} KB</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button className="cc-btn cc-btn--sm cc-btn--danger" onClick={() => startDelete(b.filename)}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {deleteTarget && (
+            <div
+              style={{
+                marginTop: 'var(--space-4)',
+                padding: 'var(--space-4)',
+                borderRadius: 'var(--radius-btn)',
+                border: '1px solid color-mix(in oklab, var(--danger) 40%, var(--border))',
+                background: 'color-mix(in oklab, var(--danger) 8%, transparent)',
+              }}
+            >
+              <p style={{ margin: '0 0 var(--space-3)', color: 'var(--danger)', fontSize: '0.9rem' }}>
+                Permanently delete <code>{deleteTarget}</code>? This cannot be undone.
+              </p>
+              <p className="cc-hint" style={{ marginBottom: 'var(--space-2)' }}>
+                To confirm, type <strong>{DELETE_BACKUP_CONFIRM}</strong> below.
+              </p>
+              <div className="cc-row-tight">
+                <input
+                  className="cc-input"
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder={DELETE_BACKUP_CONFIRM}
+                  autoFocus
+                />
+                <button
+                  className="cc-btn cc-btn--danger"
+                  onClick={confirmDelete}
+                  disabled={deleteConfirm !== DELETE_BACKUP_CONFIRM}
+                >
+                  Delete this backup
+                </button>
+                <button className="cc-btn" onClick={() => { setDeleteTarget(null); setDeleteConfirm('') }}>Cancel</button>
+              </div>
+            </div>
+          )}
         </section>
       </div>
     </div>

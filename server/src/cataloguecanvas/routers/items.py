@@ -1,9 +1,10 @@
 from __future__ import annotations
+import csv
 import json
 import sqlite3
 import zipfile
 from datetime import datetime, timezone
-from io import BytesIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Any, Optional
 
@@ -31,6 +32,15 @@ from ..settings import settings
 from .auth import get_db
 
 router = APIRouter(prefix="/api/items", tags=["items"])
+
+
+# CSV round-trip: only title/note/tags are read back on import. The remaining
+# columns are exported for reference/context but are ignored when re-uploaded.
+CSV_EDITABLE_COLUMNS = ["title", "note", "tags"]
+CSV_READONLY_COLUMNS = ["mime_type", "ingested_at", "collection_ids"]
+CSV_COLUMNS = ["id", *CSV_EDITABLE_COLUMNS, *CSV_READONLY_COLUMNS]
+CSV_TAGS_SEP = "; "
+CSV_BACKUP_KEEP = 20
 
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".tiff", ".tif"}
@@ -92,9 +102,227 @@ def _enrich(item: dict[str, Any]) -> dict[str, Any]:
     return item
 
 
+def _tags_to_cell(tags: Any) -> str:
+    tags = _json_field(tags)
+    if isinstance(tags, list):
+        return CSV_TAGS_SEP.join(str(t) for t in tags)
+    return str(tags or "")
+
+
+def _cell_to_tags(cell: str) -> list[str]:
+    parts = [t.strip() for t in (cell or "").replace(",", ";").split(";")]
+    return [t for t in parts if t]
+
+
+def _csv_changes(conn: sqlite3.Connection, file_bytes: bytes) -> dict[str, Any]:
+    """Parse an uploaded CSV and compute the change set against the DB without
+    writing. Rows are matched on `id`; unknown/blank ids are skipped. Only
+    title/note/tags are considered."""
+    text = file_bytes.decode("utf-8-sig", errors="replace")
+    reader = csv.DictReader(StringIO(text))
+    to_update: list[dict[str, Any]] = []
+    skipped: list[str] = []
+    unchanged: list[str] = []
+    total = 0
+    for row in reader:
+        total += 1
+        item_id = (row.get("id") or "").strip()
+        if not item_id:
+            skipped.append("")
+            continue
+        item = get_item(conn, item_id)
+        if not item:
+            skipped.append(item_id)
+            continue
+
+        diff: dict[str, Any] = {"id": item_id}
+        # title
+        if "title" in row:
+            new_title = (row.get("title") or "").strip()
+            old_title = item.get("title") or ""
+            if new_title != old_title:
+                diff["title"] = {"old": old_title, "new": new_title}
+        # note
+        if "note" in row:
+            new_note = row.get("note") or ""
+            old_note = item.get("note") or ""
+            if new_note != old_note:
+                diff["note"] = {"old": old_note, "new": new_note}
+        # tags
+        if "tags" in row:
+            new_tags = _cell_to_tags(row.get("tags") or "")
+            old_tags = _json_field(item.get("tags")) or []
+            if not isinstance(old_tags, list):
+                old_tags = []
+            if new_tags != old_tags:
+                diff["tags"] = {"old": old_tags, "new": new_tags}
+
+        if len(diff) > 1:
+            to_update.append(diff)
+        else:
+            unchanged.append(item_id)
+
+    return {"to_update": to_update, "skipped": skipped, "unchanged": unchanged, "total_rows": total}
+
+
+def _write_csv_backup(conn: sqlite3.Connection, item_ids: list[str]) -> str:
+    """Snapshot current title/note/tags for the given items to a timestamped,
+    lz4-compressed JSON file under CC_DATA_DIR/backups. Returns the filename.
+    Keeps only the most recent CSV_BACKUP_KEEP backups."""
+    snapshot = []
+    for item_id in item_ids:
+        item = get_item(conn, item_id)
+        if not item:
+            continue
+        snapshot.append({
+            "id": item_id,
+            "title": item.get("title") or "",
+            "note": item.get("note") or "",
+            "tags": _json_field(item.get("tags")) or [],
+        })
+
+    backup_dir = settings.data_dir / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    filename = f"csv-import-{timestamp}.json.lz4"
+    payload = json.dumps(snapshot, ensure_ascii=False).encode("utf-8")
+    (backup_dir / filename).write_bytes(lz4.frame.compress(payload))
+
+    existing = sorted(backup_dir.glob("csv-import-*.json.lz4"))
+    for stale in existing[:-CSV_BACKUP_KEEP]:
+        stale.unlink(missing_ok=True)
+
+    return filename
+
+
 @router.get("")
 def list_items(conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
     return [_enrich(i) for i in get_all_items(conn)]
+
+
+@router.get("/export/csv")
+def export_csv(
+    q: str = "",
+    conn: sqlite3.Connection = Depends(get_db),
+    _: None = Depends(require_admin),
+):
+    """Export item metadata as CSV, honoring the same search filter the
+    dashboard uses (empty q = all items). title/note/tags are editable on
+    re-import; the remaining columns are reference-only."""
+    items = search_items(conn, q) if q else get_all_items(conn)
+    buffer = StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(CSV_COLUMNS)
+    for item in items:
+        writer.writerow([
+            item.get("id") or "",
+            item.get("title") or "",
+            item.get("note") or "",
+            _tags_to_cell(item.get("tags")),
+            item.get("mime_type") or "",
+            item.get("ingested_at") or "",
+            CSV_TAGS_SEP.join(item.get("collection_ids") or []),
+        ])
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="catalogue-metadata-{timestamp}.csv"'},
+    )
+
+
+@router.post("/import/csv/preview")
+async def preview_csv_import(
+    file: UploadFile = File(...),
+    conn: sqlite3.Connection = Depends(get_db),
+    _: None = Depends(require_admin),
+):
+    """Dry run: parse the CSV and report what would change. No writes."""
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="only .csv files are supported")
+    data = await file.read()
+    return _csv_changes(conn, data)
+
+
+@router.post("/import/csv")
+async def apply_csv_import(
+    file: UploadFile = File(...),
+    conn: sqlite3.Connection = Depends(get_db),
+    _: None = Depends(require_admin),
+):
+    """Apply title/note/tags changes from the CSV. Takes a compressed backup of
+    affected items' current metadata before writing."""
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="only .csv files are supported")
+    data = await file.read()
+    changes = _csv_changes(conn, data)
+
+    affected = [c["id"] for c in changes["to_update"]]
+    backup = _write_csv_backup(conn, affected) if affected else None
+
+    updated: list[str] = []
+    for change in changes["to_update"]:
+        fields: dict[str, Any] = {}
+        if "title" in change:
+            fields["title"] = change["title"]["new"]
+        if "note" in change:
+            fields["note"] = change["note"]["new"]
+        if "tags" in change:
+            fields["tags"] = change["tags"]["new"]
+        if fields:
+            update_item_meta(conn, change["id"], fields)
+            updated.append(change["id"])
+
+    return {
+        "updated": updated,
+        "skipped": [s for s in changes["skipped"] if s],
+        "unchanged": changes["unchanged"],
+        "backup": backup,
+    }
+
+
+DELETE_BACKUP_CONFIRM = "delete metadata backup"
+
+
+def _backup_dir() -> Path:
+    return settings.data_dir / "backups"
+
+
+@router.get("/import/csv/backups")
+def list_csv_backups(_: None = Depends(require_admin)):
+    """List the lz4 metadata backups written before CSV imports, newest first."""
+    backup_dir = _backup_dir()
+    if not backup_dir.exists():
+        return {"backups": []}
+    backups = []
+    for path in sorted(backup_dir.glob("csv-import-*.json.lz4"), reverse=True):
+        stat = path.stat()
+        backups.append({
+            "filename": path.name,
+            "size": stat.st_size,
+            "created_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(timespec="seconds"),
+        })
+    return {"backups": backups}
+
+
+class DeleteBackup(BaseModel):
+    confirm: str
+
+
+@router.delete("/import/csv/backups/{filename}")
+def delete_csv_backup(filename: str, body: DeleteBackup, _: None = Depends(require_admin)):
+    """Delete a single metadata backup. Requires a typed confirmation phrase
+    (GitHub-style) so deletion can't happen by accident."""
+    if body.confirm.strip() != DELETE_BACKUP_CONFIRM:
+        raise HTTPException(status_code=400, detail=f'type "{DELETE_BACKUP_CONFIRM}" to confirm')
+    # Guard against path traversal: only accept the bare expected filename shape.
+    if Path(filename).name != filename or not filename.startswith("csv-import-") or not filename.endswith(".json.lz4"):
+        raise HTTPException(status_code=400, detail="invalid backup filename")
+    target = _backup_dir() / filename
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="backup not found")
+    target.unlink()
+    return {"ok": True}
 
 
 @router.get("/search")
