@@ -83,6 +83,13 @@ CREATE TABLE IF NOT EXISTS libraries (
     is_default INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS sessions (
+    sid        TEXT PRIMARY KEY,
+    role       TEXT NOT NULL,
+    username   TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
 """
 
 
@@ -470,6 +477,26 @@ def is_public_storage_path(conn: sqlite3.Connection, library_id: str, rel_path: 
         if row["library_id"] == library_id and row["preview_path"] == rel_path:
             return True
     return False
+
+
+# --- sessions ---
+
+def create_session(conn: sqlite3.Connection, sid: str, role: str, username: Optional[str]) -> None:
+    conn.execute(
+        "INSERT INTO sessions (sid, role, username) VALUES (?, ?, ?)",
+        (sid, role, username),
+    )
+    conn.commit()
+
+
+def session_exists(conn: sqlite3.Connection, sid: str) -> bool:
+    row = conn.execute("SELECT 1 FROM sessions WHERE sid = ?", (sid,)).fetchone()
+    return row is not None
+
+
+def delete_session(conn: sqlite3.Connection, sid: str) -> None:
+    conn.execute("DELETE FROM sessions WHERE sid = ?", (sid,))
+    conn.commit()
 
 
 # --- admin ---

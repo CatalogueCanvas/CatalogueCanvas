@@ -1,4 +1,5 @@
 from __future__ import annotations
+import secrets
 import sqlite3
 import time
 from typing import Optional
@@ -7,15 +8,17 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from ..auth import (
+    CSRF_COOKIE,
     SESSION_COOKIE,
     SESSION_MAX_AGE,
     create_session_token,
     multi_user_enabled,
     session_role,
+    session_sid,
     session_username,
     verify_login,
 )
-from ..db import get_connection
+from ..db import delete_session, get_connection
 from ..settings import settings
 
 router = APIRouter(prefix="/api", tags=["auth"])
@@ -56,7 +59,7 @@ def login(body: LoginRequest, request: Request, response: Response, conn: sqlite
     _failed_attempts.pop(client_ip, None)
 
     username = body.username if multi_user_enabled(conn) else settings.admin_username
-    token = create_session_token(role, username)
+    token = create_session_token(conn, role, username)
     response.set_cookie(
         SESSION_COOKIE,
         token,
@@ -65,12 +68,27 @@ def login(body: LoginRequest, request: Request, response: Response, conn: sqlite
         samesite="strict",
         secure=settings.cookie_secure,
     )
+    # Double-submit CSRF token: readable by JS so the client can echo it in a
+    # header; SameSite=strict keeps it from leaking cross-site.
+    csrf_token = secrets.token_urlsafe(24)
+    response.set_cookie(
+        CSRF_COOKIE,
+        csrf_token,
+        max_age=SESSION_MAX_AGE,
+        httponly=False,
+        samesite="strict",
+        secure=settings.cookie_secure,
+    )
     return {"ok": True, "role": role, "username": username}
 
 
 @router.post("/logout")
-def logout(response: Response):
+def logout(request: Request, response: Response, conn: sqlite3.Connection = Depends(get_db)):
+    sid = session_sid(request.cookies.get(SESSION_COOKIE))
+    if sid:
+        delete_session(conn, sid)
     response.delete_cookie(SESSION_COOKIE)
+    response.delete_cookie(CSRF_COOKIE)
     return {"ok": True}
 
 

@@ -107,10 +107,31 @@ class ApiError extends Error {
   }
 }
 
+const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
+function readCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'))
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+// Attach the double-submit CSRF header for state-changing requests so the
+// server can match it against the cc_csrf cookie.
+function csrfHeaders(method?: string): Record<string, string> {
+  if (!method || !UNSAFE_METHODS.has(method.toUpperCase())) return {}
+  const token = readCookie('cc_csrf')
+  return token ? { 'X-CSRF-Token': token } : {}
+}
+
+export { csrfHeaders }
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(path, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...csrfHeaders(options.method),
+      ...(options.headers || {}),
+    },
     ...options,
   })
   if (!res.ok) {
@@ -173,7 +194,7 @@ export const uploadItem = async (file: File, libraryId?: string): Promise<{ item
   const form = new FormData()
   form.append('file', file)
   if (libraryId) form.append('library_id', libraryId)
-  const res = await fetch('/api/items/upload', { method: 'POST', credentials: 'include', body: form })
+  const res = await fetch('/api/items/upload', { method: 'POST', credentials: 'include', headers: csrfHeaders('POST'), body: form })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new ApiError(res.status, body.detail || res.statusText)
@@ -267,7 +288,7 @@ export const exportItemsCsvUrl = (q?: string) =>
 const postCsv = async <T>(path: string, file: File): Promise<T> => {
   const form = new FormData()
   form.append('file', file)
-  const res = await fetch(path, { method: 'POST', credentials: 'include', body: form })
+  const res = await fetch(path, { method: 'POST', credentials: 'include', headers: csrfHeaders('POST'), body: form })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new ApiError(res.status, body.detail || res.statusText)
@@ -337,7 +358,7 @@ export const downloadBulkArchive = async (item_ids: string[]) => {
   const res = await fetch('/api/items/archive', {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders('POST') },
     body: JSON.stringify({ item_ids }),
   })
   if (!res.ok) {

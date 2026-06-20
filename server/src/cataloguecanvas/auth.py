@@ -1,4 +1,5 @@
 from __future__ import annotations
+import secrets
 import sqlite3
 from typing import Optional
 from urllib.parse import urlparse
@@ -7,13 +8,22 @@ from fastapi import HTTPException, Request
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 from passlib.context import CryptContext
 
-from .db import get_admin_hash, get_settings, get_user_by_username, set_admin_hash
+from .db import (
+    get_admin_hash,
+    get_connection,
+    get_settings,
+    get_user_by_username,
+    session_exists,
+    set_admin_hash,
+)
 from .settings import settings
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 SESSION_COOKIE = "cc_session"
 SESSION_MAX_AGE = 60 * 60 * 24 * 30  # 30 days
+CSRF_COOKIE = "cc_csrf"
+CSRF_HEADER = "x-csrf-token"
 
 
 def _serializer() -> URLSafeTimedSerializer:
@@ -59,8 +69,14 @@ def verify_login(conn: sqlite3.Connection, username: Optional[str], password: st
     return "admin" if verify_admin_password(conn, password) else None
 
 
-def create_session_token(role: str = "admin", username: Optional[str] = None) -> str:
-    return _serializer().dumps({"role": role, "username": username})
+def create_session_token(conn: sqlite3.Connection, role: str = "admin", username: Optional[str] = None) -> str:
+    """Mint a signed token bound to a server-side session row so logout (which
+    deletes the row) revokes the token, not just the cookie."""
+    from .db import create_session
+
+    sid = secrets.token_urlsafe(24)
+    create_session(conn, sid, role, username)
+    return _serializer().dumps({"sid": sid, "role": role, "username": username})
 
 
 def _session_data(token: str | None) -> Optional[dict]:
@@ -72,9 +88,28 @@ def _session_data(token: str | None) -> Optional[dict]:
         return None
 
 
+def session_sid(token: str | None) -> Optional[str]:
+    data = _session_data(token)
+    return data.get("sid") if data else None
+
+
+def _sid_is_active(sid: Optional[str]) -> bool:
+    """A token without a sid is a legacy stateless token; treat it as active for
+    backwards-compat. A token with a sid must still have a live session row."""
+    if sid is None:
+        return True
+    conn = get_connection(settings.db_path)
+    try:
+        return session_exists(conn, sid)
+    finally:
+        conn.close()
+
+
 def session_role(token: str | None) -> Optional[str]:
     data = _session_data(token)
     if data is None:
+        return None
+    if not _sid_is_active(data.get("sid")):
         return None
     # Backwards-compat with legacy {"admin": True} tokens.
     if data.get("admin") is True and "role" not in data:
@@ -94,13 +129,27 @@ def is_valid_session(token: str | None) -> bool:
     return session_role(token) is not None
 
 
+_UNSAFE_METHODS = ("POST", "PUT", "PATCH", "DELETE")
+
+
 def _check_cross_origin(request: Request) -> None:
-    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+    if request.method in _UNSAFE_METHODS:
         origin = request.headers.get("origin") or request.headers.get("referer")
         if origin:
             origin_host = urlparse(origin).netloc
             if origin_host and origin_host != request.url.netloc:
                 raise HTTPException(status_code=403, detail="cross-origin request rejected")
+
+
+def _check_csrf(request: Request) -> None:
+    """Double-submit check: the cc_csrf cookie must match the X-CSRF-Token header
+    on state-changing requests. Defense-in-depth on top of SameSite=strict."""
+    if request.method not in _UNSAFE_METHODS:
+        return
+    cookie = request.cookies.get(CSRF_COOKIE)
+    header = request.headers.get(CSRF_HEADER)
+    if not cookie or not header or not secrets.compare_digest(cookie, header):
+        raise HTTPException(status_code=403, detail="invalid or missing CSRF token")
 
 
 def require_session(request: Request) -> str:
@@ -109,6 +158,7 @@ def require_session(request: Request) -> str:
     if role is None:
         raise HTTPException(status_code=401, detail="not authenticated")
     _check_cross_origin(request)
+    _check_csrf(request)
     return role
 
 
@@ -119,3 +169,4 @@ def require_admin(request: Request) -> None:
     if role != "admin":
         raise HTTPException(status_code=403, detail="admin privileges required")
     _check_cross_origin(request)
+    _check_csrf(request)
