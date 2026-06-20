@@ -1,15 +1,15 @@
 from __future__ import annotations
+import os
 import sqlite3
 import tempfile
 import zipfile
 from datetime import datetime, timezone
-from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
 from starlette.background import BackgroundTask
 from fastapi import APIRouter, Depends
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 from ..auth import require_admin
@@ -90,7 +90,7 @@ def update_settings_endpoint(
     return _settings_response(conn)
 
 
-@router.get("/diagnostics")
+@router.post("/diagnostics")
 def diagnostics(_: None = Depends(require_admin)):
     from ..diagnostics import build_report
 
@@ -103,7 +103,7 @@ def diagnostics(_: None = Depends(require_admin)):
     )
 
 
-@router.get("/export/db")
+@router.post("/export/db")
 def export_db(_: None = Depends(require_admin)):
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
@@ -124,7 +124,7 @@ def export_db(_: None = Depends(require_admin)):
     )
 
 
-@router.get("/export/all")
+@router.post("/export/all")
 def export_all(conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
@@ -138,21 +138,31 @@ def export_all(conn: sqlite3.Connection = Depends(get_db), _: None = Depends(req
     finally:
         db_conn.close()
 
-    buffer = BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+    zip_tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
+    zip_path = Path(zip_tmp.name)
+    zip_tmp.close()
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.write(tmp_path, "catalogue.db")
         for lib in get_all_libraries(conn):
             lib_root = Path(lib["path"])
-            if lib_root.exists():
-                for path in lib_root.rglob("*"):
-                    if path.is_file():
-                        zf.write(path, Path("storage") / lib["id"] / path.relative_to(lib_root))
+            if not lib_root.exists():
+                continue
+            lib_root = lib_root.resolve()
+            for path in lib_root.rglob("*"):
+                # Skip symlinks (and anything they point outside the root) so the
+                # backup can't be tricked into exfiltrating arbitrary files.
+                if path.is_symlink() or not path.is_file():
+                    continue
+                resolved = path.resolve()
+                if resolved != lib_root and not str(resolved).startswith(str(lib_root) + os.sep):
+                    continue
+                zf.write(path, Path("storage") / lib["id"] / path.relative_to(lib_root))
     tmp_path.unlink(missing_ok=True)
-    buffer.seek(0)
 
     filename = f"cataloguecanvas-backup-{timestamp}.zip"
-    return StreamingResponse(
-        buffer,
+    return FileResponse(
+        zip_path,
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        filename=filename,
+        background=BackgroundTask(zip_path.unlink, missing_ok=True),
     )

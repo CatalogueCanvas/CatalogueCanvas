@@ -90,6 +90,14 @@ CREATE TABLE IF NOT EXISTS sessions (
     username   TEXT,
     created_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    scope       TEXT NOT NULL,
+    attempted_at REAL NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_scope ON login_attempts(scope, attempted_at);
 """
 
 
@@ -496,6 +504,34 @@ def session_exists(conn: sqlite3.Connection, sid: str) -> bool:
 
 def delete_session(conn: sqlite3.Connection, sid: str) -> None:
     conn.execute("DELETE FROM sessions WHERE sid = ?", (sid,))
+    conn.commit()
+
+
+# --- login throttle (durable, survives restart) ---
+
+def count_recent_login_failures(conn: sqlite3.Connection, scope: str, since: float) -> int:
+    row = conn.execute(
+        "SELECT COUNT(*) FROM login_attempts WHERE scope = ? AND attempted_at >= ?",
+        (scope, since),
+    ).fetchone()
+    return int(row[0])
+
+
+def record_login_failure(conn: sqlite3.Connection, scope: str, now: float) -> None:
+    conn.execute(
+        "INSERT INTO login_attempts (scope, attempted_at) VALUES (?, ?)",
+        (scope, now),
+    )
+    conn.commit()
+
+
+def clear_login_failures(conn: sqlite3.Connection, scope: str) -> None:
+    conn.execute("DELETE FROM login_attempts WHERE scope = ?", (scope,))
+    conn.commit()
+
+
+def prune_login_failures(conn: sqlite3.Connection, before: float) -> None:
+    conn.execute("DELETE FROM login_attempts WHERE attempted_at < ?", (before,))
     conn.commit()
 
 

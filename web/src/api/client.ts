@@ -255,6 +255,15 @@ export const getAppearance = () =>
 export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' | 'llm_model' | 'llm_item_type' | 'llm_summary_focus' | 'llm_bullet_count' | 'llm_bullet_max_words' | 'llm_auto_generate' | 'llm_prompt_template' | 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled' | 'multi_user_enabled'>>) =>
   request<AppSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(fields) })
 
+export const exportDatabase = () =>
+  downloadPost('/api/settings/export/db', undefined, 'catalogue.db')
+
+export const exportFullBackup = () =>
+  downloadPost('/api/settings/export/all', undefined, 'cataloguecanvas-backup.zip')
+
+export const downloadDiagnostics = () =>
+  downloadPost('/api/settings/diagnostics', undefined, 'cataloguecanvas-diagnostics.md')
+
 // --- CSV batch metadata round-trip ---
 export interface CsvFieldChange<T> {
   old: T
@@ -282,8 +291,35 @@ export interface CsvApplyResult {
   backup: string | null
 }
 
-export const exportItemsCsvUrl = (q?: string) =>
-  q ? `/api/items/export/csv?q=${encodeURIComponent(q)}` : '/api/items/export/csv'
+// Trigger a browser download from a POST endpoint. Sensitive exports are POST
+// (CSRF-protected) so they can't be fetched with a bare cross-site GET/anchor.
+async function downloadPost(path: string, body?: unknown, fallbackName = 'download'): Promise<void> {
+  const res = await fetch(path, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders('POST') },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}))
+    throw new ApiError(res.status, errBody.detail || res.statusText)
+  }
+  const disposition = res.headers.get('Content-Disposition') || ''
+  const match = disposition.match(/filename="?([^"]+)"?/)
+  const name = match ? match[1] : fallbackName
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+export const exportItemsCsv = (q?: string) =>
+  downloadPost('/api/items/export/csv', { q: q ?? '' }, 'catalogue-metadata.csv')
 
 const postCsv = async <T>(path: string, file: File): Promise<T> => {
   const form = new FormData()

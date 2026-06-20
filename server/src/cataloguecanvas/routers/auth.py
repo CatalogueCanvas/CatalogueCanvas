@@ -18,12 +18,18 @@ from ..auth import (
     session_username,
     verify_login,
 )
-from ..db import delete_session, get_connection
+from ..db import (
+    clear_login_failures,
+    count_recent_login_failures,
+    delete_session,
+    get_connection,
+    prune_login_failures,
+    record_login_failure,
+)
 from ..settings import settings
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
-_failed_attempts: dict[str, list[float]] = {}
 _LOGIN_WINDOW_SECONDS = 300
 _LOGIN_MAX_ATTEMPTS = 5
 
@@ -44,19 +50,22 @@ class LoginRequest(BaseModel):
 @router.post("/login")
 def login(body: LoginRequest, request: Request, response: Response, conn: sqlite3.Connection = Depends(get_db)):
     client_ip = request.client.host if request.client else "unknown"
-    now = time.monotonic()
-    attempts = [t for t in _failed_attempts.get(client_ip, []) if now - t < _LOGIN_WINDOW_SECONDS]
+    # Throttle on IP + attempted username so one noisy IP can't lock out others
+    # and a distributed guess at one account is still bounded.
+    scope = f"{client_ip}|{body.username or ''}"
+    now = time.time()
+    window_start = now - _LOGIN_WINDOW_SECONDS
+    prune_login_failures(conn, window_start)
 
-    if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
+    if count_recent_login_failures(conn, scope, window_start) >= _LOGIN_MAX_ATTEMPTS:
         raise HTTPException(status_code=429, detail="too many login attempts, try again later")
 
     role = verify_login(conn, body.username, body.password)
     if role is None:
-        attempts.append(now)
-        _failed_attempts[client_ip] = attempts
+        record_login_failure(conn, scope, now)
         raise HTTPException(status_code=401, detail="invalid credentials")
 
-    _failed_attempts.pop(client_ip, None)
+    clear_login_failures(conn, scope)
 
     username = body.username if multi_user_enabled(conn) else settings.admin_username
     token = create_session_token(conn, role, username)
