@@ -8,9 +8,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      CC_ADMIN_PASSWORD: ${CC_ADMIN_PASSWORD:-changeme}
+      # No default password: the app fails closed (no admin login) until this is
+      # set, so an unconfigured deployment can't ship a known credential.
+      CC_ADMIN_PASSWORD: ${CC_ADMIN_PASSWORD:?set CC_ADMIN_PASSWORD in your .env}
       CC_SITE_TITLE: ${CC_SITE_TITLE:-CatalogueCanvas}
       CC_SITE_AUTHOR: ${CC_SITE_AUTHOR:-}
-      CC_COOKIE_SECURE: ${CC_COOKIE_SECURE:-false}
+      # Secure cookies by default; set to false only for plain-HTTP LAN access.
+      CC_COOKIE_SECURE: ${CC_COOKIE_SECURE:-true}
     volumes:
       - ./data:/data
