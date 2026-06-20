@@ -5,7 +5,7 @@ set -e
 # and never needs to be baked into the image or supplied manually. Generated
 # once on first boot; reused thereafter.
 DATA_DIR="${CC_DATA_DIR:-/data}"
-KEY_FILE="${CC_SECRET_KEY_FILE:-$DATA_DIR/cc_secret_key.txt}"
+KEY_FILE="${CC_SECRET_KEY_FILE:-$DATA_DIR/secret.key}"
 
 mkdir -p "$DATA_DIR"
 
