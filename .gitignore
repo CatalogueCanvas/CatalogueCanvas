@@ -4,29 +4,25 @@ __pycache__/
 .venv/
 .uv/
 
+# Environment
+.env
+.env.*
+
 # DB and generated artifacts
 *.db
-*.duckdb
 /data/
-/secrets/*.txt
+/secrets/
 output/*
-!output/.gitkeep
-ingestion/*
-!ingestion/.gitkeep
-test/
-config/config.toml
+
+# OS files
+.DS_Store
 
 # Status Bank System
 CLAUDE.md
 CLAUDE-*.md
 .claude/
 
-# design notes for redesign work
+# Design notes for redesign work
 design/
-potential names.md
 legacy/
-analysis potential names.md
 PLAN.md
-secrets/
-AUDIT_Collection.md
-SECURITY_HARDENING_PLAN.md

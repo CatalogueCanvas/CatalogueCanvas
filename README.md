@@ -61,6 +61,27 @@ For local development without Docker:
 
 ### With Docker (recommended)
 
+Create a `.env` file in the project root (alongside `docker-compose.yml`) with at least the admin password:
+
+```dotenv
+# Required: admin login password (app fails closed until this is set)
+CC_ADMIN_PASSWORD=changeme
+
+# Optional
+CC_PORT=8000
+CC_SITE_TITLE=CatalogueCanvas
+CC_SITE_AUTHOR=
+CC_COOKIE_SECURE=true
+```
+
+Docker Compose reads `.env` automatically. Then run:
+
+```bash
+docker compose up -d --build
+```
+
+The `.env` file is gitignored — keep your real secrets out of version control. Alternatively, pass variables inline:
+
 ```bash
 CC_ADMIN_PASSWORD=mysecretpassword docker compose up --build
 ```
