@@ -94,10 +94,11 @@ def session_sid(token: str | None) -> Optional[str]:
 
 
 def _sid_is_active(sid: Optional[str]) -> bool:
-    """A token without a sid is a legacy stateless token; treat it as active for
-    backwards-compat. A token with a sid must still have a live session row."""
+    """A valid token must be bound to a live server-side session row. Tokens
+    without a sid (legacy stateless tokens) can't be revoked, so they are
+    rejected outright rather than trusted for backwards-compat."""
     if sid is None:
-        return True
+        return False
     conn = get_connection(settings.db_path)
     try:
         return session_exists(conn, sid)
@@ -111,9 +112,6 @@ def session_role(token: str | None) -> Optional[str]:
         return None
     if not _sid_is_active(data.get("sid")):
         return None
-    # Backwards-compat with legacy {"admin": True} tokens.
-    if data.get("admin") is True and "role" not in data:
-        return "admin"
     role = data.get("role")
     return role if role in ("admin", "reader") else None
 
