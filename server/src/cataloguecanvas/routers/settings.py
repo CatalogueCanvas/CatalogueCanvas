@@ -8,13 +8,13 @@ from pathlib import Path
 from typing import Optional
 
 from starlette.background import BackgroundTask
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 from ..auth import require_admin
 from ..db import get_all_libraries, get_db_stats, get_settings, set_settings
-from ..llm import default_prompt_template
+from ..llm import LLMError, _normalize_api_url, _validate_api_url, default_prompt_template
 from ..settings import settings
 from .auth import get_db
 
@@ -86,6 +86,14 @@ def update_settings_endpoint(
     _: None = Depends(require_admin),
 ):
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
+    # Re-validate the LLM endpoint here so a non-allowlisted or malformed host is
+    # rejected at save time, not just when a describe call happens to run.
+    api_url = fields.get("llm_api_url")
+    if api_url:
+        try:
+            _validate_api_url(_normalize_api_url(api_url))
+        except LLMError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     set_settings(conn, fields)
     return _settings_response(conn)
 

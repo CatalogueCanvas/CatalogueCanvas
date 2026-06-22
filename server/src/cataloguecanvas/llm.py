@@ -55,11 +55,17 @@ def _normalize_api_url(api_url: str) -> str:
 
 
 def _validate_api_url(api_url: str) -> None:
+    from .settings import settings
+
     parsed = urlparse(api_url)
     if parsed.scheme not in ("http", "https"):
         raise LLMError("api_url must use http or https")
     if not parsed.hostname:
         raise LLMError("api_url is missing a host")
+    if settings.llm_allowed_hosts and parsed.hostname.lower() not in settings.llm_allowed_hosts:
+        raise LLMError(
+            f"api_url host {parsed.hostname!r} is not in CC_LLM_ALLOWED_HOSTS"
+        )
     try:
         infos = socket.getaddrinfo(parsed.hostname, None)
     except socket.gaierror as exc:
