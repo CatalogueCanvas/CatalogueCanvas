@@ -72,6 +72,11 @@ CC_PORT=8000
 CC_SITE_TITLE=CatalogueCanvas
 CC_SITE_AUTHOR=
 CC_COOKIE_SECURE=true
+
+# Optional SSRF guard for the LLM describe feature. When set, the LLM api_url
+# host must match one of these (comma-separated). Add internal hosts explicitly,
+# e.g. CC_LLM_ALLOWED_HOSTS=ollama.lan,192.168.1.50. Unset = no host restriction.
+CC_LLM_ALLOWED_HOSTS=
 ```
 
 Docker Compose reads `.env` automatically. Then run:
