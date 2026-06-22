@@ -39,17 +39,23 @@ def _enrich_portfolio(p: dict[str, Any]) -> dict[str, Any]:
     return p
 
 
+def _visible_to(p: dict[str, Any], role: str) -> bool:
+    """Admins see everything; readers only see portfolios marked 'readers'
+    (a public portfolio is also reader-visible via this flag)."""
+    return role == "admin" or p.get("visibility", "admin") != "admin"
+
+
 # --- Admin endpoints ---
 
 @router.get("/api/portfolios")
-def list_portfolios(conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
-    return [_enrich_portfolio(p) for p in get_all_portfolios(conn)]
+def list_portfolios(conn: sqlite3.Connection = Depends(get_db), role: str = Depends(require_session)):
+    return [_enrich_portfolio(p) for p in get_all_portfolios(conn) if _visible_to(p, role)]
 
 
 @router.get("/api/portfolios/{p_id}")
-def get_portfolio_endpoint(p_id: str, conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
+def get_portfolio_endpoint(p_id: str, conn: sqlite3.Connection = Depends(get_db), role: str = Depends(require_session)):
     p = get_portfolio(conn, p_id)
-    if not p:
+    if not p or not _visible_to(p, role):
         raise HTTPException(status_code=404, detail="portfolio not found")
     return _enrich_portfolio(p)
 
@@ -60,6 +66,7 @@ class PortfolioCreate(BaseModel):
     slug: Optional[str] = None
     item_ids: list[str] = []
     is_public: bool = False
+    visibility: str = "admin"
 
 
 @router.post("/api/portfolios")
@@ -78,6 +85,7 @@ def create_portfolio(body: PortfolioCreate, conn: sqlite3.Connection = Depends(g
         "description": body.description,
         "item_ids": body.item_ids,
         "is_public": int(body.is_public),
+        "visibility": "readers" if body.visibility == "readers" else "admin",
     })
     return _enrich_portfolio(get_portfolio(conn, p_id))
 
@@ -88,6 +96,7 @@ class PortfolioUpdate(BaseModel):
     slug: Optional[str] = None
     item_ids: Optional[list[str]] = None
     is_public: Optional[bool] = None
+    visibility: Optional[str] = None
 
 
 @router.patch("/api/portfolios/{p_id}")
@@ -107,6 +116,10 @@ def update_portfolio(p_id: str, body: PortfolioUpdate, conn: sqlite3.Connection 
     updates["description"] = body.description if body.description is not None else existing["description"]
     updates["item_ids"] = body.item_ids if body.item_ids is not None else _json_field(existing["item_ids"])
     updates["is_public"] = int(body.is_public) if body.is_public is not None else existing["is_public"]
+    if body.visibility is not None:
+        updates["visibility"] = "readers" if body.visibility == "readers" else "admin"
+    else:
+        updates["visibility"] = existing["visibility"]
 
     upsert_portfolio(conn, updates)
     return _enrich_portfolio(get_portfolio(conn, p_id))

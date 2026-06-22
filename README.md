@@ -72,6 +72,11 @@ CC_PORT=8000
 CC_SITE_TITLE=CatalogueCanvas
 CC_SITE_AUTHOR=
 CC_COOKIE_SECURE=true
+
+# Optional SSRF guard for the LLM describe feature. When set, the LLM api_url
+# host must match one of these (comma-separated). Add internal hosts explicitly,
+# e.g. CC_LLM_ALLOWED_HOSTS=ollama.lan,192.168.1.50. Unset = no host restriction.
+CC_LLM_ALLOWED_HOSTS=
 ```
 
 Docker Compose reads `.env` automatically. Then run:
@@ -141,7 +146,7 @@ Environment variables (set via `docker-compose.yml` or your shell):
 - Generate per-item descriptions with a vision-capable LLM: in **Settings**, set an OpenAI-compatible `api_url` and model (an API key can also be entered per-request — used only for that request and never stored).
   - If the LLM server (e.g. LM Studio, Ollama) runs on your host machine and CatalogueCanvas runs in Docker, use `http://host.docker.internal:1234/v1/chat/completions` (not `localhost`) — `localhost` inside the container refers to the container itself, not your host.
 - Create a portfolio, select items, mark it **Public**, and share its `/p/<slug>` link — a slide-deck style presentation viewable without logging in.
-- Export the database or full data directory from **Settings**.
+- Export the database or full data directory from **Settings**. Exports are admin-only and **unencrypted** — store and transfer the downloaded files over a trusted channel.
 
 ## Layout
 

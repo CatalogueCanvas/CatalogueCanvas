@@ -94,7 +94,13 @@ def create_app() -> FastAPI:
         if not lib:
             raise HTTPException(status_code=404, detail="library not found")
         lib_root = Path(lib["path"]).resolve()
-        target = (lib_root / rel_path).resolve()
+        # Reject symlinks anywhere along the requested path so a link planted in
+        # the library can't redirect a read to another in-root (e.g. admin-only)
+        # file. The resolve()+prefix check below already blocks escaping the root.
+        unresolved = lib_root / rel_path
+        if unresolved.is_symlink() or any(p.is_symlink() for p in unresolved.parents if str(p).startswith(str(lib_root))):
+            raise HTTPException(status_code=404, detail="not found")
+        target = unresolved.resolve()
         if target != lib_root and not str(target).startswith(str(lib_root) + os.sep):
             raise HTTPException(status_code=404, detail="not found")
         if not target.is_file():
