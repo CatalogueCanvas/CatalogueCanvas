@@ -21,15 +21,20 @@ def _slugify(text: str) -> str:
     return slug or "collection"
 
 
+def _visible_to(col: dict, role: str) -> bool:
+    """Admins see everything; readers only see collections marked 'readers'."""
+    return role == "admin" or col.get("visibility", "admin") != "admin"
+
+
 @router.get("")
-def list_collections(conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
-    return get_all_collections(conn)
+def list_collections(conn: sqlite3.Connection = Depends(get_db), role: str = Depends(require_session)):
+    return [c for c in get_all_collections(conn) if _visible_to(c, role)]
 
 
 @router.get("/{col_id}")
-def get_collection_endpoint(col_id: str, conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
+def get_collection_endpoint(col_id: str, conn: sqlite3.Connection = Depends(get_db), role: str = Depends(require_session)):
     col = get_collection(conn, col_id)
-    if not col:
+    if not col or not _visible_to(col, role):
         raise HTTPException(status_code=404, detail="collection not found")
     return col
 
@@ -38,6 +43,7 @@ class CollectionCreate(BaseModel):
     title: str
     description: str = ""
     cover_item_id: Optional[str] = None
+    visibility: str = "admin"
     id: Optional[str] = None
 
 
@@ -51,6 +57,7 @@ def create_collection(body: CollectionCreate, conn: sqlite3.Connection = Depends
         "title": body.title,
         "description": body.description,
         "cover_item_id": body.cover_item_id,
+        "visibility": "readers" if body.visibility == "readers" else "admin",
     })
     return get_collection(conn, col_id)
 
@@ -59,6 +66,7 @@ class CollectionUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     cover_item_id: Optional[str] = None
+    visibility: Optional[str] = None
 
 
 @router.patch("/{col_id}")
@@ -74,6 +82,7 @@ def update_collection(col_id: str, body: CollectionUpdate, conn: sqlite3.Connect
         "title": merged["title"],
         "description": merged["description"],
         "cover_item_id": merged["cover_item_id"],
+        "visibility": "readers" if merged.get("visibility") == "readers" else "admin",
     })
     return get_collection(conn, col_id)
 
@@ -90,7 +99,8 @@ def delete_collection_endpoint(col_id: str, conn: sqlite3.Connection = Depends(g
 
 
 @router.get("/{col_id}/items")
-def list_collection_items(col_id: str, conn: sqlite3.Connection = Depends(get_db), _: str = Depends(require_session)):
-    if not get_collection(conn, col_id):
+def list_collection_items(col_id: str, conn: sqlite3.Connection = Depends(get_db), role: str = Depends(require_session)):
+    col = get_collection(conn, col_id)
+    if not col or not _visible_to(col, role):
         raise HTTPException(status_code=404, detail="collection not found")
     return [_enrich(i) for i in get_collection_items(conn, col_id)]

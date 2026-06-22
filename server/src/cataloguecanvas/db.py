@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS collections (
     description   TEXT,
     cover_item_id TEXT,
     is_system     INTEGER NOT NULL DEFAULT 0,
+    visibility    TEXT NOT NULL DEFAULT 'admin',
     created_at    TEXT DEFAULT (datetime('now'))
 );
 
@@ -55,6 +56,7 @@ CREATE TABLE IF NOT EXISTS portfolios (
     description TEXT,
     item_ids    TEXT,
     is_public   INTEGER NOT NULL DEFAULT 0,
+    visibility  TEXT NOT NULL DEFAULT 'admin',
     created_at  TEXT DEFAULT (datetime('now'))
 );
 
@@ -120,6 +122,14 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     collection_cols = {row["name"] for row in conn.execute("PRAGMA table_info(collections)")}
     if "is_system" not in collection_cols:
         conn.execute("ALTER TABLE collections ADD COLUMN is_system INTEGER NOT NULL DEFAULT 0")
+    if "visibility" not in collection_cols:
+        # Existing collections default to admin-only so readers don't suddenly
+        # gain access to data created before visibility control existed.
+        conn.execute("ALTER TABLE collections ADD COLUMN visibility TEXT NOT NULL DEFAULT 'admin'")
+
+    portfolio_cols = {row["name"] for row in conn.execute("PRAGMA table_info(portfolios)")}
+    if "visibility" not in portfolio_cols:
+        conn.execute("ALTER TABLE portfolios ADD COLUMN visibility TEXT NOT NULL DEFAULT 'admin'")
 
     conn.execute("""
         INSERT OR IGNORE INTO item_collections (item_id, collection_id)
@@ -378,13 +388,14 @@ def get_collection_items(conn: sqlite3.Connection, col_id: str) -> list[dict[str
 
 def upsert_collection(conn: sqlite3.Connection, col: dict[str, Any]) -> None:
     conn.execute("""
-        INSERT INTO collections (id, title, description, cover_item_id, is_system)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO collections (id, title, description, cover_item_id, is_system, visibility)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT (id) DO UPDATE SET
             title = excluded.title,
             description = excluded.description,
-            cover_item_id = excluded.cover_item_id
-    """, (col["id"], col.get("title", ""), col.get("description", ""), col.get("cover_item_id"), col.get("is_system", 0)))
+            cover_item_id = excluded.cover_item_id,
+            visibility = excluded.visibility
+    """, (col["id"], col.get("title", ""), col.get("description", ""), col.get("cover_item_id"), col.get("is_system", 0), col.get("visibility", "admin")))
     conn.commit()
 
 
