@@ -2,6 +2,7 @@ from __future__ import annotations
 import hashlib
 import json
 import mimetypes
+import shutil
 import sqlite3
 import tomllib
 import zipfile
@@ -22,6 +23,25 @@ PREVIEW_MIME_PRIORITY = ["image/png", "image/jpeg", "image/tiff", "image/svg+xml
 
 # OS/editor noise that should never be stored as an item file.
 NOISE_BASENAMES = {".ds_store", "thumbs.db", "thumbnails.db", "desktop.ini"}
+
+
+def _read_member_capped(zf: zipfile.ZipFile, name: str, max_bytes: int) -> bytes:
+    """Decompress a member while enforcing a hard byte cap on the *actual*
+    decompressed stream. The pre-flight check trusts the central directory's
+    declared file_size; a crafted zip can lie there, so we also stop reading
+    once a member exceeds the limit instead of buffering it all into memory."""
+    chunks: list[bytes] = []
+    read = 0
+    with zf.open(name) as src:
+        while True:
+            chunk = src.read(1024 * 1024)
+            if not chunk:
+                break
+            read += len(chunk)
+            if read > max_bytes:
+                raise ValueError(f"member {name!r} exceeds max size of {max_bytes} bytes")
+            chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _mime_type(name: str) -> Optional[str]:
@@ -124,6 +144,13 @@ def ingest_zip_bytes(
         if total_size > settings.max_zip_total_bytes:
             raise ValueError(f"zip total uncompressed size exceeds {settings.max_zip_total_bytes} bytes")
 
+        # Refuse to start an extraction we can't finish: a partial write leaves
+        # orphaned files and a half-built item behind.
+        library_path.mkdir(parents=True, exist_ok=True)
+        free = shutil.disk_usage(library_path).free
+        if total_size > free:
+            raise ValueError(f"not enough disk space: need {total_size} bytes, {free} available")
+
         preview_choice, preview_candidates = _select_preview(members)
         if len(preview_candidates) > 1:
             ext = Path(preview_choice[0]).suffix.lstrip(".")
@@ -145,7 +172,7 @@ def ingest_zip_bytes(
         svg_compressed = False
 
         for name in members:
-            member_data = zf.read(name)
+            member_data = _read_member_capped(zf, name, settings.max_zip_member_bytes)
             base_name = Path(name).name
 
             if preview_choice and name == preview_choice[0]:
