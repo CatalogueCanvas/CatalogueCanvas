@@ -53,6 +53,7 @@ html,body{margin:0;padding:0}
 .cc-deck__idxtitle{font-family:var(--font-head);font-weight:var(--head-weight);font-size:16px;letter-spacing:var(--head-tracking);min-width:0;overflow-wrap:anywhere;word-break:break-word}
 .cc-deck__art{display:grid;grid-template-columns:1.5fr 1fr;gap:clamp(28px,5vw,72px);align-items:center}
 .cc-deck__plate{aspect-ratio:4/3;border:1px solid var(--border);border-radius:var(--radius-thumb);background:repeating-linear-gradient(45deg,color-mix(in oklab,var(--text) 5%,var(--surface)) 0 12px,transparent 12px 24px),color-mix(in oklab,var(--accent) 5%,var(--surface-2));display:grid;place-items:center;box-shadow:var(--shadow-lift)}
+.cc-deck__plate:has(img){background:var(--surface)}
 .cc-deck__plate img{max-width:100%;max-height:100%;object-fit:contain}
 .cc-deck__plate span{font-family:var(--font-mono);font-size:12px;color:var(--text-ter)}
 .cc-deck__caption .cc-deck__kicker{margin-bottom:14px}
@@ -129,6 +130,7 @@ html,body{margin:0;padding:0}
 .cc-deck[data-portfolio-style="riso"] .cc-deck__cover .cc-deck__desc{color:var(--text-sec)}
 .cc-deck[data-portfolio-style="riso"] .cc-deck__caption h3{text-transform:uppercase}
 .cc-deck[data-portfolio-style="riso"] .cc-deck__plate{border:1px solid var(--border-strong);border-radius:var(--radius-thumb);background:radial-gradient(circle at 1px 1px,color-mix(in oklab,var(--accent) 55%,transparent) 1px,transparent 1.7px) 0 0/7px 7px,color-mix(in oklab,var(--accent) 10%,var(--surface))}
+.cc-deck[data-portfolio-style="riso"] .cc-deck__plate:has(img){background:var(--surface)}
 .cc-deck[data-portfolio-style="riso"] .cc-tag{border-radius:var(--radius-pill);background:color-mix(in oklab,var(--accent) 18%,transparent);border-color:color-mix(in oklab,var(--accent) 45%,transparent);color:var(--text)}
 
 /* print: one 1920x1080 slide per section */
