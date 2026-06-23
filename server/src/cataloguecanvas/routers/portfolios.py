@@ -183,13 +183,22 @@ def update_portfolio_items(p_id: str, body: PortfolioItemsUpdate, conn: sqlite3.
     return _enrich_portfolio(get_portfolio(conn, p_id))
 
 
+class ExportOptions(BaseModel):
+    quality: int = 85  # webp quality, clamped 40..95
+    max_edge: Optional[int] = None  # longest-edge cap in px; None = original
+
+
 @router.post("/api/portfolios/{p_id}/export")
-def export_portfolio_static(p_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def export_portfolio_static(p_id: str, body: Optional[ExportOptions] = None, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
     """Render the portfolio to a self-contained static site and return it as a zip."""
     p = get_portfolio(conn, p_id)
     if not p:
         raise HTTPException(status_code=404, detail="portfolio not found")
     p = _enrich_portfolio(p)
+
+    opts = body or ExportOptions()
+    quality = max(40, min(95, opts.quality))
+    max_edge = max(480, min(4000, opts.max_edge)) if opts.max_edge else None
 
     items = []
     for item_id in p["item_ids"]:
@@ -206,7 +215,7 @@ def export_portfolio_static(p_id: str, conn: sqlite3.Connection = Depends(get_db
     zip_tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
     zip_path = Path(zip_tmp.name)
     zip_tmp.close()
-    build_static_site(p, items, library_roots, zip_path)
+    build_static_site(p, items, library_roots, zip_path, quality=quality, max_edge=max_edge)
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     safe_slug = re.sub(r"[^a-zA-Z0-9_-]", "-", p["slug"]) or "portfolio"
