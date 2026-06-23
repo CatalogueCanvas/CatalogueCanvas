@@ -250,8 +250,10 @@ export const updatePortfolio = (id: string, fields: Partial<Pick<Portfolio, 'tit
 
 export const deletePortfolio = (id: string) => request<{ ok: boolean }>(`/api/portfolios/${id}`, { method: 'DELETE' })
 
-export const exportPortfolioStatic = (id: string) =>
-  downloadPost(`/api/portfolios/${id}/export`, undefined, 'portfolio-site.zip')
+export const exportPortfolioStatic = (
+  id: string,
+  opts?: { quality?: number; max_edge?: number | null },
+) => downloadPost(`/api/portfolios/${id}/export`, opts ?? undefined, 'portfolio-site.zip')
 
 export const getPublicPortfolio = (slug: string) => request<PublicPortfolio>(`/api/p/${slug}`)
 
