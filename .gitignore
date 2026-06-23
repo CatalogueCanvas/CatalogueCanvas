@@ -14,6 +14,13 @@ __pycache__/
 /secrets/
 output/*
 
+# Test coverage
+coverage.xml
+.coverage
+htmlcov/
+.pytest_cache/
+coverage/
+
 # OS files
 .DS_Store
 
@@ -27,3 +34,4 @@ design/
 legacy/
 PLAN.md
 AUDIT2.md
+secret.toml
