@@ -37,6 +37,8 @@ export interface Collection {
   created_at: string
 }
 
+export type PortfolioStyle = 'ledger' | 'kinetic' | 'brutalist' | 'riso'
+
 export interface Portfolio {
   id: string
   slug: string
@@ -44,6 +46,7 @@ export interface Portfolio {
   description: string
   item_ids: string[]
   is_public: boolean
+  style: PortfolioStyle
   created_at: string
 }
 
@@ -51,6 +54,7 @@ export interface PublicPortfolio {
   title: string
   description: string
   slug: string
+  style: PortfolioStyle
   items: Item[]
 }
 
@@ -236,13 +240,16 @@ export const listPortfolios = () => request<Portfolio[]>('/api/portfolios')
 
 export const getPortfolio = (id: string) => request<Portfolio>(`/api/portfolios/${id}`)
 
-export const createPortfolio = (data: { title: string; description?: string; slug?: string; item_ids?: string[]; is_public?: boolean }) =>
+export const createPortfolio = (data: { title: string; description?: string; slug?: string; item_ids?: string[]; is_public?: boolean; style?: PortfolioStyle }) =>
   request<Portfolio>('/api/portfolios', { method: 'POST', body: JSON.stringify(data) })
 
-export const updatePortfolio = (id: string, fields: Partial<Pick<Portfolio, 'title' | 'description' | 'slug' | 'item_ids' | 'is_public'>>) =>
+export const updatePortfolio = (id: string, fields: Partial<Pick<Portfolio, 'title' | 'description' | 'slug' | 'item_ids' | 'is_public' | 'style'>>) =>
   request<Portfolio>(`/api/portfolios/${id}`, { method: 'PATCH', body: JSON.stringify(fields) })
 
 export const deletePortfolio = (id: string) => request<{ ok: boolean }>(`/api/portfolios/${id}`, { method: 'DELETE' })
+
+export const exportPortfolioStatic = (id: string) =>
+  downloadPost(`/api/portfolios/${id}/export`, undefined, 'portfolio-site.zip')
 
 export const getPublicPortfolio = (slug: string) => request<PublicPortfolio>(`/api/p/${slug}`)
 
