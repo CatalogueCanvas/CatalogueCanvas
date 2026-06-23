@@ -18,6 +18,10 @@ export function PortfolioEdit() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null)
   const [items, setItems] = useState<Item[]>([])
   const [saveState, setSaveState] = useState<SaveState>('idle')
+  // Transient export options — not persisted, only applied on download.
+  const [exportQuality, setExportQuality] = useState(85)
+  const [exportResize, setExportResize] = useState(false)
+  const [exportMaxEdge, setExportMaxEdge] = useState(1280)
   const navigate = useNavigate()
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const latest = useRef<Portfolio | null>(null)
@@ -156,9 +160,40 @@ export function PortfolioEdit() {
           <div className="cc-field">
             <label className="cc-label">Share link</label>
             <div className="cc-sharebox">{shareUrl}</div>
+            <div className="cc-field">
+              <label className="cc-label" htmlFor="export-quality">Image quality<span className="cc-count">({exportQuality})</span></label>
+              <input
+                id="export-quality"
+                type="range"
+                min={40}
+                max={95}
+                value={exportQuality}
+                onChange={(e) => setExportQuality(Number(e.target.value))}
+              />
+            </div>
+            <label className="cc-check">
+              <input type="checkbox" checked={exportResize} onChange={(e) => setExportResize(e.target.checked)} />
+              <span className="cc-check__box" />
+              Resize images for screen
+            </label>
+            {exportResize && (
+              <div className="cc-field">
+                <label className="cc-label" htmlFor="export-maxedge">Max size<span className="cc-count">({exportMaxEdge}px)</span></label>
+                <input
+                  id="export-maxedge"
+                  type="range"
+                  min={480}
+                  max={4000}
+                  step={80}
+                  value={exportMaxEdge}
+                  onChange={(e) => setExportMaxEdge(Number(e.target.value))}
+                />
+              </div>
+            )}
+            <p className="cc-hint">Lower quality or smaller size makes a lighter zip — handy for sharing on screen. Full resolution and quality 85 keep the originals.</p>
             <div className="cc-row-tight">
               <a className="cc-btn" href={`/p/${portfolio.slug}`} target="_blank" rel="noreferrer">Preview deck</a>
-              <button className="cc-btn" type="button" onClick={async () => { clearTimeout(timer.current); await flush(); api.exportPortfolioStatic(portfolio.id) }}>
+              <button className="cc-btn" type="button" onClick={async () => { clearTimeout(timer.current); await flush(); api.exportPortfolioStatic(portfolio.id, { quality: exportQuality, max_edge: exportResize ? exportMaxEdge : null }) }}>
                 <Icon name="download" size={15} />Export static site (.zip)
               </button>
             </div>

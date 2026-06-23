@@ -216,6 +216,8 @@ def build_static_site(
     items: list[dict[str, Any]],
     library_roots: dict[str, Path],
     zip_path: Path,
+    quality: int = 85,
+    max_edge: int | None = None,
 ) -> None:
     """Write a self-contained portfolio site to zip_path.
 
@@ -245,14 +247,22 @@ def build_static_site(
 
     wm_text = portfolio.get("watermark_text") or ""
     wm_on = bool(portfolio.get("watermark_enabled")) and bool(wm_text.strip())
+    # Re-encode only when something changes the bytes; otherwise copy the
+    # already-optimized webp verbatim (fast path, identical to prior behavior).
+    reencode = wm_on or max_edge is not None or quality != 85
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("index.html", body)
         zf.writestr("README.txt", README)
         for src, rel in asset_map.values():
-            if wm_on:
-                from .convert import watermark_webp
-                zf.writestr(rel, watermark_webp(src.read_bytes(), wm_text))
+            if reencode:
+                from .convert import process_export_webp
+                zf.writestr(rel, process_export_webp(
+                    src.read_bytes(),
+                    quality=quality,
+                    max_edge=max_edge,
+                    watermark=wm_text if wm_on else "",
+                ))
             else:
                 zf.write(src, rel)
 
