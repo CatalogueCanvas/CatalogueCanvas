@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS portfolios (
     item_ids    TEXT,
     is_public   INTEGER NOT NULL DEFAULT 0,
     visibility  TEXT NOT NULL DEFAULT 'admin',
+    style       TEXT NOT NULL DEFAULT 'ledger',
     created_at  TEXT DEFAULT (datetime('now'))
 );
 
@@ -130,6 +131,8 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     portfolio_cols = {row["name"] for row in conn.execute("PRAGMA table_info(portfolios)")}
     if "visibility" not in portfolio_cols:
         conn.execute("ALTER TABLE portfolios ADD COLUMN visibility TEXT NOT NULL DEFAULT 'admin'")
+    if "style" not in portfolio_cols:
+        conn.execute("ALTER TABLE portfolios ADD COLUMN style TEXT NOT NULL DEFAULT 'ledger'")
 
     conn.execute("""
         INSERT OR IGNORE INTO item_collections (item_id, collection_id)

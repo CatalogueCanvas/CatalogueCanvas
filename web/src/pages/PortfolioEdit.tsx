@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import * as api from '../api/client'
-import type { Item, Portfolio } from '../api/client'
+import type { Item, Portfolio, PortfolioStyle } from '../api/client'
 import { Icon } from '../components/Icon'
+
+const STYLES: { value: PortfolioStyle; label: string }[] = [
+  { value: 'ledger', label: 'Ledger' },
+  { value: 'kinetic', label: 'Kinetic' },
+  { value: 'brutalist', label: 'Brutalist' },
+  { value: 'riso', label: 'Riso' },
+]
 
 export function PortfolioEdit() {
   const { id } = useParams<{ id: string }>()
@@ -34,6 +41,7 @@ export function PortfolioEdit() {
       slug: portfolio.slug,
       item_ids: portfolio.item_ids,
       is_public: portfolio.is_public,
+      style: portfolio.style,
     })
     setPortfolio(updated)
     setSaved(true)
@@ -70,6 +78,23 @@ export function PortfolioEdit() {
           <label className="cc-label" htmlFor="description">Description (markdown)</label>
           <textarea id="description" className="cc-textarea" rows={4} value={portfolio.description} onChange={(e) => setPortfolio({ ...portfolio, description: e.target.value })} />
         </div>
+        <div className="cc-field">
+          <label className="cc-label">Theme</label>
+          <div className="cc-row-tight">
+            {STYLES.map((s) => (
+              <label className="cc-check" key={s.value}>
+                <input
+                  type="radio"
+                  name="style"
+                  checked={portfolio.style === s.value}
+                  onChange={() => setPortfolio({ ...portfolio, style: s.value })}
+                />
+                <span className="cc-check__box" />
+                {s.label}
+              </label>
+            ))}
+          </div>
+        </div>
         <label className="cc-check">
           <input
             id="public"
@@ -84,7 +109,13 @@ export function PortfolioEdit() {
           <div className="cc-field">
             <label className="cc-label">Share link</label>
             <div className="cc-sharebox">{shareUrl}</div>
-            <a className="cc-btn" href={`/p/${portfolio.slug}`} target="_blank" rel="noreferrer">Preview deck</a>
+            <div className="cc-row-tight">
+              <a className="cc-btn" href={`/p/${portfolio.slug}`} target="_blank" rel="noreferrer">Preview deck</a>
+              <button className="cc-btn" type="button" onClick={() => api.exportPortfolioStatic(portfolio.id)}>
+                <Icon name="download" size={15} />Export static site (.zip)
+              </button>
+            </div>
+            <p className="cc-hint">Unzip and host the folder anywhere static — Codeberg Pages, GitHub Pages, Netlify, Cloudflare Pages. No server needed.</p>
           </div>
         )}
       </div>

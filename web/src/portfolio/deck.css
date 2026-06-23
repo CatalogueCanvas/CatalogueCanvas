@@ -40,11 +40,11 @@
   margin: 0; letter-spacing: var(--head-tracking);
 }
 .cc-deck__indexgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: clamp(20px,3vw,40px); }
-.cc-deck__idxitem { text-decoration: none; color: inherit; }
+.cc-deck__idxitem { text-decoration: none; color: inherit; min-width: 0; display: flex; flex-direction: column; }
 .cc-deck__idxnum { font-family: var(--font-mono); font-size: 12px; color: var(--text-ter); }
-.cc-deck__idxitem .cc-thumb { margin: 8px 0; aspect-ratio: auto; height: auto; background: none; }
-.cc-deck__idxitem .cc-thumb img { width: 100%; height: auto; object-fit: contain; }
-.cc-deck__idxtitle { font-family: var(--font-head); font-weight: var(--head-weight); font-size: 16px; letter-spacing: var(--head-tracking); }
+.cc-deck__idxitem .cc-thumb { margin: 8px 0; aspect-ratio: 4 / 3; height: auto; background: none; display: grid; place-items: center; overflow: hidden; }
+.cc-deck__idxitem .cc-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.cc-deck__idxtitle { font-family: var(--font-head); font-weight: var(--head-weight); font-size: 16px; letter-spacing: var(--head-tracking); min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 
 /* art plate */
 .cc-deck__art { display: grid; grid-template-columns: 1.5fr 1fr; gap: clamp(28px,5vw,72px); align-items: center; }
@@ -55,6 +55,8 @@
     color-mix(in oklab, var(--accent) 5%, var(--surface-2));
   display: grid; place-items: center; box-shadow: var(--shadow-lift);
 }
+/* Plates holding a real image drop the placeholder stripe pattern (all themes). */
+.cc-deck__plate:has(img) { background: var(--surface); }
 .cc-deck__plate img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .cc-deck__plate span { font-family: var(--font-mono); font-size: 12px; color: var(--text-ter); }
 .cc-deck__caption .cc-deck__kicker { margin-bottom: 14px; }
@@ -107,11 +109,228 @@
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(2, 1fr);
     gap: 40px;
+    height: 100%;
+    min-height: 0;
   }
+  .cc-deck__idxitem { min-height: 0; overflow: hidden; }
+  .cc-deck__idxitem .cc-thumb { flex: 1 1 auto; min-height: 0; }
+  .cc-deck__idxtitle { flex: 0 0 auto; }
 
   .cc-deck__art.cc-deck__art--wide {
     grid-template-columns: 1fr;
     grid-template-rows: 2fr 1fr;
   }
   .cc-deck__art.cc-deck__art--wide .cc-deck__plate { max-height: 650px; }
+}
+
+/* ============================================================================
+   PORTFOLIO STYLE: KINETIC — a deck-only published skin (Kinetic Minimalist).
+   Scoped to .cc-deck[data-portfolio-style="kinetic"] so it dresses ONLY the
+   public deck, never the admin app. Carries its own fixed dark token set, so
+   a published portfolio looks the same regardless of the studio's theme.
+   ============================================================================ */
+.cc-deck[data-portfolio-style="kinetic"] {
+  --bg:        oklch(0.155 0.004 110);
+  --surface:   oklch(0.19 0.004 110);
+  --surface-2: oklch(0.225 0.005 110);
+  --border:    oklch(0.3 0.005 110);
+  --border-strong: oklch(0.46 0.006 110);
+  --text:      oklch(0.95 0.006 110);
+  --text-sec:  oklch(0.7 0.006 110);
+  --text-ter:  oklch(0.54 0.006 110);
+  --accent:    oklch(0.86 0.19 124);
+  --accent-dim: oklch(0.78 0.18 124);
+  --accent-contrast: oklch(0.16 0.03 124);
+  --font-head: 'Newsreader', Georgia, serif;
+  --font-body: 'Albert Sans', system-ui, sans-serif;
+  --head-weight: 600;
+  --radius-thumb: 0px;
+  color-scheme: dark;
+}
+.cc-deck[data-portfolio-style="kinetic"] .cc-deck__sec {
+  padding: clamp(80px, 14vw, 220px) clamp(28px, 9vw, 150px);
+}
+/* cover: not inverted — sits on the dark canvas, type pinned low-left */
+.cc-deck[data-portfolio-style="kinetic"] .cc-deck__cover {
+  background: var(--bg); color: var(--text);
+  min-height: 94vh; justify-content: flex-end; border-bottom: 1px solid var(--border);
+}
+.cc-deck[data-portfolio-style="kinetic"] .cc-deck__cover .cc-deck__kicker { color: var(--accent); }
+.cc-deck[data-portfolio-style="kinetic"] .cc-deck__title {
+  font-size: clamp(54px, 13vw, 184px); letter-spacing: -0.035em; line-height: 0.9; max-width: 13ch;
+}
+.cc-deck[data-portfolio-style="kinetic"] .cc-deck__cover .cc-deck__desc { color: var(--text-sec); max-width: 38ch; }
+.cc-deck[data-portfolio-style="kinetic"] .cc-deck__cover-foot { color: var(--text-ter); }
+/* Kinetic display is upright — neutralise any leaked editorial-italic from the
+   studio's current direction (e.g. Gallery sets deck titles italic). */
+.cc-deck[data-portfolio-style="kinetic"] .cc-deck__title,
+.cc-deck[data-portfolio-style="kinetic"] .cc-deck__krow-title,
+.cc-deck[data-portfolio-style="kinetic"] .cc-deck__caption h3,
+.cc-deck[data-portfolio-style="kinetic"] .cc-deck__colo h2,
+.cc-deck[data-portfolio-style="kinetic"] .cc-deck__indexhead h2 { font-style: normal; }
+
+/* capabilities marquee ribbon (kinetic deck only — element is only rendered then) */
+.cc-deck__marquee {
+  padding: 0 !important; overflow: hidden;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.cc-deck__marquee-track { display: flex; width: max-content; white-space: nowrap; animation: cc-marq 42s linear infinite; }
+.cc-deck__marquee-track > span {
+  display: inline-flex; align-items: center;
+  font-family: var(--font-mono); font-size: clamp(13px, 1.5vw, 18px);
+  letter-spacing: 0.18em; text-transform: uppercase; padding: 22px clamp(14px, 2vw, 28px) 22px 0;
+}
+.cc-deck__marquee-track i { color: var(--accent); font-style: normal; padding: 0 clamp(14px, 2vw, 28px); }
+@keyframes cc-marq { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .cc-deck__marquee-track { animation: none; } }
+
+/* kinetic row index */
+.cc-deck__kindex { border-top: 1px solid var(--border); }
+.cc-deck__krow {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: clamp(16px, 3vw, 40px);
+  padding: clamp(18px, 2.6vw, 36px) 0; border-bottom: 1px solid var(--border);
+  text-decoration: none; color: inherit;
+  transition: padding-left var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+.cc-deck__krow:hover { padding-left: clamp(12px, 2vw, 28px); color: var(--accent); }
+.cc-deck__krow-num { font-family: var(--font-mono); font-size: 13px; color: var(--text-ter); }
+.cc-deck__krow:hover .cc-deck__krow-num { color: var(--accent); }
+.cc-deck__krow-title {
+  font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: -0.03em;
+  font-size: clamp(30px, 6vw, 76px); line-height: 0.98;
+}
+.cc-deck__krow-meta { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-ter); }
+
+/* cursor-following thumbnail */
+.cc-deck__follow {
+  position: fixed; z-index: 50; width: min(30vw, 300px); pointer-events: none;
+  transform: translate(-50%, -50%); opacity: 0; transition: opacity 0.25s var(--ease);
+}
+.cc-deck__follow[data-on="1"] { opacity: 1; }
+.cc-deck__followplate { aspect-ratio: 4 / 3; width: 100%; }
+@media (max-width: 760px) { .cc-deck__follow { display: none; } }
+
+/* ============================================================================
+   PORTFOLIO STYLE: LEDGER — archival specimen sheet. Warm paper, IBM Plex
+   Mono display set as uppercase catalogue labels, fine ruled hairlines, ink
+   accent. Data-dense and clinical — reads like a museum collection record.
+   ============================================================================ */
+.cc-deck[data-portfolio-style="ledger"] {
+  --bg:        oklch(0.96 0.008 95);
+  --surface:   oklch(0.99 0.004 95);
+  --surface-2: oklch(0.93 0.008 95);
+  --border:    oklch(0.82 0.01 95);
+  --border-strong: oklch(0.5 0.01 95);
+  --text:      oklch(0.22 0.008 95);
+  --text-sec:  oklch(0.42 0.008 95);
+  --text-ter:  oklch(0.56 0.008 95);
+  --accent:    oklch(0.48 0.13 255);
+  --accent-contrast: oklch(0.99 0 0);
+  --font-head: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-body: 'Albert Sans', system-ui, sans-serif;
+  --head-weight: 500;
+  --radius-thumb: 0px;
+  color-scheme: light;
+}
+.cc-deck[data-portfolio-style="ledger"] .cc-deck__sec { padding: clamp(40px, 6vw, 88px) clamp(24px, 6vw, 92px); border-bottom: 1px solid var(--border); }
+.cc-deck[data-portfolio-style="ledger"] .cc-deck__cover { background: var(--bg); color: var(--text); min-height: 74vh; justify-content: flex-end; border-bottom: 1px solid var(--border-strong); }
+.cc-deck[data-portfolio-style="ledger"] .cc-deck__cover .cc-deck__kicker { color: var(--accent); }
+.cc-deck[data-portfolio-style="ledger"] .cc-deck__title { font-family: var(--font-head); font-style: normal; text-transform: uppercase; font-weight: 500; letter-spacing: -0.01em; font-size: clamp(34px, 7vw, 92px); line-height: 1.02; max-width: 18ch; }
+.cc-deck[data-portfolio-style="ledger"] .cc-deck__cover .cc-deck__desc { color: var(--text-sec); max-width: 54ch; border-top: 1px solid var(--border); margin-top: 26px; padding-top: 18px; }
+.cc-deck[data-portfolio-style="ledger"] .cc-deck__cover-foot { color: var(--text-ter); border-top: 1px solid var(--border); padding-top: 14px; }
+.cc-deck[data-portfolio-style="ledger"] .cc-deck__indexhead h2 { font-family: var(--font-head); font-style: normal; text-transform: uppercase; font-weight: 500; letter-spacing: 0; font-size: clamp(17px, 2.2vw, 24px); }
+.cc-deck[data-portfolio-style="ledger"] .cc-deck__idxtitle { font-family: var(--font-head); font-weight: 500; font-size: 14px; letter-spacing: 0; }
+.cc-deck[data-portfolio-style="ledger"] .cc-deck__plate { border: 1px solid var(--border-strong); border-radius: 0; }
+.cc-deck[data-portfolio-style="ledger"] .cc-deck__caption h3 { font-family: var(--font-head); font-style: normal; text-transform: uppercase; font-weight: 500; letter-spacing: -0.01em; font-size: clamp(20px, 2.6vw, 32px); }
+.cc-deck[data-portfolio-style="ledger"] .cc-tag { border-radius: 0; border: 1px solid var(--border-strong); font-family: var(--font-head); }
+
+/* ============================================================================
+   PORTFOLIO STYLE: BRUTALIST — stark white/black, Archivo black, hard 2px
+   rules, uppercase oversized heads, square plates, vermilion alarm accent.
+   ============================================================================ */
+.cc-deck[data-portfolio-style="brutalist"] {
+  --bg:        oklch(0.97 0 0);
+  --surface:   oklch(1 0 0);
+  --surface-2: oklch(0.93 0 0);
+  --border:    oklch(0.14 0 0);
+  --border-strong: oklch(0.14 0 0);
+  --text:      oklch(0.14 0 0);
+  --text-sec:  oklch(0.32 0 0);
+  --text-ter:  oklch(0.46 0 0);
+  --accent:    oklch(0.56 0.24 25);
+  --accent-contrast: oklch(0.99 0 0);
+  --font-head: 'Archivo', 'Helvetica Neue', sans-serif;
+  --font-body: 'Archivo', system-ui, sans-serif;
+  --head-weight: 800;
+  --radius-thumb: 0px;
+  color-scheme: light;
+}
+.cc-deck[data-portfolio-style="brutalist"] .cc-deck__sec {
+  border-bottom: 2px solid var(--border); padding: clamp(40px, 7vw, 100px) clamp(24px, 6vw, 96px);
+}
+.cc-deck[data-portfolio-style="brutalist"] .cc-deck__cover {
+  background: var(--bg); color: var(--text); min-height: 82vh;
+  justify-content: flex-end; border-bottom: 2px solid var(--border);
+}
+.cc-deck[data-portfolio-style="brutalist"] .cc-deck__cover .cc-deck__kicker { color: var(--accent); }
+.cc-deck[data-portfolio-style="brutalist"] .cc-deck__title {
+  text-transform: uppercase; font-style: normal; letter-spacing: -0.02em;
+  font-size: clamp(48px, 11vw, 150px); line-height: 0.9; max-width: 14ch;
+}
+.cc-deck[data-portfolio-style="brutalist"] .cc-deck__cover .cc-deck__desc { color: var(--text-sec); }
+.cc-deck[data-portfolio-style="brutalist"] .cc-deck__indexhead h2 { text-transform: uppercase; font-style: normal; }
+.cc-deck[data-portfolio-style="brutalist"] .cc-deck__idxnum { font-size: 22px; font-weight: 700; color: var(--text); }
+.cc-deck[data-portfolio-style="brutalist"] .cc-deck__plate { border: 2px solid var(--border); border-radius: 0; }
+.cc-deck[data-portfolio-style="brutalist"] .cc-deck__caption h3 { text-transform: uppercase; font-style: normal; }
+.cc-deck[data-portfolio-style="brutalist"] .cc-tag { border-radius: 0; border: 1.5px solid var(--border); }
+
+/* ============================================================================
+   PORTFOLIO STYLE: RISO — risograph overprint. Warm newsprint, fluorescent
+   blue + vermilion inks, mis-registered display, halftone-dot plates.
+   Tactile and on-brand (the studio sells risograph editions).
+   ============================================================================ */
+.cc-deck[data-portfolio-style="riso"] {
+  --bg:        oklch(0.94 0.022 90);
+  --surface:   oklch(0.97 0.015 90);
+  --surface-2: oklch(0.9 0.025 88);
+  --border:    oklch(0.8 0.03 85);
+  --border-strong: oklch(0.55 0.04 80);
+  --text:      oklch(0.22 0.03 268);
+  --text-sec:  oklch(0.4 0.05 268);
+  --text-ter:  oklch(0.52 0.05 268);
+  --accent:    oklch(0.58 0.2 252);
+  --accent-2:  oklch(0.62 0.21 28);
+  --accent-contrast: oklch(0.98 0.01 90);
+  --font-head: 'Archivo', 'Helvetica Neue', sans-serif;
+  --font-body: 'Albert Sans', system-ui, sans-serif;
+  --head-weight: 800;
+  --radius-thumb: 4px;
+  color-scheme: light;
+}
+.cc-deck[data-portfolio-style="riso"] .cc-deck__cover {
+  background:
+    radial-gradient(60% 80% at 82% 14%, color-mix(in oklab, var(--accent) 30%, transparent), transparent 60%),
+    radial-gradient(52% 70% at 14% 88%, color-mix(in oklab, var(--accent-2) 26%, transparent), transparent 60%),
+    var(--bg);
+  color: var(--text); min-height: 86vh; justify-content: flex-end;
+}
+.cc-deck[data-portfolio-style="riso"] .cc-deck__cover .cc-deck__kicker { color: var(--accent-2); }
+.cc-deck[data-portfolio-style="riso"] .cc-deck__title {
+  font-style: normal; text-transform: uppercase; letter-spacing: -0.02em; font-weight: 800;
+  font-size: clamp(48px, 11vw, 156px); line-height: 0.9; max-width: 13ch;
+  text-shadow: 0.05em 0.05em 0 color-mix(in oklab, var(--accent) 75%, transparent),
+               0.1em 0.1em 0 color-mix(in oklab, var(--accent-2) 55%, transparent);
+}
+.cc-deck[data-portfolio-style="riso"] .cc-deck__cover .cc-deck__desc { color: var(--text-sec); }
+.cc-deck[data-portfolio-style="riso"] .cc-deck__caption h3 { font-style: normal; text-transform: uppercase; }
+.cc-deck[data-portfolio-style="riso"] .cc-deck__plate {
+  border: 1px solid var(--border-strong); border-radius: var(--radius-thumb);
+  background:
+    radial-gradient(circle at 1px 1px, color-mix(in oklab, var(--accent) 55%, transparent) 1px, transparent 1.7px) 0 0 / 7px 7px,
+    color-mix(in oklab, var(--accent) 10%, var(--surface));
+}
+.cc-deck[data-portfolio-style="riso"] .cc-deck__plate:has(img) { background: var(--surface); }
+.cc-deck[data-portfolio-style="riso"] .cc-tag {
+  border-radius: var(--radius-pill); background: color-mix(in oklab, var(--accent) 18%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 45%, transparent); color: var(--text);
 }
