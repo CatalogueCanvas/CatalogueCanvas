@@ -27,7 +27,7 @@ jobs:
         run: uv run pytest --cov --cov-report=xml:coverage.xml
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python-coverage
           path: server/coverage.xml
@@ -55,7 +55,7 @@ jobs:
         run: npm run coverage
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-coverage
           path: web/coverage/lcov.info
@@ -93,13 +93,13 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Download Python coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: python-coverage
           path: server
 
       - name: Download web coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: web-coverage
           path: web/coverage
