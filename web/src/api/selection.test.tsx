@@ -15,31 +15,31 @@ describe('useSelection', () => {
     const { result } = renderHook(() => useSelection(), { wrapper })
     expect(result.current.batchMode).toBe(false)
 
-    act(() => result.current.toggleBatchMode())
+    act(() => { result.current.toggleBatchMode(); })
     expect(result.current.batchMode).toBe(true)
 
-    act(() => result.current.toggleSelect('a'))
+    act(() => { result.current.toggleSelect('a'); })
     expect(result.current.selected.has('a')).toBe(true)
 
-    act(() => result.current.toggleBatchMode())
+    act(() => { result.current.toggleBatchMode(); })
     expect(result.current.batchMode).toBe(false)
     expect(result.current.selected.size).toBe(0)
   })
 
   it('toggleSelect adds and removes ids', () => {
     const { result } = renderHook(() => useSelection(), { wrapper })
-    act(() => result.current.toggleSelect('x'))
-    act(() => result.current.toggleSelect('y'))
+    act(() => { result.current.toggleSelect('x'); })
+    act(() => { result.current.toggleSelect('y'); })
     expect([...result.current.selected].sort()).toEqual(['x', 'y'])
-    act(() => result.current.toggleSelect('x'))
+    act(() => { result.current.toggleSelect('x'); })
     expect([...result.current.selected]).toEqual(['y'])
   })
 
   it('selectAll and clear replace the set', () => {
     const { result } = renderHook(() => useSelection(), { wrapper })
-    act(() => result.current.selectAll(['a', 'b', 'c']))
+    act(() => { result.current.selectAll(['a', 'b', 'c']); })
     expect(result.current.selected.size).toBe(3)
-    act(() => result.current.clear())
+    act(() => { result.current.clear(); })
     expect(result.current.selected.size).toBe(0)
   })
 })

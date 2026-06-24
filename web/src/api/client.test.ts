@@ -24,7 +24,7 @@ function bodyJson(opts: RequestInit): unknown {
   return JSON.parse(opts.body as string)
 }
 function header(opts: RequestInit, name: string): string | undefined {
-  return (opts.headers as Record<string, string>)?.[name]
+  return (opts.headers as Record<string, string>)[name]
 }
 
 afterEach(() => {

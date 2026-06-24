@@ -24,9 +24,9 @@ describe('useActivity', () => {
     const { result } = renderHook(() => useActivity(), { wrapper })
     let id = ''
     act(() => { id = result.current.startTask({ kind: 'upload', title: 'U', origin: 'o' }) })
-    act(() => result.current.addItems(id, [{ label: 'a.png', status: 'pending' }]))
+    act(() => { result.current.addItems(id, [{ label: 'a.png', status: 'pending' }]); })
     expect(result.current.tasks[0].items).toHaveLength(1)
-    act(() => result.current.updateItem(id, 'a.png', { status: 'done', detail: 'ok' }))
+    act(() => { result.current.updateItem(id, 'a.png', { status: 'done', detail: 'ok' }); })
     expect(result.current.tasks[0].items[0]).toMatchObject({ status: 'done', detail: 'ok' })
   })
 
@@ -34,9 +34,9 @@ describe('useActivity', () => {
     const { result } = renderHook(() => useActivity(), { wrapper })
     let id = ''
     act(() => { id = result.current.startTask({ kind: 'describe', title: 'Old', origin: 'o' }) })
-    act(() => result.current.setTaskTitle(id, 'New'))
+    act(() => { result.current.setTaskTitle(id, 'New'); })
     expect(result.current.tasks[0].title).toBe('New')
-    act(() => result.current.finishTask(id, 'done'))
+    act(() => { result.current.finishTask(id, 'done'); })
     expect(result.current.tasks[0].status).toBe('done')
   })
 
@@ -49,9 +49,9 @@ describe('useActivity', () => {
       result.current.finishTask(done, 'done')
     })
     expect(result.current.tasks).toHaveLength(2)
-    act(() => result.current.clearFinished())
+    act(() => { result.current.clearFinished(); })
     expect(result.current.tasks).toHaveLength(1)
-    act(() => result.current.removeTask(running))
+    act(() => { result.current.removeTask(running); })
     expect(result.current.tasks).toHaveLength(0)
   })
 })
