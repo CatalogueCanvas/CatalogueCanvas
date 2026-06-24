@@ -12,7 +12,7 @@ dependencies = [
     "passlib[argon2]>=1.7",
     "httpx>=0.28.1",
     "markdown>=3.6",
-    "lz4>=4.3",
+    "lz4>=4.4.5",
 ]
 
 [dependency-groups]
