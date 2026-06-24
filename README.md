@@ -1,7 +1,6 @@
 # CatalogueCanvas
 
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/c8aae12c769c4fae8b2a60da660dd382)](https://app.codacy.com?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/e2b7642211994b0a8cba75e9d1d1a14f)](https://app.codacy.com/gh/CatalogueCanvas/CatalogueCanvas/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
 <img src="media/logo_dark.png" align="right" width="150"/>
 <p></p>
