@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import * as api from '../api/client'
-import type { Accent, AppSettings, CsvApplyResult, CsvBackup, CsvPreview, Density, Library, NavLayout, Theme } from '../api/client'
+import type { Accent, AppSettings, CsvApplyResult, CsvBackup, CsvFieldChange, CsvPreview, Density, Library, NavLayout, Theme } from '../api/client'
 import { ApiError, DELETE_BACKUP_CONFIRM } from '../api/client'
-import { ACCENT_PRESETS, useAppearance } from '../api/appearance'
+import { ACCENT_PRESETS, type AccentPreset, useAppearance } from '../api/appearance'
 import { UsersPanel } from '../components/UsersPanel'
 
 const ACCENT_LABELS: Record<Accent, string> = {
@@ -55,7 +55,7 @@ export function Settings() {
   const [libError, setLibError] = useState('')
 
   const refreshLibraries = () => api.listLibraries().then(setLibraries).catch(() => {})
-  useEffect(() => { refreshLibraries() }, [])
+  useEffect(() => { void refreshLibraries() }, [])
 
   // --- CSV batch metadata ---
   const csvInputRef = useRef<HTMLInputElement>(null)
@@ -69,7 +69,7 @@ export function Settings() {
   const [deleteConfirm, setDeleteConfirm] = useState('')
 
   const refreshBackups = () => api.listCsvBackups().then((r) => setBackups(r.backups)).catch(() => {})
-  useEffect(() => { refreshBackups() }, [])
+  useEffect(() => { void refreshBackups() }, [])
 
   const startDelete = (filename: string) => {
     setDeleteTarget(filename)
@@ -82,7 +82,7 @@ export function Settings() {
       await api.deleteCsvBackup(deleteTarget, deleteConfirm)
       setDeleteTarget(null)
       setDeleteConfirm('')
-      refreshBackups()
+      void refreshBackups()
     } catch (err) {
       setCsvError(err instanceof ApiError ? err.message : 'delete failed')
     }
@@ -115,7 +115,7 @@ export function Settings() {
       setCsvFile(null)
       if (csvInputRef.current) csvInputRef.current.value = ''
       api.getSettings().then(setSettings).catch(() => {})
-      refreshBackups()
+      void refreshBackups()
     } catch (err) {
       setCsvError(err instanceof ApiError ? err.message : 'import failed')
     } finally {
@@ -130,7 +130,7 @@ export function Settings() {
       await api.createLibrary({ name: libName.trim(), path: libPath.trim() })
       setLibName('')
       setLibPath('')
-      refreshLibraries()
+      void refreshLibraries()
     } catch (err) {
       setLibError(err instanceof ApiError ? err.message : 'failed to create library')
     }
@@ -140,7 +140,7 @@ export function Settings() {
     setLibError('')
     try {
       await api.setDefaultLibrary(id)
-      refreshLibraries()
+      void refreshLibraries()
     } catch (err) {
       setLibError(err instanceof ApiError ? err.message : 'failed to set default library')
     }
@@ -151,7 +151,7 @@ export function Settings() {
     setLibError('')
     try {
       await api.deleteLibrary(id)
-      refreshLibraries()
+      void refreshLibraries()
     } catch (err) {
       setLibError(err instanceof ApiError ? err.message : 'failed to delete library')
     }
@@ -228,14 +228,14 @@ export function Settings() {
               <span className="cc-label">Accent</span>
             </div>
             <div className="cc-swatches">
-              {(Object.keys(ACCENT_PRESETS) as Accent[]).map((a) => (
+              {(Object.entries(ACCENT_PRESETS) as [Accent, AccentPreset][]).map(([a, preset]) => (
                 <button
                   key={a}
                   type="button"
                   className="cc-swatch"
                   aria-pressed={draft.accent === a}
                   title={ACCENT_LABELS[a]}
-                  style={{ background: ACCENT_PRESETS[a].accent ?? 'oklch(0.6 0.21 30)' }}
+                  style={{ background: preset.accent ?? 'oklch(0.6 0.21 30)' }}
                   onClick={() => setDraft({ ...draft, accent: a })}
                 />
               ))}
@@ -293,7 +293,7 @@ export function Settings() {
             </div>
           </div>
           <div className="cc-row-tight" style={{ marginTop: 'var(--space-4)' }}>
-            <button className="cc-btn cc-btn--primary" onClick={saveAppearance} disabled={appearanceBusy} type="button">
+            <button className="cc-btn cc-btn--primary" onClick={() => void saveAppearance()} disabled={appearanceBusy} type="button">
               {appearanceBusy ? 'Saving...' : 'Save'}
             </button>
             {appearanceSaved && <span className="cc-saved">Saved</span>}
@@ -314,7 +314,7 @@ export function Settings() {
                   key={label}
                   type="button"
                   aria-pressed={(settings.multi_user_enabled === 'true') === value}
-                  onClick={() => setMultiUser(value)}
+                  onClick={() => void setMultiUser(value)}
                 >
                   {label}
                 </button>
@@ -408,7 +408,7 @@ export function Settings() {
               />
             </div>
             <div className="cc-row-tight">
-              <button className="cc-btn cc-btn--primary" onClick={save} disabled={busy} type="button">
+              <button className="cc-btn cc-btn--primary" onClick={() => void save()} disabled={busy} type="button">
                 {busy ? 'Saving...' : 'Save'}
               </button>
               {saved && <span className="cc-saved">Saved</span>}
@@ -432,7 +432,7 @@ export function Settings() {
             />
           </div>
           <div className="cc-row-tight">
-            <button className="cc-btn cc-btn--primary" onClick={save} disabled={busy} type="button">
+            <button className="cc-btn cc-btn--primary" onClick={() => void save()} disabled={busy} type="button">
               {busy ? 'Saving...' : 'Save'}
             </button>
             <button
@@ -467,10 +467,10 @@ export function Settings() {
                   </div>
                   <div className="cc-row__actions">
                     {!lib.is_default && (
-                      <button className="cc-btn cc-btn--sm" onClick={() => setLibDefault(lib.id)}>Set default</button>
+                      <button className="cc-btn cc-btn--sm" onClick={() => void setLibDefault(lib.id)}>Set default</button>
                     )}
                     {!lib.is_default && lib.item_count === 0 && (
-                      <button className="cc-btn cc-btn--danger cc-btn--sm" onClick={() => removeLib(lib.id)}>Delete</button>
+                      <button className="cc-btn cc-btn--danger cc-btn--sm" onClick={() => void removeLib(lib.id)}>Delete</button>
                     )}
                   </div>
                 </div>
@@ -488,7 +488,7 @@ export function Settings() {
               <p className="cc-hint">Must be an existing, writable directory inside the container.</p>
             </div>
             <div className="cc-row-tight">
-              <button className="cc-btn cc-btn--primary" type="button" onClick={createLib}>Add library</button>
+              <button className="cc-btn cc-btn--primary" type="button" onClick={() => void createLib()}>Add library</button>
             </div>
             {libError && <div className="error-text">{libError}</div>}
           </div>
@@ -511,9 +511,9 @@ export function Settings() {
             </div>
           </div>
           <div className="cc-row-tight" style={{ marginTop: 'var(--space-4)' }}>
-            <button type="button" className="cc-btn" onClick={() => api.exportDatabase().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download database backup</button>
-            <button type="button" className="cc-btn" onClick={() => api.exportFullBackup().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download full backup (db + storage)</button>
-            <button type="button" className="cc-btn" onClick={() => api.downloadDiagnostics().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download diagnostic report</button>
+            <button type="button" className="cc-btn" onClick={() => void api.exportDatabase().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download database backup</button>
+            <button type="button" className="cc-btn" onClick={() => void api.exportFullBackup().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download full backup (db + storage)</button>
+            <button type="button" className="cc-btn" onClick={() => void api.downloadDiagnostics().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download diagnostic report</button>
           </div>
           <p className="cc-hint">Diagnostic report is a redacted Markdown summary (versions, masked config, database counts) for attaching to a GitHub issue. No secrets are included.</p>
         </section>
@@ -527,7 +527,7 @@ export function Settings() {
           </p>
 
           <div className="cc-row-tight">
-            <button type="button" className="cc-btn" onClick={() => api.exportItemsCsv().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download metadata CSV</button>
+            <button type="button" className="cc-btn" onClick={() => void api.exportItemsCsv().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download metadata CSV</button>
             <label className="cc-btn">
               Choose CSV to import…
               <input
@@ -535,7 +535,7 @@ export function Settings() {
                 type="file"
                 accept=".csv,text/csv"
                 style={{ display: 'none' }}
-                onChange={(e) => onCsvSelected(e.target.files?.[0] ?? null)}
+                onChange={(e) => void onCsvSelected(e.target.files?.[0] ?? null)}
                 disabled={csvBusy}
               />
             </label>
@@ -572,34 +572,33 @@ export function Settings() {
                     </tr>
                   </thead>
                   <tbody>
-                    {csvPreview.to_update.flatMap((c) =>
-                      (['title', 'note', 'tags'] as const)
-                        .filter((f) => c[f])
-                        .map((f) => {
-                          const change = c[f]!
-                          const fmt = (v: string | string[]) => (Array.isArray(v) ? v.join(', ') : v) || '—'
-                          return (
-                            <tr key={`${c.id}-${f}`}>
-                              <td>{c.id}</td>
-                              <td>{f}</td>
-                              <td>{fmt(change.old)}</td>
-                              <td>{fmt(change.new)}</td>
-                            </tr>
-                          )
-                        })
-                    )}
+                    {csvPreview.to_update.flatMap((c) => {
+                      const fmt = (v: string | string[]) => (Array.isArray(v) ? v.join(', ') : v) || '—'
+                      const changes: { field: string; change: CsvFieldChange<string | string[]> }[] = []
+                      if (c.title) changes.push({ field: 'title', change: c.title })
+                      if (c.note) changes.push({ field: 'note', change: c.note })
+                      if (c.tags) changes.push({ field: 'tags', change: c.tags })
+                      return changes.map(({ field, change }) => (
+                        <tr key={`${c.id}-${field}`}>
+                          <td>{c.id}</td>
+                          <td>{field}</td>
+                          <td>{fmt(change.old)}</td>
+                          <td>{fmt(change.new)}</td>
+                        </tr>
+                      ))
+                    })}
                   </tbody>
                 </table>
               )}
               <div className="cc-row-tight" style={{ marginTop: 'var(--space-4)' }}>
                 <button
                   className="cc-btn cc-btn--primary"
-                  onClick={applyCsv}
+                  onClick={() => void applyCsv()}
                   disabled={csvBusy || csvPreview.to_update.length === 0}
                 >
                   Apply changes
                 </button>
-                <button className="cc-btn" onClick={() => onCsvSelected(null)} disabled={csvBusy}>Cancel</button>
+                <button className="cc-btn" onClick={() => void onCsvSelected(null)} disabled={csvBusy}>Cancel</button>
               </div>
             </div>
           )}
@@ -665,7 +664,7 @@ export function Settings() {
                 />
                 <button
                   className="cc-btn cc-btn--danger"
-                  onClick={confirmDelete}
+                  onClick={() => void confirmDelete()}
                   disabled={deleteConfirm !== DELETE_BACKUP_CONFIRM}
                 >
                   Delete this backup

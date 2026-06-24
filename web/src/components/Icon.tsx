@@ -1,4 +1,4 @@
-const ICONS: Record<string, string> = {
+const ICONS = {
   items: `<rect class="cc-ico-acc" x="13.4" y="3.4" width="7.2" height="7.2" rx="1.4"/>
     <rect class="cc-ico-ink" x="3.4" y="3.4" width="7.2" height="7.2" rx="1.4"/>
     <rect class="cc-ico-ink" x="3.4" y="13.4" width="7.2" height="7.2" rx="1.4"/>
@@ -42,9 +42,11 @@ const ICONS: Record<string, string> = {
   heartFilled: `<path class="cc-ico-acc" d="M12 20.2 4.6 13C2.6 11 2.6 7.7 4.6 5.7c2-2 5.1-2 7 0L12 6l.4-.3c2-2 5.1-2 7 0 2 2 2 5.3 0 7.3z"/>`,
   user: `<circle class="cc-ico-acc" cx="12" cy="8" r="4"/>
     <path class="cc-ico-ink" fill="none" stroke-width="1.8" stroke-linecap="round" d="M4.5 20a7.5 7.5 0 0 1 15 0"/>`,
-}
+} as const
 
-export function Icon({ name, size = 18, className = '' }: { name: string; size?: number; className?: string }) {
+export type IconName = keyof typeof ICONS
+
+export function Icon({ name, size = 18, className = '' }: { name: IconName; size?: number; className?: string }) {
   const svg = ICONS[name]
   if (!svg) return null
   return (

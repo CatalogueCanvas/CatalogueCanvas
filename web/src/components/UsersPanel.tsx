@@ -11,7 +11,7 @@ export function UsersPanel() {
   const [error, setError] = useState('')
 
   const refresh = () => api.listUsers().then(setUsers).catch(() => {})
-  useEffect(() => { refresh() }, [])
+  useEffect(() => { void refresh() }, [])
 
   const create = async () => {
     if (!username.trim() || !password) return
@@ -21,7 +21,7 @@ export function UsersPanel() {
       setUsername('')
       setPassword('')
       setRole('reader')
-      refresh()
+      void refresh()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'failed to create user')
     }
@@ -33,7 +33,7 @@ export function UsersPanel() {
     setError('')
     try {
       await api.updateUser(user.id, { password: pw })
-      refresh()
+      void refresh()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'failed to update password')
     }
@@ -43,7 +43,7 @@ export function UsersPanel() {
     setError('')
     try {
       await api.updateUser(user.id, { role: newRole })
-      refresh()
+      void refresh()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'failed to change role')
     }
@@ -54,7 +54,7 @@ export function UsersPanel() {
     setError('')
     try {
       await api.deleteUser(user.id)
-      refresh()
+      void refresh()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'failed to delete user')
     }
@@ -77,14 +77,14 @@ export function UsersPanel() {
                       key={r}
                       type="button"
                       aria-pressed={u.role === r}
-                      onClick={() => changeRole(u, r)}
+                      onClick={() => void changeRole(u, r)}
                     >
                       {r === 'admin' ? 'Admin' : 'Reader'}
                     </button>
                   ))}
                 </div>
-                <button className="cc-btn cc-btn--sm" type="button" onClick={() => resetPassword(u)}>Reset password</button>
-                <button className="cc-btn cc-btn--danger cc-btn--sm" type="button" onClick={() => remove(u)}>Delete</button>
+                <button className="cc-btn cc-btn--sm" type="button" onClick={() => void resetPassword(u)}>Reset password</button>
+                <button className="cc-btn cc-btn--danger cc-btn--sm" type="button" onClick={() => void remove(u)}>Delete</button>
               </div>
             </div>
           ))}
@@ -116,7 +116,7 @@ export function UsersPanel() {
           </div>
         </div>
         <div className="cc-row-tight">
-          <button className="cc-btn cc-btn--primary" type="button" onClick={create}>Add user</button>
+          <button className="cc-btn cc-btn--primary" type="button" onClick={() => void create()}>Add user</button>
         </div>
         {error && <div className="error-text">{error}</div>}
       </div>

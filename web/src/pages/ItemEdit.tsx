@@ -20,15 +20,15 @@ export function ItemEdit() {
   const { isAdmin } = useAuth()
 
   useEffect(() => {
-    if (id) api.getItem(id).then(setItem)
+    if (id) void api.getItem(id).then(setItem)
   }, [id])
 
   useEffect(() => {
-    if (isAdmin) api.getSettings().then(setSettings)
+    if (isAdmin) void api.getSettings().then(setSettings)
   }, [isAdmin])
 
   useEffect(() => {
-    api.listItems().then((items) => setItemIds(items.map((i) => i.id)))
+    void api.listItems().then((items) => setItemIds(items.map((i) => i.id)))
   }, [])
 
   const currentIndex = item ? itemIds.indexOf(item.id) : -1
@@ -37,10 +37,10 @@ export function ItemEdit() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
-      if (e.key === 'ArrowLeft' && prevId) navigate(`/items/${prevId}`)
-      else if (e.key === 'ArrowRight' && nextId) navigate(`/items/${nextId}`)
+      const el = e.target as HTMLElement
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return
+      if (e.key === 'ArrowLeft' && prevId) void navigate(`/items/${prevId}`)
+      else if (e.key === 'ArrowRight' && nextId) void navigate(`/items/${nextId}`)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -59,7 +59,7 @@ export function ItemEdit() {
   const remove = async () => {
     if (!confirm(`Delete item ${item.id}? This cannot be undone.`)) return
     await api.deleteItem(item.id)
-    navigate('/')
+    void navigate('/')
   }
 
   const toggleFavorite = async () => {
@@ -84,7 +84,7 @@ export function ItemEdit() {
         {isAdmin && appearance.favoritesEnabled && (
           <button
             className="cc-btn"
-            onClick={toggleFavorite}
+            onClick={() => void toggleFavorite()}
             aria-pressed={item.collection_ids.includes('favorites')}
           >
             <Icon name={item.collection_ids.includes('favorites') ? 'heartFilled' : 'heart'} size={15} />
@@ -92,7 +92,7 @@ export function ItemEdit() {
           </button>
         )}
         {isAdmin && (
-          <button className="cc-btn cc-btn--danger" onClick={remove}><Icon name="delete" size={15} />Delete</button>
+          <button className="cc-btn cc-btn--danger" onClick={() => void remove()}><Icon name="delete" size={15} />Delete</button>
         )}
       </div>
       <div className="cc-itemedit">
@@ -148,7 +148,7 @@ export function ItemEdit() {
               <ul>
                 {llmResult.descriptions.map((d, i) => <li key={i}>{d}</li>)}
               </ul>
-              <button className="cc-btn cc-btn--primary" onClick={applyDescription} type="button">Apply to note</button>
+              <button className="cc-btn cc-btn--primary" onClick={() => void applyDescription()} type="button">Apply to note</button>
             </div>
           )}
         </div>

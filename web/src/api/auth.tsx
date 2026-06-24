@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.me()
+    void api.me()
       .then((res) => {
         setAuthenticated(res.authenticated)
         setRole(res.role)

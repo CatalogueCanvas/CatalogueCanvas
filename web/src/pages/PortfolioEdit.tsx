@@ -28,8 +28,8 @@ export function PortfolioEdit() {
 
   useEffect(() => {
     if (!id) return
-    api.getPortfolio(id).then((p) => { latest.current = p; setPortfolio(p) })
-    api.listItems().then(setItems)
+    void api.getPortfolio(id).then((p) => { latest.current = p; setPortfolio(p) })
+    void api.listItems().then(setItems)
   }, [id])
 
   // Persist the current portfolio. Toggles/items flush now; text debounces.
@@ -60,8 +60,8 @@ export function PortfolioEdit() {
     setPortfolio(next)
     setSaveState('saving')
     clearTimeout(timer.current)
-    if (immediate) flush()
-    else timer.current = setTimeout(flush, 500)
+    if (immediate) void flush()
+    else timer.current = setTimeout(() => void flush(), 500)
   }
 
   useEffect(() => () => clearTimeout(timer.current), [])
@@ -78,7 +78,7 @@ export function PortfolioEdit() {
   const remove = async () => {
     if (!confirm('Delete this portfolio?')) return
     await api.deletePortfolio(portfolio.id)
-    navigate('/portfolios')
+    void navigate('/portfolios')
   }
 
   const shareUrl = `${window.location.origin}/p/${portfolio.slug}`
@@ -90,7 +90,7 @@ export function PortfolioEdit() {
           <p className="cc-kicker">Share</p>
           <h1 className="cc-h1">{portfolio.title}</h1>
         </div>
-        <button className="cc-btn cc-btn--danger" onClick={remove}><Icon name="delete" size={15} />Delete</button>
+        <button className="cc-btn cc-btn--danger" onClick={() => void remove()}><Icon name="delete" size={15} />Delete</button>
       </div>
 
       <div className="cc-panel cc-stack">
@@ -193,7 +193,7 @@ export function PortfolioEdit() {
             <p className="cc-hint">Lower quality or smaller size makes a lighter zip — handy for sharing on screen. Full resolution and quality 85 keep the originals.</p>
             <div className="cc-row-tight">
               <a className="cc-btn" href={`/p/${portfolio.slug}`} target="_blank" rel="noreferrer">Preview deck</a>
-              <button className="cc-btn" type="button" onClick={async () => { clearTimeout(timer.current); await flush(); api.exportPortfolioStatic(portfolio.id, { quality: exportQuality, max_edge: exportResize ? exportMaxEdge : null }) }}>
+              <button className="cc-btn" type="button" onClick={() => void (async () => { clearTimeout(timer.current); await flush(); void api.exportPortfolioStatic(portfolio.id, { quality: exportQuality, max_edge: exportResize ? exportMaxEdge : null }) })()}>
                 <Icon name="download" size={15} />Export static site (.zip)
               </button>
             </div>

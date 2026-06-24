@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import time
 
+import pytest
+
 from cataloguecanvas import db
 
 
@@ -30,6 +32,11 @@ def test_upsert_and_get_item(conn):
     assert got["collection_ids"] == []
     assert db.id_exists(conn, "apple-001") is True
     assert db.hash_exists(conn, "hash-apple-001") == "apple-001"
+
+
+def test_upsert_item_rejects_unknown_column(conn):
+    with pytest.raises(ValueError, match="unknown column"):
+        db.upsert_item(conn, _item(**{"id; DROP TABLE items": "x"}))
 
 
 def test_get_item_missing(conn):

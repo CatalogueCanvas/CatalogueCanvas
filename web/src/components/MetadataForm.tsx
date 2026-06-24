@@ -84,7 +84,7 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
         )}
       </div>
       {!readOnly && (
-        <button className="cc-btn cc-btn--primary" onClick={save} disabled={saving}>
+        <button className="cc-btn cc-btn--primary" onClick={() => void save()} disabled={saving}>
           {saving ? 'Saving...' : saved ? 'Saved ✓' : 'Save'}
         </button>
       )}

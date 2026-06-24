@@ -31,7 +31,7 @@ export function NotesPanel({ item, onSaved, readOnly = false }: { item: Item; on
         {readOnly ? null : editing ? (
           <div className="cc-row-tight">
             <button className="cc-btn" type="button" onClick={cancel} disabled={saving}>Cancel</button>
-            <button className="cc-btn cc-btn--primary" type="button" onClick={save} disabled={saving}>
+            <button className="cc-btn cc-btn--primary" type="button" onClick={() => void save()} disabled={saving}>
               {saving ? 'Saving...' : 'Save'}
             </button>
           </div>

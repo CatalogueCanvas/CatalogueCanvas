@@ -120,7 +120,7 @@ def export_db(_: None = Depends(require_admin)):
 
     conn = sqlite3.connect(str(settings.db_path))
     try:
-        conn.execute(f"VACUUM INTO '{tmp_path}'")
+        conn.execute("VACUUM INTO ?", (str(tmp_path),))
     finally:
         conn.close()
 
@@ -142,7 +142,7 @@ def export_all(conn: sqlite3.Connection = Depends(get_db), _: None = Depends(req
 
     db_conn = sqlite3.connect(str(settings.db_path))
     try:
-        db_conn.execute(f"VACUUM INTO '{tmp_path}'")
+        db_conn.execute("VACUUM INTO ?", (str(tmp_path),))
     finally:
         db_conn.close()
 
