@@ -274,13 +274,17 @@ def _db_section() -> list[str]:
     return lines
 
 
+def _secret_source() -> str:
+    """Return where the session secret comes from. Presence only — never the value."""
+    if "CC_SECRET_KEY_FILE" in os.environ:
+        return "CC_SECRET_KEY_FILE"
+    if "CC_SECRET_KEY" in os.environ:
+        return "CC_SECRET_KEY"
+    return "auto-generated (persisted under data dir)"
+
+
 def build_report() -> str:
-    if os.environ.get("CC_SECRET_KEY_FILE"):
-        secret_source = "CC_SECRET_KEY_FILE"
-    elif os.environ.get("CC_SECRET_KEY"):
-        secret_source = "CC_SECRET_KEY"
-    else:
-        secret_source = "auto-generated (persisted under data dir)"
+    secret_source = _secret_source()
 
     out: list[str] = []
     out.append("# CatalogueCanvas Diagnostic Report")
