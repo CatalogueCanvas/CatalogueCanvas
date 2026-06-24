@@ -82,7 +82,7 @@ export function LLMButton({ itemId, itemTitle, onResult }: Props) {
         <input id="llm-api-key" className="cc-input" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
       </div>
       <div className="cc-row-tight">
-        <button className="cc-btn cc-btn--primary" onClick={run} disabled={busy || !settings} type="button">
+        <button className="cc-btn cc-btn--primary" onClick={() => void run()} disabled={busy || !settings} type="button">
           {busy ? 'Generating...' : 'Generate'}
         </button>
         <button className="cc-btn" onClick={() => setOpen(false)} type="button">Cancel</button>

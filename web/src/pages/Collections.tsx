@@ -14,19 +14,19 @@ export function Collections() {
 
   const refresh = () => api.listCollections().then((cols) =>
     setCollections(cols.filter((c) => !c.is_system || appearance.favoritesEnabled)))
-  useEffect(() => { refresh() }, [appearance.favoritesEnabled])
+  useEffect(() => { void refresh() }, [appearance.favoritesEnabled])
 
   const create = async () => {
     if (!title.trim()) return
     await api.createCollection({ title: title.trim() })
     setTitle('')
-    refresh()
+    void refresh()
   }
 
   const remove = async (id: string) => {
     if (!confirm(`Delete collection "${id}"? Items will be unassigned.`)) return
     await api.deleteCollection(id)
-    refresh()
+    void refresh()
   }
 
   return (
@@ -40,7 +40,7 @@ export function Collections() {
       {isAdmin && (
         <div className="cc-createbar">
           <input className="cc-input" placeholder="New collection title" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <button className="cc-btn cc-btn--primary" onClick={create}><Icon name="create" size={15} />Create</button>
+          <button className="cc-btn cc-btn--primary" onClick={() => void create()}><Icon name="create" size={15} />Create</button>
         </div>
       )}
       {collections.length === 0 ? (
@@ -61,7 +61,7 @@ export function Collections() {
                 ) : (
                   <>
                     <Link className="cc-btn cc-btn--sm" to={`/collections/${c.id}`}><Icon name="edit" size={14} />Edit</Link>
-                    <button className="cc-btn cc-btn--danger cc-btn--sm" onClick={() => remove(c.id)}><Icon name="delete" size={14} />Delete</button>
+                    <button className="cc-btn cc-btn--danger cc-btn--sm" onClick={() => void remove(c.id)}><Icon name="delete" size={14} />Delete</button>
                   </>
                 )}
               </div>

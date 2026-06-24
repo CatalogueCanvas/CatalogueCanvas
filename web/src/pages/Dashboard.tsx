@@ -27,9 +27,9 @@ export function Dashboard() {
   const refresh = useCallback(() => {
     const q = query.trim()
     const load = q ? api.searchItems(q) : api.listItems()
-    load.then(setItems).finally(() => setLoading(false))
-    api.listItems().then(setAllItems)
-    api.listPortfolios().then(setPortfolios)
+    void load.then(setItems).finally(() => setLoading(false))
+    void api.listItems().then(setAllItems)
+    void api.listPortfolios().then(setPortfolios)
   }, [query])
 
   // Debounce the server-side search so we don't fire a request per keystroke.
@@ -154,7 +154,7 @@ export function Dashboard() {
               selected={batchMode ? selected.has(item.id) : undefined}
               onToggle={batchMode ? toggleSelect : undefined}
               favoritesEnabled={isAdmin && appearance.favoritesEnabled}
-              onToggleFavorite={isAdmin ? toggleFavorite : undefined}
+              onToggleFavorite={isAdmin ? (item) => void toggleFavorite(item) : undefined}
             />
           ))}
         </div>

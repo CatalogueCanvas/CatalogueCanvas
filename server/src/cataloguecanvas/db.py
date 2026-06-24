@@ -105,6 +105,26 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 CREATE INDEX IF NOT EXISTS idx_login_attempts_scope ON login_attempts(scope, attempted_at);
 """
 
+# Allow-lists of valid column identifiers for the dynamic-column upserts below.
+# Records are always built server-side, but validating the keys here keeps the
+# SQL string construction provably safe regardless of caller.
+_ITEM_COLUMNS = frozenset({
+    "id", "content_hash", "title", "note", "mime_type", "preview_path",
+    "other_files", "tags", "collection_id", "raw_meta", "ingested_at",
+    "imported_at", "width", "height", "library_id",
+})
+_PORTFOLIO_COLUMNS = frozenset({
+    "id", "slug", "title", "description", "item_ids", "is_public",
+    "visibility", "style", "watermark_enabled", "watermark_text", "created_at",
+})
+
+
+def _check_columns(cols: list[str], allowed: frozenset[str]) -> None:
+    """Reject any column name that is not a known schema identifier."""
+    unknown = [c for c in cols if c not in allowed]
+    if unknown:
+        raise ValueError(f"unknown column(s): {', '.join(sorted(unknown))}")
+
 
 def get_connection(db_path: Path) -> sqlite3.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -118,9 +138,14 @@ def get_connection(db_path: Path) -> sqlite3.Connection:
 def ensure_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA_SQL)
     existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(items)")}
-    for col in ("width", "height"):
+    # Fixed DDL statements (no interpolation) for columns added after v1.
+    item_column_ddl = {
+        "width": "ALTER TABLE items ADD COLUMN width INTEGER",
+        "height": "ALTER TABLE items ADD COLUMN height INTEGER",
+    }
+    for col, ddl in item_column_ddl.items():
         if col not in existing_cols:
-            conn.execute(f"ALTER TABLE items ADD COLUMN {col} INTEGER")
+            conn.execute(ddl)
 
     collection_cols = {row["name"] for row in conn.execute("PRAGMA table_info(collections)")}
     if "is_system" not in collection_cols:
@@ -294,6 +319,7 @@ def id_exists(conn: sqlite3.Connection, item_id: str) -> bool:
 
 def upsert_item(conn: sqlite3.Connection, record: dict[str, Any]) -> None:
     cols = list(record.keys())
+    _check_columns(cols, _ITEM_COLUMNS)
     placeholders = ", ".join(["?" for _ in cols])
     col_names = ", ".join(cols)
     updates = ", ".join(f"{c} = excluded.{c}" for c in cols if c != "id")
@@ -427,6 +453,7 @@ def delete_collection(conn: sqlite3.Connection, col_id: str) -> None:
 
 def upsert_portfolio(conn: sqlite3.Connection, p: dict[str, Any]) -> dict[str, Any]:
     cols = list(p.keys())
+    _check_columns(cols, _PORTFOLIO_COLUMNS)
     placeholders = ", ".join(["?" for _ in cols])
     col_names = ", ".join(cols)
     updates = ", ".join(f"{c} = excluded.{c}" for c in cols if c != "id")
@@ -496,13 +523,14 @@ def is_public_storage_path(conn: sqlite3.Connection, library_id: str, rel_path: 
     public_ids = get_public_item_ids(conn)
     if not public_ids:
         return False
-    placeholders = ",".join("?" for _ in public_ids)
-    rows = conn.execute(
-        f"SELECT library_id, preview_path FROM items WHERE id IN ({placeholders})",
-        tuple(public_ids),
-    ).fetchall()
-    for row in rows:
-        if row["library_id"] == library_id and row["preview_path"] == rel_path:
+    # Look up each candidate by primary key (parameterized) and match in Python,
+    # avoiding a dynamically built IN (...) clause.
+    for item_id in public_ids:
+        row = conn.execute(
+            "SELECT library_id, preview_path FROM items WHERE id = ?",
+            (item_id,),
+        ).fetchone()
+        if row and row["library_id"] == library_id and row["preview_path"] == rel_path:
             return True
     return False
 

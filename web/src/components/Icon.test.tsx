@@ -18,7 +18,9 @@ describe('Icon', () => {
   })
 
   it('renders nothing for an unknown name', () => {
-    const { container } = render(<Icon name="nope" />)
+    // Names are typed, but the runtime guard still protects against bad data
+    // (e.g. a value coming from an untyped source); force an invalid name here.
+    const { container } = render(<Icon name={'nope' as never} />)
     expect(container.querySelector('svg')).toBeNull()
   })
 })

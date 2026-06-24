@@ -11,19 +11,19 @@ export function Portfolios() {
   const { isAdmin } = useAuth()
 
   const refresh = () => api.listPortfolios().then(setPortfolios)
-  useEffect(() => { refresh() }, [])
+  useEffect(() => { void refresh() }, [])
 
   const create = async () => {
     if (!title.trim()) return
     await api.createPortfolio({ title: title.trim() })
     setTitle('')
-    refresh()
+    void refresh()
   }
 
   const remove = async (id: string) => {
     if (!confirm('Delete this portfolio?')) return
     await api.deletePortfolio(id)
-    refresh()
+    void refresh()
   }
 
   return (
@@ -37,7 +37,7 @@ export function Portfolios() {
       {isAdmin && (
         <div className="cc-createbar">
           <input className="cc-input" placeholder="New portfolio title" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <button className="cc-btn cc-btn--primary" onClick={create}><Icon name="create" size={15} />Create</button>
+          <button className="cc-btn cc-btn--primary" onClick={() => void create()}><Icon name="create" size={15} />Create</button>
         </div>
       )}
       {portfolios.length === 0 ? (
@@ -61,7 +61,7 @@ export function Portfolios() {
               <div className="cc-row__actions">
                 {p.is_public && <a className="cc-btn cc-btn--sm" href={`/p/${p.slug}`} target="_blank" rel="noreferrer"><Icon name="view" size={14} />View</a>}
                 {isAdmin && <Link className="cc-btn cc-btn--sm" to={`/portfolios/${p.id}`}><Icon name="edit" size={14} />Edit</Link>}
-                {isAdmin && <button className="cc-btn cc-btn--danger cc-btn--sm" onClick={() => remove(p.id)}><Icon name="delete" size={14} />Delete</button>}
+                {isAdmin && <button className="cc-btn cc-btn--danger cc-btn--sm" onClick={() => void remove(p.id)}><Icon name="delete" size={14} />Delete</button>}
               </div>
             </div>
           ))}
