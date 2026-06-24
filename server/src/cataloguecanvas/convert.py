@@ -32,17 +32,12 @@ def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def watermark_webp(image_bytes: bytes, text: str, *, margin_ratio: float = 0.025) -> bytes:
-    """Burn semi-transparent white `text` into the bottom-right of a webp image.
+def _burn_watermark(img: Image.Image, text: str, *, margin_ratio: float = 0.025) -> Image.Image:
+    """Composite semi-transparent white `text` into the bottom-right of an RGBA image.
 
     Mirrors the ImageMagick southeast-gravity overlay: white at 50% alpha, an
-    offset margin scaled to the image. Empty text returns the input unchanged.
-    Output is webp bytes (quality 85).
+    offset margin scaled to the image. Returns a new RGBA image.
     """
-    if not text.strip():
-        return image_bytes
-
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
@@ -57,8 +52,46 @@ def watermark_webp(image_bytes: bytes, text: str, *, margin_ratio: float = 0.025
     y = img.height - text_h - margin - bbox[1]
 
     draw.text((x, y), text, font=font, fill=(255, 255, 255, 128))
+    return Image.alpha_composite(img, overlay)
 
-    out = Image.alpha_composite(img, overlay).convert("RGB")
+
+def watermark_webp(image_bytes: bytes, text: str, *, margin_ratio: float = 0.025) -> bytes:
+    """Burn semi-transparent white `text` into the bottom-right of a webp image.
+
+    Empty text returns the input unchanged. Output is webp bytes (quality 85).
+    """
+    if not text.strip():
+        return image_bytes
+
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+    out = _burn_watermark(img, text, margin_ratio=margin_ratio).convert("RGB")
     buf = io.BytesIO()
     out.save(buf, format="WEBP", quality=85)
+    return buf.getvalue()
+
+
+def process_export_webp(
+    image_bytes: bytes,
+    *,
+    quality: int = 85,
+    max_edge: int | None = None,
+    watermark: str = "",
+) -> bytes:
+    """Downscale, optionally watermark, and re-encode an image as webp bytes.
+
+    `max_edge` (longest-edge cap in px) downscales with LANCZOS when the image
+    is larger; `None` keeps the original size. `quality` is clamped 40..95.
+    Watermark is burned bottom-right when non-empty (scaled to the final size).
+    """
+    quality = max(40, min(95, quality))
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+
+    if max_edge and max(img.width, img.height) > max_edge:
+        img.thumbnail((max_edge, max_edge), Image.LANCZOS)
+
+    if watermark.strip():
+        img = _burn_watermark(img, watermark)
+
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, format="WEBP", quality=quality)
     return buf.getvalue()

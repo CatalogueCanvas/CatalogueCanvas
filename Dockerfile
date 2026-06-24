@@ -42,6 +42,13 @@ ENV CC_DATA_DIR=/data \
 VOLUME /data
 EXPOSE 8000
 
+# Run as an unprivileged user. /data (volume) and /app must be writable by it:
+# the entrypoint generates a session key under /data on first boot.
+RUN useradd --create-home --uid 1000 appuser \
+    && mkdir -p /data \
+    && chown -R appuser:appuser /data /app
+USER appuser
+
 WORKDIR /app/server
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["uv", "run", "uvicorn", "cataloguecanvas.main:app", "--host", "0.0.0.0", "--port", "8000"]

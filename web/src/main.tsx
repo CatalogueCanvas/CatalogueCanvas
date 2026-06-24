@@ -6,7 +6,10 @@ import App from './App.tsx'
 import { AuthProvider } from './api/auth'
 import { AppearanceProvider } from './api/appearance'
 
-createRoot(document.getElementById('root')!).render(
+const rootEl = document.getElementById('root')
+if (!rootEl) throw new Error('Root element #root not found')
+
+createRoot(rootEl).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>

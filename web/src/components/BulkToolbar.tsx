@@ -113,9 +113,8 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
     let failed = false
     try {
       const settings = await api.getSettings()
-      for (let i = 0; i < targets.length; i++) {
+      for (const item of targets) {
         if (cancelRef.current) break
-        const item = targets[i]
         const label = item.title || item.id
         updateItem(taskId, label, { status: 'uploading' })
         try {
@@ -150,13 +149,13 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
         <button className="cc-btn" onClick={onSelectAll} disabled={busy}>Select all ({totalCount})</button>
         <button className="cc-btn" onClick={onClear} disabled={busy}>Clear selection</button>
         {isAdmin && (
-          <button className="cc-btn cc-btn--danger" onClick={clearNotes} disabled={busy}><Icon name="delete" size={15} />Clear notes</button>
+          <button className="cc-btn cc-btn--danger" onClick={() => void clearNotes()} disabled={busy}><Icon name="delete" size={15} />Clear notes</button>
         )}
-        <button className="cc-btn" onClick={download} disabled={busy}><Icon name="download" size={15} />Download zip</button>
+        <button className="cc-btn" onClick={() => void download()} disabled={busy}><Icon name="download" size={15} />Download zip</button>
         {isAdmin && appearance.favoritesEnabled && (
           <>
-            <button className="cc-btn" onClick={addFavorites} disabled={busy}><Icon name="heart" size={15} />Add to Favorites</button>
-            <button className="cc-btn" onClick={removeFavorites} disabled={busy}><Icon name="heartFilled" size={15} />Remove from Favorites</button>
+            <button className="cc-btn" onClick={() => void addFavorites()} disabled={busy}><Icon name="heart" size={15} />Add to Favorites</button>
+            <button className="cc-btn" onClick={() => void removeFavorites()} disabled={busy}><Icon name="heartFilled" size={15} />Remove from Favorites</button>
           </>
         )}
         {isAdmin && (
@@ -168,7 +167,7 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
               onChange={(e) => setTagsInput(e.target.value)}
               disabled={busy}
             />
-            <button className="cc-btn" onClick={addTags} disabled={busy || !tagsInput.trim()}>Add tags</button>
+            <button className="cc-btn" onClick={() => void addTags()} disabled={busy || !tagsInput.trim()}>Add tags</button>
             <select className="cc-input" value={portfolioId} onChange={(e) => setPortfolioId(e.target.value)} disabled={busy}>
               <option value="">Portfolio...</option>
               {portfolios.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
@@ -177,7 +176,7 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
               <option value="add">Add to</option>
               <option value="remove">Remove from</option>
             </select>
-            <button className="cc-btn" onClick={applyPortfolio} disabled={busy || !portfolioId}>Apply</button>
+            <button className="cc-btn" onClick={() => void applyPortfolio()} disabled={busy || !portfolioId}>Apply</button>
           </>
         )}
       </div>
@@ -196,7 +195,7 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
             onChange={(e) => setApiKey(e.target.value)}
             disabled={busy}
           />
-          <button className="cc-btn cc-btn--primary" onClick={generateDescriptions} disabled={busy}>
+          <button className="cc-btn cc-btn--primary" onClick={() => void generateDescriptions()} disabled={busy}>
             <Icon name="generate" size={15} />Generate descriptions (LLM)
           </button>
         </div>
