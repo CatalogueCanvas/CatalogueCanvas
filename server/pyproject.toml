@@ -21,7 +21,7 @@ dev = [
     "pytest-cov>=5",
     "coverage[toml]>=7",
     "respx>=0.21",
-    "pip-audit>=2.7",
+    "pip-audit>=2.10.1",
 ]
 
 [tool.pytest.ini_options]
