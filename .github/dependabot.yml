@@ -17,6 +17,11 @@ updates:
     schedule:
       interval: weekly
     groups:
+      # Keep vitest and its coverage plugin in lockstep (shared peer dep).
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
       npm-minor-patch:
         update-types:
           - minor
