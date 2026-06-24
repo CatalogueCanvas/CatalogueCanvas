@@ -10,7 +10,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "itsdangerous>=2.2",
     "passlib[argon2]>=1.7",
-    "httpx>=0.27",
+    "httpx>=0.28.1",
     "markdown>=3.6",
     "lz4>=4.3",
 ]
