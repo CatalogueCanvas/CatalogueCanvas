@@ -53,7 +53,7 @@ export function Uploader({ onUploaded }: { onUploaded: () => void }) {
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setDragOver(false)
-    handleFiles(e.dataTransfer.files)
+    void handleFiles(e.dataTransfer.files)
   }
 
   return (
@@ -82,7 +82,7 @@ export function Uploader({ onUploaded }: { onUploaded: () => void }) {
           accept=".zip"
           multiple
           hidden
-          onChange={(e) => handleFiles(e.target.files)}
+          onChange={(e) => void handleFiles(e.target.files)}
         />
         Drop ZIP files here or click to upload
       </div>

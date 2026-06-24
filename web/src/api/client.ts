@@ -116,8 +116,11 @@ class ApiError extends Error {
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 function readCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'))
-  return match ? decodeURIComponent(match[1]) : null
+  const prefix = name + '='
+  for (const part of document.cookie.split('; ')) {
+    if (part.startsWith(prefix)) return decodeURIComponent(part.slice(prefix.length))
+  }
+  return null
 }
 
 // Attach the double-submit CSRF header for state-changing requests so the
@@ -250,8 +253,10 @@ export const updatePortfolio = (id: string, fields: Partial<Pick<Portfolio, 'tit
 
 export const deletePortfolio = (id: string) => request<{ ok: boolean }>(`/api/portfolios/${id}`, { method: 'DELETE' })
 
-export const exportPortfolioStatic = (id: string) =>
-  downloadPost(`/api/portfolios/${id}/export`, undefined, 'portfolio-site.zip')
+export const exportPortfolioStatic = (
+  id: string,
+  opts?: { quality?: number; max_edge?: number | null },
+) => downloadPost(`/api/portfolios/${id}/export`, opts ?? undefined, 'portfolio-site.zip')
 
 export const getPublicPortfolio = (slug: string) => request<PublicPortfolio>(`/api/p/${slug}`)
 

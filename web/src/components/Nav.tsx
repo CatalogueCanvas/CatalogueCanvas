@@ -3,9 +3,9 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../api/auth'
 import { useAppearance } from '../api/appearance'
 import { useSelection } from '../api/selection'
-import { Icon } from './Icon'
+import { Icon, type IconName } from './Icon'
 
-function NavItem({ to, end, label, icon }: { to: string; end?: boolean; label: string; icon: string }) {
+function NavItem({ to, end, label, icon }: { to: string; end?: boolean; label: string; icon: IconName }) {
   return (
     <NavLink to={to} end={end} className="cc-nav-link">
       {({ isActive }) => (
@@ -65,13 +65,13 @@ export function Nav() {
           <button
             className="cc-mode-btn"
             type="button"
-            onClick={() => setAppearance({ theme: isDark ? 'light' : 'dark' })}
+            onClick={() => void setAppearance({ theme: isDark ? 'light' : 'dark' })}
           >
             <span className="cc-mode-ind" />
             {isDark ? 'Dark' : 'Light'}
           </button>
           {username && <span className="cc-nav__user" title={username}><Icon name="user" size={14} />{username}</span>}
-          <button className="cc-btn cc-btn--ghost cc-btn--sm" onClick={() => logout()}><Icon name="logout" size={15} />Log out</button>
+          <button className="cc-btn cc-btn--ghost cc-btn--sm" onClick={() => void logout()}><Icon name="logout" size={15} />Log out</button>
         </div>
       )}
     </nav>

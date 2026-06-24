@@ -274,9 +274,17 @@ def _db_section() -> list[str]:
     return lines
 
 
+def _secret_source() -> str:
+    """Return where the session secret comes from. Presence only — never the value."""
+    if "CC_SECRET_KEY_FILE" in os.environ:
+        return "CC_SECRET_KEY_FILE"
+    if "CC_SECRET_KEY" in os.environ:
+        return "CC_SECRET_KEY"
+    return "auto-generated (persisted under data dir)"
+
+
 def build_report() -> str:
-    secret_source = "CC_SECRET_KEY_FILE" if os.environ.get("CC_SECRET_KEY_FILE") else "CC_SECRET_KEY"
-    secret_is_default = settings.secret_key == "dev-secret-change-me"
+    secret_source = _secret_source()
 
     out: list[str] = []
     out.append("# CatalogueCanvas Diagnostic Report")
@@ -302,7 +310,6 @@ def build_report() -> str:
     out.append(f"- Admin username: {settings.admin_username}")
     out.append(f"- Admin password set: {bool(settings.admin_password)}")
     out.append(f"- Secret key source: {secret_source}")
-    out.append(f"- Secret key is default: {secret_is_default}")
     out.append(f"- Cookie secure: {settings.cookie_secure}")
     out.append(f"- Data dir: `{settings.data_dir}` (exists: {settings.data_dir.is_dir()})")
     out.append(f"- Storage dir: `{settings.storage_dir}` (exists: {settings.storage_dir.is_dir()})")
