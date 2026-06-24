@@ -6,29 +6,10 @@ methods, matching what the browser client does.
 """
 from __future__ import annotations
 
-import pytest
-from fastapi.testclient import TestClient
 
-from cataloguecanvas.main import app
-
-
-@pytest.fixture()
-def client():
-    return TestClient(app)
-
-
-def _csrf_headers(client: TestClient) -> dict:
+def _csrf_headers(client) -> dict:
     token = client.cookies.get("cc_csrf")
     return {"X-CSRF-Token": token} if token else {}
-
-
-@pytest.fixture()
-def admin(client):
-    """A logged-in admin client (cookies persisted on the client)."""
-    resp = client.post("/api/login", json={"password": "hunter2"})
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["role"] == "admin"
-    return client
 
 
 # --- auth flow ---

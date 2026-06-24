@@ -17,6 +17,14 @@ export default defineConfig({
       reportsDirectory: 'coverage',
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/main.tsx', 'src/vite-env.d.ts'],
+      // Floors set at the currently achieved level so CI catches regressions.
+      // Large page components are not yet tested; ratchet these up as that grows.
+      thresholds: {
+        lines: 12,
+        functions: 40,
+        branches: 70,
+        statements: 12,
+      },
     },
   },
 })
