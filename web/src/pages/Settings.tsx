@@ -68,7 +68,7 @@ export function Settings() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState('')
 
-  const refreshBackups = () => api.listCsvBackups().then((r) => setBackups(r.backups)).catch(() => {})
+  const refreshBackups = () => api.listCsvBackups().then((r) => { setBackups(r.backups) }).catch(() => {})
   useEffect(() => { void refreshBackups() }, [])
 
   const startDelete = (filename: string) => {
@@ -216,7 +216,7 @@ export function Settings() {
                   key={t}
                   type="button"
                   aria-pressed={draft.theme === t}
-                  onClick={() => setDraft({ ...draft, theme: t })}
+                  onClick={() => { setDraft({ ...draft, theme: t }) }}
                 >
                   {t === 'light' ? 'Light' : 'Dark'}
                 </button>
@@ -236,7 +236,7 @@ export function Settings() {
                   aria-pressed={draft.accent === a}
                   title={ACCENT_LABELS[a]}
                   style={{ background: preset.accent ?? 'oklch(0.6 0.21 30)' }}
-                  onClick={() => setDraft({ ...draft, accent: a })}
+                  onClick={() => { setDraft({ ...draft, accent: a }) }}
                 />
               ))}
             </div>
@@ -251,7 +251,7 @@ export function Settings() {
                   key={n}
                   type="button"
                   aria-pressed={draft.nav === n}
-                  onClick={() => setDraft({ ...draft, nav: n })}
+                  onClick={() => { setDraft({ ...draft, nav: n }) }}
                 >
                   {n === 'top' ? 'Top bar' : 'Sidebar'}
                 </button>
@@ -268,7 +268,7 @@ export function Settings() {
                   key={d}
                   type="button"
                   aria-pressed={draft.density === d}
-                  onClick={() => setDraft({ ...draft, density: d })}
+                  onClick={() => { setDraft({ ...draft, density: d }) }}
                 >
                   {d[0].toUpperCase() + d.slice(1)}
                 </button>
@@ -285,7 +285,7 @@ export function Settings() {
                   key={label}
                   type="button"
                   aria-pressed={draft.favoritesEnabled === value}
-                  onClick={() => setDraft({ ...draft, favoritesEnabled: value })}
+                  onClick={() => { setDraft({ ...draft, favoritesEnabled: value }) }}
                 >
                   {label}
                 </button>
@@ -339,7 +339,7 @@ export function Settings() {
                     key={value}
                     type="button"
                     aria-pressed={settings.llm_auto_generate === value}
-                    onClick={() => setSettings({ ...settings, llm_auto_generate: value })}
+                    onClick={() => { setSettings({ ...settings, llm_auto_generate: value }) }}
                   >
                     {label}
                   </button>
@@ -354,7 +354,7 @@ export function Settings() {
                 className="cc-input"
                 placeholder="http://host.docker.internal:1234"
                 value={settings.llm_api_url}
-                onChange={(e) => setSettings({ ...settings, llm_api_url: e.target.value })}
+                onChange={(e) => { setSettings({ ...settings, llm_api_url: e.target.value }) }}
               />
               <p className="cc-hint">Enter just the server host and port — the <code>/v1/chat/completions</code> path is added automatically. A full URL works too.</p>
             </div>
@@ -364,7 +364,7 @@ export function Settings() {
                 id="set-llm-model"
                 className="cc-input"
                 value={settings.llm_model}
-                onChange={(e) => setSettings({ ...settings, llm_model: e.target.value })}
+                onChange={(e) => { setSettings({ ...settings, llm_model: e.target.value }) }}
               />
             </div>
             <div className="cc-field">
@@ -373,7 +373,7 @@ export function Settings() {
                 id="set-llm-item-type"
                 className="cc-input"
                 value={settings.llm_item_type}
-                onChange={(e) => setSettings({ ...settings, llm_item_type: e.target.value })}
+                onChange={(e) => { setSettings({ ...settings, llm_item_type: e.target.value }) }}
               />
             </div>
             <div className="cc-field">
@@ -382,7 +382,7 @@ export function Settings() {
                 id="set-llm-summary-focus"
                 className="cc-input"
                 value={settings.llm_summary_focus}
-                onChange={(e) => setSettings({ ...settings, llm_summary_focus: e.target.value })}
+                onChange={(e) => { setSettings({ ...settings, llm_summary_focus: e.target.value }) }}
               />
             </div>
             <div className="cc-field">
@@ -393,7 +393,7 @@ export function Settings() {
                 type="number"
                 min="1"
                 value={settings.llm_bullet_count}
-                onChange={(e) => setSettings({ ...settings, llm_bullet_count: e.target.value })}
+                onChange={(e) => { setSettings({ ...settings, llm_bullet_count: e.target.value }) }}
               />
             </div>
             <div className="cc-field">
@@ -404,7 +404,7 @@ export function Settings() {
                 type="number"
                 min="1"
                 value={settings.llm_bullet_max_words}
-                onChange={(e) => setSettings({ ...settings, llm_bullet_max_words: e.target.value })}
+                onChange={(e) => { setSettings({ ...settings, llm_bullet_max_words: e.target.value }) }}
               />
             </div>
             <div className="cc-row-tight">
@@ -428,7 +428,7 @@ export function Settings() {
               className="cc-textarea cc-textarea--mono"
               rows={16}
               value={settings.llm_prompt_template}
-              onChange={(e) => setSettings({ ...settings, llm_prompt_template: e.target.value })}
+              onChange={(e) => { setSettings({ ...settings, llm_prompt_template: e.target.value }) }}
             />
           </div>
           <div className="cc-row-tight">
@@ -438,7 +438,7 @@ export function Settings() {
             <button
               className="cc-btn"
               type="button"
-              onClick={() => setSettings({ ...settings, llm_prompt_template: settings.llm_prompt_template_default })}
+              onClick={() => { setSettings({ ...settings, llm_prompt_template: settings.llm_prompt_template_default }) }}
             >
               Reset to default
             </button>
@@ -480,11 +480,11 @@ export function Settings() {
           <div className="cc-form">
             <div className="cc-field">
               <label className="cc-label" htmlFor="lib-name">Name</label>
-              <input id="lib-name" className="cc-input" value={libName} onChange={(e) => setLibName(e.target.value)} />
+              <input id="lib-name" className="cc-input" value={libName} onChange={(e) => { setLibName(e.target.value) }} />
             </div>
             <div className="cc-field">
               <label className="cc-label" htmlFor="lib-path">Path</label>
-              <input id="lib-path" className="cc-input" value={libPath} onChange={(e) => setLibPath(e.target.value)} placeholder="/data/storage2" />
+              <input id="lib-path" className="cc-input" value={libPath} onChange={(e) => { setLibPath(e.target.value) }} placeholder="/data/storage2" />
               <p className="cc-hint">Must be an existing, writable directory inside the container.</p>
             </div>
             <div className="cc-row-tight">
@@ -511,9 +511,9 @@ export function Settings() {
             </div>
           </div>
           <div className="cc-row-tight" style={{ marginTop: 'var(--space-4)' }}>
-            <button type="button" className="cc-btn" onClick={() => void api.exportDatabase().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download database backup</button>
-            <button type="button" className="cc-btn" onClick={() => void api.exportFullBackup().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download full backup (db + storage)</button>
-            <button type="button" className="cc-btn" onClick={() => void api.downloadDiagnostics().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download diagnostic report</button>
+            <button type="button" className="cc-btn" onClick={() => void api.exportDatabase().catch((err) => { setError(err instanceof ApiError ? err.message : 'download failed') })}>Download database backup</button>
+            <button type="button" className="cc-btn" onClick={() => void api.exportFullBackup().catch((err) => { setError(err instanceof ApiError ? err.message : 'download failed') })}>Download full backup (db + storage)</button>
+            <button type="button" className="cc-btn" onClick={() => void api.downloadDiagnostics().catch((err) => { setError(err instanceof ApiError ? err.message : 'download failed') })}>Download diagnostic report</button>
           </div>
           <p className="cc-hint">Diagnostic report is a redacted Markdown summary (versions, masked config, database counts) for attaching to a GitHub issue. No secrets are included.</p>
         </section>
@@ -527,7 +527,7 @@ export function Settings() {
           </p>
 
           <div className="cc-row-tight">
-            <button type="button" className="cc-btn" onClick={() => void api.exportItemsCsv().catch((err) => setError(err instanceof ApiError ? err.message : 'download failed'))}>Download metadata CSV</button>
+            <button type="button" className="cc-btn" onClick={() => void api.exportItemsCsv().catch((err) => { setError(err instanceof ApiError ? err.message : 'download failed') })}>Download metadata CSV</button>
             <label className="cc-btn">
               Choose CSV to import…
               <input
@@ -629,7 +629,7 @@ export function Settings() {
                       <td>{new Date(b.created_at).toLocaleString()}</td>
                       <td>{(b.size / 1024).toFixed(1)} KB</td>
                       <td style={{ textAlign: 'right' }}>
-                        <button className="cc-btn cc-btn--sm cc-btn--danger" onClick={() => startDelete(b.filename)}>Delete</button>
+                        <button className="cc-btn cc-btn--sm cc-btn--danger" onClick={() => { startDelete(b.filename) }}>Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -658,7 +658,7 @@ export function Settings() {
                 <input
                   className="cc-input"
                   value={deleteConfirm}
-                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  onChange={(e) => { setDeleteConfirm(e.target.value) }}
                   placeholder={DELETE_BACKUP_CONFIRM}
                   autoFocus
                 />

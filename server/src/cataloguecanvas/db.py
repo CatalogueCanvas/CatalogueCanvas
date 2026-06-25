@@ -328,7 +328,7 @@ def upsert_item(conn: sqlite3.Connection, record: dict[str, Any]) -> None:
         ON CONFLICT (id) DO UPDATE SET {updates}
     """
     values = [_dump(v) for v in record.values()]
-    conn.execute(sql, values)
+    conn.execute(sql, values)  # nosec B608 — columns validated by _check_columns
     index_item(conn, record)
     conn.commit()
 
@@ -360,7 +360,7 @@ def update_item_meta(conn: sqlite3.Connection, item_id: str, fields: dict[str, A
         return get_item(conn, item_id)
     set_clause = ", ".join(f"{k} = ?" for k in fields)
     values = [_dump(v) for v in fields.values()]
-    conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", (*values, item_id))
+    conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", (*values, item_id))  # nosec B608 — columns from hardcoded allowlist
     updated = get_item(conn, item_id)
     if updated:
         index_item(conn, updated)
@@ -654,7 +654,7 @@ def update_user(
     if not sets:
         return
     params.append(user_id)
-    conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = ?", params)
+    conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = ?", params)  # nosec B608 — columns are hardcoded literals
     conn.commit()
 
 
@@ -726,7 +726,7 @@ def update_library(conn: sqlite3.Connection, lib_id: str, fields: dict[str, Any]
     fields = {k: v for k, v in fields.items() if k in allowed and v is not None}
     if fields:
         set_clause = ", ".join(f"{k} = ?" for k in fields)
-        conn.execute(f"UPDATE libraries SET {set_clause} WHERE id = ?", (*fields.values(), lib_id))
+        conn.execute(f"UPDATE libraries SET {set_clause} WHERE id = ?", (*fields.values(), lib_id))  # nosec B608 — columns from hardcoded allowlist
         conn.commit()
     return get_library(conn, lib_id)
 

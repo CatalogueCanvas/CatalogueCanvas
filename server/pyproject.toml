@@ -37,6 +37,9 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 
+[tool.bandit]
+skips = ["B101"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

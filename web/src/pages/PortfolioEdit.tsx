@@ -64,7 +64,7 @@ export function PortfolioEdit() {
     else timer.current = setTimeout(() => void flush(), 500)
   }
 
-  useEffect(() => () => clearTimeout(timer.current), [])
+  useEffect(() => () => { clearTimeout(timer.current) }, [])
 
   if (!portfolio) return <div className="container"><div className="cc-empty"><p className="cc-empty__title">Loading...</p></div></div>
 
@@ -78,7 +78,7 @@ export function PortfolioEdit() {
   const remove = async () => {
     if (!confirm('Delete this portfolio?')) return
     await api.deletePortfolio(portfolio.id)
-    void navigate('/portfolios')
+    navigate('/portfolios')
   }
 
   const shareUrl = `${window.location.origin}/p/${portfolio.slug}`
@@ -96,15 +96,15 @@ export function PortfolioEdit() {
       <div className="cc-panel cc-stack">
         <div className="cc-field">
           <label className="cc-label" htmlFor="title">Title</label>
-          <input id="title" className="cc-input" value={portfolio.title} onChange={(e) => update({ title: e.target.value })} />
+          <input id="title" className="cc-input" value={portfolio.title} onChange={(e) => { update({ title: e.target.value }) }} />
         </div>
         <div className="cc-field">
           <label className="cc-label" htmlFor="slug">Slug</label>
-          <input id="slug" className="cc-input" value={portfolio.slug} onChange={(e) => update({ slug: e.target.value })} />
+          <input id="slug" className="cc-input" value={portfolio.slug} onChange={(e) => { update({ slug: e.target.value }) }} />
         </div>
         <div className="cc-field">
           <label className="cc-label" htmlFor="description">Description (markdown)</label>
-          <textarea id="description" className="cc-textarea" rows={4} value={portfolio.description} onChange={(e) => update({ description: e.target.value })} />
+          <textarea id="description" className="cc-textarea" rows={4} value={portfolio.description} onChange={(e) => { update({ description: e.target.value }) }} />
         </div>
         <div className="cc-field">
           <label className="cc-label">Theme</label>
@@ -115,7 +115,7 @@ export function PortfolioEdit() {
                   type="radio"
                   name="style"
                   checked={portfolio.style === s.value}
-                  onChange={() => update({ style: s.value }, true)}
+                  onChange={() => { update({ style: s.value }, true) }}
                 />
                 <span className="cc-check__box" />
                 {s.label}
@@ -128,7 +128,7 @@ export function PortfolioEdit() {
             <input
               type="checkbox"
               checked={portfolio.watermark_enabled}
-              onChange={(e) => update({ watermark_enabled: e.target.checked }, true)}
+              onChange={(e) => { update({ watermark_enabled: e.target.checked }, true) }}
             />
             <span className="cc-check__box" />
             Watermark exported images
@@ -139,7 +139,7 @@ export function PortfolioEdit() {
                 className="cc-input"
                 placeholder="© Your Name"
                 value={portfolio.watermark_text}
-                onChange={(e) => update({ watermark_text: e.target.value })}
+                onChange={(e) => { update({ watermark_text: e.target.value }) }}
                 style={{ marginTop: 'var(--space-2)' }}
               />
               <p className="cc-hint">Burned into the images in the exported zip only. The live deck is unaffected.</p>
@@ -151,7 +151,7 @@ export function PortfolioEdit() {
             id="public"
             type="checkbox"
             checked={portfolio.is_public}
-            onChange={(e) => update({ is_public: e.target.checked }, true)}
+            onChange={(e) => { update({ is_public: e.target.checked }, true) }}
           />
           <span className="cc-check__box" />
           Public
@@ -168,11 +168,11 @@ export function PortfolioEdit() {
                 min={40}
                 max={95}
                 value={exportQuality}
-                onChange={(e) => setExportQuality(Number(e.target.value))}
+                onChange={(e) => { setExportQuality(Number(e.target.value)) }}
               />
             </div>
             <label className="cc-check">
-              <input type="checkbox" checked={exportResize} onChange={(e) => setExportResize(e.target.checked)} />
+              <input type="checkbox" checked={exportResize} onChange={(e) => { setExportResize(e.target.checked) }} />
               <span className="cc-check__box" />
               Resize images for screen
             </label>
@@ -186,7 +186,7 @@ export function PortfolioEdit() {
                   max={4000}
                   step={80}
                   value={exportMaxEdge}
-                  onChange={(e) => setExportMaxEdge(Number(e.target.value))}
+                  onChange={(e) => { setExportMaxEdge(Number(e.target.value)) }}
                 />
               </div>
             )}
@@ -208,16 +208,16 @@ export function PortfolioEdit() {
         </div>
         <div className="cc-picker">
           {items.map((item) => (
-            <div className="cc-picker__item" key={item.id} data-on={portfolio.item_ids.includes(item.id)} onClick={() => toggleItem(item.id)}>
+            <div className="cc-picker__item" key={item.id} data-on={portfolio.item_ids.includes(item.id)} onClick={() => { toggleItem(item.id) }}>
               <div className="cc-thumb">
                 {item.preview_url ? <img src={item.preview_url} alt={item.title} loading="lazy" /> : <span className="cc-thumb__label">no preview</span>}
               </div>
               <div className="cc-picker__bar">
-                <label className="cc-check" onClick={(e) => e.stopPropagation()}>
+                <label className="cc-check" onClick={(e) => { e.stopPropagation() }}>
                   <input
                     type="checkbox"
                     checked={portfolio.item_ids.includes(item.id)}
-                    onChange={() => toggleItem(item.id)}
+                    onChange={() => { toggleItem(item.id) }}
                   />
                   <span className="cc-check__box" />
                 </label>
