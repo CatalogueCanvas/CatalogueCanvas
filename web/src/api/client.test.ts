@@ -24,7 +24,6 @@ function bodyJson(opts: RequestInit): unknown {
   return JSON.parse(opts.body as string)
 }
 function header(opts: RequestInit, name: string): string | undefined {
-  // eslint-disable-next-line security/detect-object-injection
   return (opts.headers as Record<string, string>)[name]
 }
 

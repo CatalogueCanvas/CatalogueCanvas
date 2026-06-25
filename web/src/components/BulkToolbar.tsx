@@ -114,7 +114,6 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
     try {
       const settings = await api.getSettings()
       for (const item of targets) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (cancelRef.current) break
         const label = item.title || item.id
         updateItem(taskId, label, { status: 'uploading' })
