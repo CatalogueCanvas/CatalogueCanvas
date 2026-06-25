@@ -34,3 +34,7 @@ design/
 legacy/
 PLAN.md
 secret.toml
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
