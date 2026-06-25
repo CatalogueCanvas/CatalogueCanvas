@@ -234,6 +234,7 @@ export function Settings() {
                   type="button"
                   className="cc-swatch"
                   aria-pressed={draft.accent === a}
+                  // eslint-disable-next-line security/detect-object-injection
                   title={ACCENT_LABELS[a]}
                   style={{ background: preset.accent ?? 'oklch(0.6 0.21 30)' }}
                   onClick={() => { setDraft({ ...draft, accent: a }) }}

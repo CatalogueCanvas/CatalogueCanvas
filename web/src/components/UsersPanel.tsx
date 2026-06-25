@@ -93,11 +93,11 @@ export function UsersPanel() {
       <div className="cc-form">
         <div className="cc-field">
           <label className="cc-label" htmlFor="user-username">Username</label>
-          <input id="user-username" className="cc-input" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <input id="user-username" className="cc-input" value={username} onChange={(e) => { setUsername(e.target.value) }} />
         </div>
         <div className="cc-field">
           <label className="cc-label" htmlFor="user-password">Password</label>
-          <input id="user-password" className="cc-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input id="user-password" className="cc-input" type="password" value={password} onChange={(e) => { setPassword(e.target.value) }} />
           <p className="cc-hint">Must differ from every other user's password.</p>
         </div>
         <div className="cc-field">
@@ -108,7 +108,7 @@ export function UsersPanel() {
                 key={r}
                 type="button"
                 aria-pressed={role === r}
-                onClick={() => setRole(r)}
+                onClick={() => { setRole(r) }}
               >
                 {r === 'admin' ? 'Admin' : 'Reader'}
               </button>

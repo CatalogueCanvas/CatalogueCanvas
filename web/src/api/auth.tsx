@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUsername(res.username)
         setMultiUser(res.multi_user)
       })
-      .finally(() => setLoading(false))
+      .finally(() => { setLoading(false) })
   }, [])
 
   const login = async (password: string, username?: string) => {

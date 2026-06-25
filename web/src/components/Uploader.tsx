@@ -61,7 +61,7 @@ export function Uploader({ onUploaded }: { onUploaded: () => void }) {
       {libraries.length > 1 && (
         <div className="cc-row-tight" style={{ marginBottom: 'var(--space-3)' }}>
           <label className="cc-label" htmlFor="upload-library">Library</label>
-          <select id="upload-library" className="cc-input" value={libraryId} onChange={(e) => setLibraryId(e.target.value)}>
+          <select id="upload-library" className="cc-input" value={libraryId} onChange={(e) => { setLibraryId(e.target.value) }}>
             {libraries.map((lib) => (
               <option key={lib.id} value={lib.id}>{lib.name}</option>
             ))}
@@ -72,7 +72,7 @@ export function Uploader({ onUploaded }: { onUploaded: () => void }) {
         className={`cc-dropzone${dragOver ? ' cc-dropzone--over' : ''}`}
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
+        onDragLeave={() => { setDragOver(false) }}
         onDrop={onDrop}
       >
         <span className="cc-dropzone__icon" />

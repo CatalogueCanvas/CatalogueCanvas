@@ -69,7 +69,7 @@ export function LLMButton({ itemId, itemTitle, onResult }: Props) {
 
   if (!open) {
     return (
-      <button className="cc-btn" onClick={() => setOpen(true)} type="button">
+      <button className="cc-btn" onClick={() => { setOpen(true) }} type="button">
         Generate description (LLM)
       </button>
     )
@@ -79,13 +79,13 @@ export function LLMButton({ itemId, itemTitle, onResult }: Props) {
     <div className="cc-llm">
       <div className="cc-field">
         <label className="cc-label" htmlFor="llm-api-key">API key (optional, never stored)</label>
-        <input id="llm-api-key" className="cc-input" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+        <input id="llm-api-key" className="cc-input" type="password" value={apiKey} onChange={(e) => { setApiKey(e.target.value) }} />
       </div>
       <div className="cc-row-tight">
         <button className="cc-btn cc-btn--primary" onClick={() => void run()} disabled={busy || !settings} type="button">
           {busy ? 'Generating...' : 'Generate'}
         </button>
-        <button className="cc-btn" onClick={() => setOpen(false)} type="button">Cancel</button>
+        <button className="cc-btn" onClick={() => { setOpen(false) }} type="button">Cancel</button>
       </div>
       {error && (
         <div className="error-text">

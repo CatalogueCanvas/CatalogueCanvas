@@ -36,7 +36,7 @@ export function NotesPanel({ item, onSaved, readOnly = false }: { item: Item; on
             </button>
           </div>
         ) : (
-          <button className="cc-btn cc-btn--sm" type="button" onClick={() => setEditing(true)}>Edit</button>
+          <button className="cc-btn cc-btn--sm" type="button" onClick={() => { setEditing(true) }}>Edit</button>
         )}
       </div>
       {editing ? (
@@ -44,7 +44,7 @@ export function NotesPanel({ item, onSaved, readOnly = false }: { item: Item; on
           className="cc-textarea cc-textarea--mono"
           rows={10}
           value={note}
-          onChange={(e) => setNote(e.target.value)}
+          onChange={(e) => { setNote(e.target.value) }}
         />
       ) : item.note ? (
         <div className="cc-notes__rendered">

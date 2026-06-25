@@ -14,7 +14,7 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
   useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current) }, [])
 
   useEffect(() => {
-    api.listCollections().then((cols) => setCollections(cols.filter((c) => !c.is_system))).catch(() => {})
+    api.listCollections().then((cols) => { setCollections(cols.filter((c) => !c.is_system)) }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
       onSaved(updated)
       setSaved(true)
       if (savedTimer.current) clearTimeout(savedTimer.current)
-      savedTimer.current = setTimeout(() => setSaved(false), 1800)
+      savedTimer.current = setTimeout(() => { setSaved(false) }, 1800)
     } finally {
       setSaving(false)
     }
@@ -49,7 +49,7 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
     <div className="cc-form">
       <div className="cc-field">
         <label className="cc-label" htmlFor="title">Title</label>
-        <input id="title" className="cc-input" value={title} onChange={(e) => setTitle(e.target.value)} disabled={readOnly} />
+        <input id="title" className="cc-input" value={title} onChange={(e) => { setTitle(e.target.value) }} disabled={readOnly} />
       </div>
       <div className="cc-field">
         <label className="cc-label" htmlFor="tags">Tags (comma separated)</label>
@@ -73,7 +73,7 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
                 <input
                   type="checkbox"
                   checked={collectionIds.includes(c.id)}
-                  onChange={() => toggleCollection(c.id)}
+                  onChange={() => { toggleCollection(c.id) }}
                   disabled={readOnly}
                 />
                 <span className="cc-check__box" />

@@ -27,20 +27,20 @@ export function Dashboard() {
   const refresh = useCallback(() => {
     const q = query.trim()
     const load = q ? api.searchItems(q) : api.listItems()
-    void load.then(setItems).finally(() => setLoading(false))
+    void load.then(setItems).finally(() => { setLoading(false) })
     void api.listItems().then(setAllItems)
     void api.listPortfolios().then(setPortfolios)
   }, [query])
 
   // Debounce the server-side search so we don't fire a request per keystroke.
   useEffect(() => {
-    const t = setTimeout(() => refresh(), 200)
-    return () => clearTimeout(t)
+    const t = setTimeout(() => { refresh() }, 200)
+    return () => { clearTimeout(t) }
   }, [refresh])
 
   const allTags = useMemo(() => {
     const tags = new Set<string>()
-    allItems.forEach((i) => i.tags.forEach((t) => tags.add(t)))
+    allItems.forEach((i) => { i.tags.forEach((t) => { tags.add(t) }) })
     return [...tags].sort((a, b) => a.localeCompare(b))
   }, [allItems])
 
@@ -93,7 +93,7 @@ export function Dashboard() {
         </div>
         <div className="cc-search">
           <span className="cc-search__icon" />
-          <input className="cc-input" placeholder="Search items..." value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input className="cc-input" placeholder="Search items..." value={query} onChange={(e) => { setQuery(e.target.value) }} />
         </div>
       </div>
       <div className="cc-filterbar">
@@ -110,7 +110,7 @@ export function Dashboard() {
         </button>
         {filtersOpen && (
           <div className="cc-row-tight cc-filterbar__panel">
-            <select className="cc-input cc-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}>
+            <select className="cc-input cc-select" value={sortBy} onChange={(e) => { setSortBy(e.target.value as SortBy) }}>
               <option value="date-new">Newest first</option>
               <option value="date-old">Oldest first</option>
               <option value="title-asc">Title A-Z</option>
@@ -118,7 +118,7 @@ export function Dashboard() {
               <option value="note">Has note first</option>
               <option value="no-note">No note first</option>
             </select>
-            <select className="cc-input cc-select" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+            <select className="cc-input cc-select" value={tagFilter} onChange={(e) => { setTagFilter(e.target.value) }}>
               <option value="">All tags</option>
               {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -133,7 +133,7 @@ export function Dashboard() {
           totalCount={filtered.length}
           onDone={onBulkDone}
           onClear={clear}
-          onSelectAll={() => selectAll(filtered.map((i) => i.id))}
+          onSelectAll={() => { selectAll(filtered.map((i) => i.id)) }}
         />
       )}
       {loading ? (

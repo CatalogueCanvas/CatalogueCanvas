@@ -12,8 +12,9 @@ export function Collections() {
   const { appearance } = useAppearance()
   const { isAdmin } = useAuth()
 
-  const refresh = () => api.listCollections().then((cols) =>
-    setCollections(cols.filter((c) => !c.is_system || appearance.favoritesEnabled)))
+  const refresh = () => api.listCollections().then((cols) => {
+    setCollections(cols.filter((c) => !c.is_system || appearance.favoritesEnabled))
+  })
   useEffect(() => { void refresh() }, [appearance.favoritesEnabled])
 
   const create = async () => {
@@ -39,7 +40,7 @@ export function Collections() {
       </div>
       {isAdmin && (
         <div className="cc-createbar">
-          <input className="cc-input" placeholder="New collection title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input className="cc-input" placeholder="New collection title" value={title} onChange={(e) => { setTitle(e.target.value) }} />
           <button className="cc-btn cc-btn--primary" onClick={() => void create()}><Icon name="create" size={15} />Create</button>
         </div>
       )}

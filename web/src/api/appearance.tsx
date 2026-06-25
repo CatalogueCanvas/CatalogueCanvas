@@ -41,15 +41,15 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     api.getAppearance()
-      .then((s) => setAppearanceState({
+      .then((s) => { setAppearanceState({
         theme: s.theme,
         accent: s.accent,
         nav: s.nav,
         density: s.density,
         favoritesEnabled: s.favorites_enabled !== 'false',
-      }))
+      }) })
       .catch(() => { /* use defaults */ })
-      .finally(() => setLoading(false))
+      .finally(() => { setLoading(false) })
   }, [])
 
   const setAppearance = async (changes: Partial<Appearance>) => {

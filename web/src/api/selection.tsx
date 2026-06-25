@@ -31,8 +31,8 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  const selectAll = (ids: string[]) => setSelected(new Set(ids))
-  const clear = () => setSelected(new Set())
+  const selectAll = (ids: string[]) => { setSelected(new Set(ids)) }
+  const clear = () => { setSelected(new Set()) }
 
   return (
     <SelectionContext.Provider value={{ batchMode, toggleBatchMode, selected, toggleSelect, selectAll, clear }}>

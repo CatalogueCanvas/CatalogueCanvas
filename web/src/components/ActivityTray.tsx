@@ -26,7 +26,7 @@ export function ActivityTray() {
     <div className={`cc-activity-tray${expanded ? ' cc-activity-tray--open' : ''}`}>
       <button
         className="cc-activity-tray__pill"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => { setExpanded((v) => !v) }}
         type="button"
         aria-expanded={expanded}
       >
@@ -61,7 +61,7 @@ export function ActivityTray() {
                   {task.status !== 'running' && (
                     <button
                       className="cc-activity-tray__dismiss"
-                      onClick={() => removeTask(task.id)}
+                      onClick={() => { removeTask(task.id) }}
                       type="button"
                       aria-label="Dismiss"
                     >

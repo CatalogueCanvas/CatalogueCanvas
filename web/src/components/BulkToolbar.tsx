@@ -114,6 +114,7 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
     try {
       const settings = await api.getSettings()
       for (const item of targets) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (cancelRef.current) break
         const label = item.title || item.id
         updateItem(taskId, label, { status: 'uploading' })
@@ -164,15 +165,15 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
               className="cc-input"
               placeholder="tag1, tag2..."
               value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
+              onChange={(e) => { setTagsInput(e.target.value) }}
               disabled={busy}
             />
             <button className="cc-btn" onClick={() => void addTags()} disabled={busy || !tagsInput.trim()}>Add tags</button>
-            <select className="cc-input" value={portfolioId} onChange={(e) => setPortfolioId(e.target.value)} disabled={busy}>
+            <select className="cc-input" value={portfolioId} onChange={(e) => { setPortfolioId(e.target.value) }} disabled={busy}>
               <option value="">Portfolio...</option>
               {portfolios.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
             </select>
-            <select className="cc-input" value={portfolioAction} onChange={(e) => setPortfolioAction(e.target.value as 'add' | 'remove')} disabled={busy}>
+            <select className="cc-input" value={portfolioAction} onChange={(e) => { setPortfolioAction(e.target.value as 'add' | 'remove') }} disabled={busy}>
               <option value="add">Add to</option>
               <option value="remove">Remove from</option>
             </select>
@@ -183,7 +184,7 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
       {isAdmin && (
         <div className="cc-bulk-toolbar__row">
           <label className="cc-check">
-            <input type="checkbox" checked={skipExisting} onChange={(e) => setSkipExisting(e.target.checked)} disabled={busy} />
+            <input type="checkbox" checked={skipExisting} onChange={(e) => { setSkipExisting(e.target.checked) }} disabled={busy} />
             <span className="cc-check__box" />
             Skip items that already have a note
           </label>
@@ -192,7 +193,7 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
             type="password"
             placeholder="API key (optional, never stored)"
             value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
+            onChange={(e) => { setApiKey(e.target.value) }}
             disabled={busy}
           />
           <button className="cc-btn cc-btn--primary" onClick={() => void generateDescriptions()} disabled={busy}>

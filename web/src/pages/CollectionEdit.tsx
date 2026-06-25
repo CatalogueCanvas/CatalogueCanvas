@@ -32,7 +32,7 @@ export function CollectionEdit() {
   const remove = async () => {
     if (!confirm(`Delete collection "${collection.id}"?`)) return
     await api.deleteCollection(collection.id)
-    void navigate('/collections')
+    navigate('/collections')
   }
 
   return (
@@ -50,11 +50,11 @@ export function CollectionEdit() {
         <div className="cc-panel cc-stack">
           <div className="cc-field">
             <label className="cc-label" htmlFor="title">Title</label>
-            <input id="title" className="cc-input" value={collection.title} onChange={(e) => setCollection({ ...collection, title: e.target.value })} />
+            <input id="title" className="cc-input" value={collection.title} onChange={(e) => { setCollection({ ...collection, title: e.target.value }) }} />
           </div>
           <div className="cc-field">
             <label className="cc-label" htmlFor="description">Description (markdown)</label>
-            <textarea id="description" className="cc-textarea" rows={4} value={collection.description} onChange={(e) => setCollection({ ...collection, description: e.target.value })} />
+            <textarea id="description" className="cc-textarea" rows={4} value={collection.description} onChange={(e) => { setCollection({ ...collection, description: e.target.value }) }} />
           </div>
           <div>
             <button className="cc-btn cc-btn--primary" onClick={() => void save()}><Icon name="save" size={15} />Save</button>

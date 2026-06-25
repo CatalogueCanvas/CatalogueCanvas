@@ -24,7 +24,7 @@ export function Deck() {
     if (!slug) return
     api.getPublicPortfolio(slug)
       .then(setPortfolio)
-      .catch(() => setError('Portfolio not found.'))
+      .catch(() => { setError('Portfolio not found.') })
   }, [slug])
 
   // Cursor-following thumbnail tracks the pointer (kinetic deck only).
@@ -35,7 +35,7 @@ export function Deck() {
       if (el) { el.style.left = `${e.clientX}px`; el.style.top = `${e.clientY}px` }
     }
     window.addEventListener('mousemove', onMove)
-    return () => window.removeEventListener('mousemove', onMove)
+    return () => { window.removeEventListener('mousemove', onMove) }
   }, [kinetic])
 
   if (error) return <div className="cc-deck"><section className="cc-deck__sec"><div className="cc-empty"><p className="cc-empty__title">{error}</p></div></section></div>
@@ -52,7 +52,7 @@ export function Deck() {
 
   return (
     <div className="cc-deck" data-portfolio-style={style}>
-      <button className="cc-btn cc-deck__printbtn no-print" onClick={() => window.print()} type="button">
+      <button className="cc-btn cc-deck__printbtn no-print" onClick={() => { window.print() }} type="button">
         Print / Export PDF
       </button>
       <section className="cc-deck__sec cc-deck__cover">
@@ -85,7 +85,7 @@ export function Deck() {
             <h2>Selected</h2>
             <span className="cc-mono">{String(total).padStart(2, '0')} works</span>
           </div>
-          <div className="cc-deck__kindex" onMouseLeave={() => setHover(null)}>
+          <div className="cc-deck__kindex" onMouseLeave={() => { setHover(null) }}>
             {items.map((item, i) => (
               <a className="cc-deck__krow" href={`#work-${item.id}`} key={item.id} onMouseEnter={() => setHover(item)}>
                 <span className="cc-deck__krow-num">{String(i + 1).padStart(2, '0')}</span>
