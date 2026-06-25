@@ -37,7 +37,6 @@ export function ItemEdit() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // eslint-disable-next-line xss/no-mixed-html
       const el = e.target as HTMLElement
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return
       if (e.key === 'ArrowLeft' && prevId) { void navigate(`/items/${prevId}`) }
@@ -60,7 +59,7 @@ export function ItemEdit() {
   const remove = async () => {
     if (!confirm(`Delete item ${item.id}? This cannot be undone.`)) return
     await api.deleteItem(item.id)
-    navigate('/')
+    void navigate('/')
   }
 
   const toggleFavorite = async () => {

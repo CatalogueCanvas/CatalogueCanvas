@@ -47,9 +47,7 @@ const ICONS = {
 export type IconName = keyof typeof ICONS
 
 export function Icon({ name, size = 18, className = '' }: { name: IconName; size?: number; className?: string }) {
-  // eslint-disable-next-line security/detect-object-injection
   const svg = ICONS[name]
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!svg) return null
   return (
     <svg
@@ -58,7 +56,6 @@ export function Icon({ name, size = 18, className = '' }: { name: IconName; size
       height={size}
       viewBox="0 0 24 24"
       aria-hidden="true"
-      // eslint-disable-next-line xss/no-mixed-html
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   )

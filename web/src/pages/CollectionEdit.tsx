@@ -32,7 +32,7 @@ export function CollectionEdit() {
   const remove = async () => {
     if (!confirm(`Delete collection "${collection.id}"?`)) return
     await api.deleteCollection(collection.id)
-    navigate('/collections')
+    void navigate('/collections')
   }
 
   return (
