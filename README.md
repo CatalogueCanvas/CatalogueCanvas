@@ -1,6 +1,12 @@
 # CatalogueCanvas
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/e2b7642211994b0a8cba75e9d1d1a14f)](https://app.codacy.com/gh/CatalogueCanvas/CatalogueCanvas/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Coverage CI](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/coverage.yml/badge.svg)](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/coverage.yml)
+[![Security audit](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/security.yml/badge.svg)](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/security.yml)
+[![CodeQL](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/codeql.yml/badge.svg)](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/codeql.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-blue?logo=docker)](https://github.com/CatalogueCanvas/CatalogueCanvas/blob/main/Dockerfile)
 
 <img src="media/logo_dark.png" align="right" width="150"/>
 <p></p>
