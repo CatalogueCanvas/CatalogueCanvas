@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import * as api from '../api/client'
 import type { Collection } from '../api/client'
@@ -12,10 +12,10 @@ export function Collections() {
   const { appearance } = useAppearance()
   const { isAdmin } = useAuth()
 
-  const refresh = () => api.listCollections().then((cols) => {
+  const refresh = useCallback(() => api.listCollections().then((cols) => {
     setCollections(cols.filter((c) => !c.is_system || appearance.favoritesEnabled))
-  })
-  useEffect(() => { void refresh() }, [appearance.favoritesEnabled])
+  }), [appearance.favoritesEnabled])
+  useEffect(() => { void refresh() }, [refresh])
 
   const create = async () => {
     if (!title.trim()) return

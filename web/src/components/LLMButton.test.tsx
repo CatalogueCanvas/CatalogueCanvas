@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { LLMButton } from './LLMButton'
-import { ApiError } from '../api/client'
+import type { AppSettings } from '../api/client'
 
 vi.mock('../api/client', () => ({
   getSettings: vi.fn(),
@@ -30,7 +30,7 @@ const mocked = vi.mocked(api)
 
 afterEach(() => vi.clearAllMocks())
 
-const defaultSettings = {
+const defaultSettings: AppSettings = {
   llm_api_url: 'http://localhost:1234',
   llm_model: 'test-model',
   llm_item_type: 'artwork',
@@ -50,13 +50,13 @@ function renderButton(onResult = vi.fn()) {
 
 describe('LLMButton', () => {
   it('renders the initial button', () => {
-    mocked.getSettings.mockResolvedValue(defaultSettings as any)
+    mocked.getSettings.mockResolvedValue(defaultSettings)
     renderButton()
     expect(screen.getByText('Generate description (LLM)')).toBeInTheDocument()
   })
 
   it('opens the form when clicked', async () => {
-    mocked.getSettings.mockResolvedValue(defaultSettings as any)
+    mocked.getSettings.mockResolvedValue(defaultSettings)
     renderButton()
     await userEvent.click(screen.getByText('Generate description (LLM)'))
     expect(screen.getByText('Generate')).toBeInTheDocument()
@@ -64,7 +64,7 @@ describe('LLMButton', () => {
   })
 
   it('closes the form when Cancel is clicked', async () => {
-    mocked.getSettings.mockResolvedValue(defaultSettings as any)
+    mocked.getSettings.mockResolvedValue(defaultSettings)
     renderButton()
     await userEvent.click(screen.getByText('Generate description (LLM)'))
     await userEvent.click(screen.getByText('Cancel'))
@@ -73,7 +73,7 @@ describe('LLMButton', () => {
 
   it('calls describeItem and passes result on success', async () => {
     const result = { summary: 'A test summary', descriptions: ['desc1'] }
-    mocked.getSettings.mockResolvedValue(defaultSettings as any)
+    mocked.getSettings.mockResolvedValue(defaultSettings)
     mocked.describeItem.mockResolvedValue(result)
     const onResult = vi.fn()
     renderButton(onResult)
@@ -85,7 +85,7 @@ describe('LLMButton', () => {
   })
 
   it('shows error on failure', async () => {
-    mocked.getSettings.mockResolvedValue(defaultSettings as any)
+    mocked.getSettings.mockResolvedValue(defaultSettings)
     mocked.describeItem.mockRejectedValue(new Error('network error'))
     renderButton()
     await waitFor(() => expect(mocked.getSettings).toHaveBeenCalled())

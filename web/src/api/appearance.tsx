@@ -1,3 +1,5 @@
+// Context provider component and its hook/constants intentionally live together.
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import * as api from './client'
 import type { Accent, Density, NavLayout, Theme } from './client'

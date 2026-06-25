@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ItemEdit } from './ItemEdit'
-import type { Item } from '../api/client'
+import type { AppSettings, Item } from '../api/client'
 
 vi.mock('../api/client', () => ({
   getItem: vi.fn(),
@@ -46,6 +46,15 @@ const mocked = vi.mocked(api)
 
 afterEach(() => vi.clearAllMocks())
 
+function makeSettings(over: Partial<AppSettings> = {}): AppSettings {
+  return {
+    llm_api_url: '', llm_model: '', llm_item_type: '', llm_summary_focus: '',
+    llm_bullet_count: '3', llm_bullet_max_words: '50', llm_auto_generate: 'false',
+    llm_prompt_template: '', llm_prompt_template_default: '', multi_user_enabled: 'false',
+    stats: { total_items: 0, total_collections: 0, missing_preview: 0 }, ...over,
+  }
+}
+
 function makeItem(over: Partial<Item> = {}): Item {
   return {
     id: 'item-1', content_hash: 'h', title: 'Test Item', note: '',
@@ -78,7 +87,7 @@ describe('ItemEdit', () => {
 
   it('renders item title and components', async () => {
     mocked.getItem.mockResolvedValue(makeItem())
-    mocked.getSettings.mockResolvedValue({ llm_auto_generate: 'false' } as any)
+    mocked.getSettings.mockResolvedValue(makeSettings())
     mocked.listItems.mockResolvedValue([makeItem()])
     renderPage()
     await waitFor(() => expect(screen.getByText('Test Item')).toBeInTheDocument())
@@ -88,7 +97,7 @@ describe('ItemEdit', () => {
 
   it('shows the preview image', async () => {
     mocked.getItem.mockResolvedValue(makeItem())
-    mocked.getSettings.mockResolvedValue({ llm_auto_generate: 'false' } as any)
+    mocked.getSettings.mockResolvedValue(makeSettings())
     mocked.listItems.mockResolvedValue([makeItem()])
     renderPage()
     await waitFor(() => expect(screen.getByAltText('Test Item')).toBeInTheDocument())
@@ -96,7 +105,7 @@ describe('ItemEdit', () => {
 
   it('shows "no preview" when preview_url is null', async () => {
     mocked.getItem.mockResolvedValue(makeItem({ preview_url: null }))
-    mocked.getSettings.mockResolvedValue({ llm_auto_generate: 'false' } as any)
+    mocked.getSettings.mockResolvedValue(makeSettings())
     mocked.listItems.mockResolvedValue([makeItem({ preview_url: null })])
     renderPage()
     await waitFor(() => expect(screen.getByText('no preview')).toBeInTheDocument())
@@ -104,7 +113,7 @@ describe('ItemEdit', () => {
 
   it('shows delete button for admin', async () => {
     mocked.getItem.mockResolvedValue(makeItem())
-    mocked.getSettings.mockResolvedValue({ llm_auto_generate: 'false' } as any)
+    mocked.getSettings.mockResolvedValue(makeSettings())
     mocked.listItems.mockResolvedValue([makeItem()])
     renderPage()
     await waitFor(() => expect(screen.getByText('Delete')).toBeInTheDocument())
@@ -112,7 +121,7 @@ describe('ItemEdit', () => {
 
   it('deletes item after confirmation', async () => {
     mocked.getItem.mockResolvedValue(makeItem())
-    mocked.getSettings.mockResolvedValue({ llm_auto_generate: 'false' } as any)
+    mocked.getSettings.mockResolvedValue(makeSettings())
     mocked.listItems.mockResolvedValue([makeItem()])
     mocked.deleteItem.mockResolvedValue(undefined)
     vi.spyOn(window, 'confirm').mockReturnValue(true)
@@ -125,7 +134,7 @@ describe('ItemEdit', () => {
 
   it('shows LLMButton when auto-generate is enabled', async () => {
     mocked.getItem.mockResolvedValue(makeItem())
-    mocked.getSettings.mockResolvedValue({ llm_auto_generate: 'true' } as any)
+    mocked.getSettings.mockResolvedValue(makeSettings({ llm_auto_generate: 'true' }))
     mocked.listItems.mockResolvedValue([makeItem()])
     renderPage()
     await waitFor(() => expect(screen.getByTestId('llm-button')).toBeInTheDocument())
@@ -133,7 +142,7 @@ describe('ItemEdit', () => {
 
   it('shows navigation links when there are adjacent items', async () => {
     mocked.getItem.mockResolvedValue(makeItem())
-    mocked.getSettings.mockResolvedValue({ llm_auto_generate: 'false' } as any)
+    mocked.getSettings.mockResolvedValue(makeSettings())
     mocked.listItems.mockResolvedValue([
       makeItem({ id: 'item-0', title: 'First' }),
       makeItem(),

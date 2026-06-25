@@ -44,7 +44,7 @@ function renderTray() {
 describe('ActivityTray', () => {
   it('renders nothing when there are no tasks', () => {
     const { container } = renderTray()
-    expect(container.innerHTML).toBe('')
+    expect(container).toBeEmptyDOMElement()
   })
 
   it('shows a running pill when tasks are active', () => {
