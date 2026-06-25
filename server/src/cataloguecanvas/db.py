@@ -328,7 +328,7 @@ def upsert_item(conn: sqlite3.Connection, record: dict[str, Any]) -> None:
         ON CONFLICT (id) DO UPDATE SET {updates}
     """
     values = [_dump(v) for v in record.values()]
-    conn.execute(sql, values)  # nosec B608 — columns validated by _check_columns
+    conn.execute(sql, values)  # nosec B608 # nosemgrep — columns validated by _check_columns
     index_item(conn, record)
     conn.commit()
 
