@@ -112,6 +112,9 @@ run_one() {
     echo "$tf" >>"$DONE"
   else
     echo "[$idx/$total]   FAILED (rc=$rc, see $TMP/$safe.log): $tf"
+    echo "----- last 30 lines of $TMP/$safe.log -----"
+    tail -n 30 "$TMP/$safe.log" || true
+    echo "----- end $tf -----"
     echo "$tf" >>"$FAILED"
   fi
 }
