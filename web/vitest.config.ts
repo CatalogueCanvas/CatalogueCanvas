@@ -20,10 +20,10 @@ export default defineConfig({
       // Floors set at the currently achieved level so CI catches regressions.
       // Large page components are not yet tested; ratchet these up as that grows.
       thresholds: {
-        lines: 12,
-        functions: 40,
-        branches: 70,
-        statements: 12,
+        lines: 30,
+        functions: 60,
+        branches: 80,
+        statements: 30,
       },
     },
   },

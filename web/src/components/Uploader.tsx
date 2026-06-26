@@ -78,6 +78,7 @@ export function Uploader({ onUploaded }: { onUploaded: () => void }) {
         <span className="cc-dropzone__icon" />
         <input
           ref={inputRef}
+          data-testid="upload-input"
           type="file"
           accept=".zip"
           multiple

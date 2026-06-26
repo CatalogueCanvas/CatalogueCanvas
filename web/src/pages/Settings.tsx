@@ -26,6 +26,8 @@ export function Settings() {
   const [appearanceSaved, setAppearanceSaved] = useState(false)
 
   useEffect(() => {
+    // Resync the local draft when the saved appearance changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(appearance)
   }, [appearance])
 

@@ -18,6 +18,8 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
   }, [])
 
   useEffect(() => {
+    // Resync the editable draft when a different item is loaded.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTitle(item.title)
     setTags(item.tags.join(', '))
     setCollectionIds(item.collection_ids.filter((id) => id !== 'favorites'))
