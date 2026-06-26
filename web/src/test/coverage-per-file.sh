@@ -83,7 +83,7 @@ run_one() {
   if [[ -n "$TIMEOUT_BIN" ]]; then
     "$TIMEOUT_BIN" -k 5 "$RUN_TIMEOUT" npx vitest run "$tf" \
         --coverage \
-        --pool=forks --poolOptions.forks.maxForks=1 \
+        --pool=forks --maxWorkers=1 \
         --coverage.reporter=json \
         --coverage.reportsDirectory="$TMP/$safe" \
         --coverage.thresholds.lines=0 \
@@ -95,7 +95,7 @@ run_one() {
   else
     npx vitest run "$tf" \
         --coverage \
-        --pool=forks --poolOptions.forks.maxForks=1 \
+        --pool=forks --maxWorkers=1 \
         --coverage.reporter=json \
         --coverage.reportsDirectory="$TMP/$safe" \
         --coverage.thresholds.lines=0 \
@@ -112,9 +112,6 @@ run_one() {
     echo "$tf" >>"$DONE"
   else
     echo "[$idx/$total]   FAILED (rc=$rc, see $TMP/$safe.log): $tf"
-    echo "----- last 30 lines of $TMP/$safe.log -----"
-    tail -n 30 "$TMP/$safe.log" || true
-    echo "----- end $tf -----"
     echo "$tf" >>"$FAILED"
   fi
 }
