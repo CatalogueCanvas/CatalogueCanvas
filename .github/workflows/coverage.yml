@@ -1,10 +1,9 @@
 name: Coverage
-
 on:
   push:
     branches: [main]
   pull_request:
-
+  workflow_dispatch: null
 jobs:
   python:
     name: Server coverage (pytest)
@@ -14,24 +13,19 @@ jobs:
         working-directory: server
     steps:
       - uses: actions/checkout@v7
-
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
-
       - name: Sync dependencies
         run: uv sync --group dev
-
       - name: Run tests with coverage
         run: uv run pytest --cov --cov-report=xml:coverage.xml
-
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v7
         with:
           name: python-coverage
           path: server/coverage.xml
-
   web:
     name: Web coverage (vitest)
     runs-on: ubuntu-latest
@@ -40,29 +34,24 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v7
-
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
-
       - name: Install dependencies
         run: npm ci
-
       # The full-suite `vitest run --coverage` spikes past the runner's heap and
       # OOMs. Run coverage one test file at a time (same strategy as local), each
       # in its own single-fork process, then merge into coverage/lcov.info.
       - name: Run tests with coverage
         run: npm run coverage:per-file
-
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v7
         with:
           name: web-coverage
           path: web/coverage/lcov.info
-
   lint:
     name: Web lint (eslint)
     runs-on: ubuntu-latest
@@ -71,20 +60,16 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v7
-
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
-
       - name: Install dependencies
         run: npm ci
-
       - name: Lint
         run: npm run lint
-
   codacy:
     name: Upload to Codacy
     runs-on: ubuntu-latest
@@ -94,19 +79,16 @@ jobs:
     if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - uses: actions/checkout@v7
-
       - name: Download Python coverage
         uses: actions/download-artifact@v8
         with:
           name: python-coverage
           path: server
-
       - name: Download web coverage
         uses: actions/download-artifact@v8
         with:
           name: web-coverage
           path: web/coverage
-
       - name: Send coverage to Codacy
         uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1.3.0
         with:
