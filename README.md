@@ -1,7 +1,7 @@
 # CatalogueCanvas
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/e2b7642211994b0a8cba75e9d1d1a14f)](https://app.codacy.com/gh/CatalogueCanvas/CatalogueCanvas/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-[![Coverage CI](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/coverage.yml/badge.svg)](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/coverage.yml)
+[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/e2b7642211994b0a8cba75e9d1d1a14f)](https://app.codacy.com/gh/CatalogueCanvas/CatalogueCanvas/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 [![Security audit](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/security.yml/badge.svg)](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/security.yml)
 [![CodeQL](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/codeql.yml/badge.svg)](https://github.com/CatalogueCanvas/CatalogueCanvas/actions/workflows/codeql.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
