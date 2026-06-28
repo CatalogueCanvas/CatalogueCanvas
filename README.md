@@ -23,6 +23,26 @@ Collect whatever you like. Generative art, illustrations, code sketches, design 
 
 It is built for people who work in files. If you make art, you can show a body of work without first building a website. If you write generative code, the rendered image and the source that produced it live in the same item. And if you would rather run your own catalogue than pay for another seat somewhere, this is for you.
 
+Designed to fit in a self-hosting environment, will run anywhere that a docker container can run, even a old android phone [Article](https://medium.com/@adam.frydrych_29025/running-a-server-from-an-old-android-phone-4f1a3973f7cb) [Guide](https://gist.github.com/FreddieOliveira/efe850df7ff3951cb62d74bd770dce27)
+
+![Main Layout Catalogue Canvas](media/Items_CC.png "Main Layout")
+
+## Requirements
+
+- Docker + Docker Compose (recommended way to run the app)
+
+For local development without Docker:
+
+- Python 3.11+ and [`uv`](https://docs.astral.sh/uv/) for the backend
+- Node.js 22+ for the frontend
+
+### Deployment footprint 
+
+- Docker image size: ~436 MB
+- RAM: ~256 MB sufficient for light use; more if large ZIP ingests are used heavily
+- Disk: depends on uploaded item assets — size `CC_DATA_DIR` volume accordingly
+- CPU: single core sufficient (image conversion/ingest is the main CPU cost)
+
 ## Architecture
 
 - **`server/`** — FastAPI backend (`cataloguecanvas` Python package, managed with `uv`). Serves the JSON API, the built React app, and public portfolio pages. Persists data to a SQLite database and stores uploaded item assets on disk.
@@ -51,22 +71,6 @@ It is built for people who work in files. If you make art, you can show a body o
 2. Admin uploads a ZIP via the dashboard → `ingest.py` extracts it into `CC_STORAGE_DIR`, creates a row in `items`.
 3. Items can be edited (title, tags, notes) and optionally described via an LLM (configured in **Settings**).
 4. Items are grouped into `collections`, and selected items can be published as a `portfolio` (slide-deck view at `/p/<slug>`, public if `is_public` is set).
-
-## Requirements
-
-- Docker + Docker Compose (recommended way to run the app)
-
-For local development without Docker:
-
-- Python 3.11+ and [`uv`](https://docs.astral.sh/uv/) for the backend
-- Node.js 22+ for the frontend
-
-### Deployment footprint
-
-- Docker image size: ~436 MB
-- RAM: ~256 MB sufficient for light use; more if the LLM describe feature or large ZIP ingests are used heavily
-- Disk: depends on uploaded item assets — size `CC_DATA_DIR` volume accordingly
-- CPU: single core sufficient (image conversion/ingest is the main CPU cost)
 
 ## Installation / Running
 
@@ -114,7 +118,9 @@ This maps host port 8081 to the container, so the app is reachable at `http://lo
 
 On first boot the container generates a random session signing key at `/data/cc_secret_key.txt` and reuses it on subsequent starts — no manual setup needed. All data (the SQLite database, uploaded item assets, and the session key) is persisted in the `./data` directory mounted into the container at `/data`.
 
-### Local development (without Docker)
+### Bare Metal Install 
+
+This is more advanced since will let you use the full OS to run it. This have been tested in windows 11, OSX arm and Debian. Details and guides for install each system in documentation.
 
 Backend:
 
