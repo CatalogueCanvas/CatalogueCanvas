@@ -171,3 +171,10 @@ Environment variables (set via `docker-compose.yml` or your shell):
 server/                  FastAPI backend (SQLite db, ingestion, LLM descriptions, auth)
 web/                     React admin UI + public portfolio pages
 ```
+
+
+## Use of AI
+
+The backend code was refactored by Claude from a private project of mine where I was doing internal cataloging—something like MkDocs or Jekyll but for digital art. The frontend is 100% Claude written in Node.js. All code has been reviewed/audited for safety and logic using Codacy, GitHub CodeQL, and GitHub Advanced Security.
+
+Feel free to vibe code suggestions, improvements but you will be held accountable. @LLMgibber.txt
