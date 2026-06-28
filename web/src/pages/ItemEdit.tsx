@@ -84,7 +84,7 @@ export function ItemEdit() {
         {isAdmin && appearance.favoritesEnabled && (
           <button
             className="cc-btn"
-            onClick={() => { toggleFavorite() }}
+            onClick={() => void toggleFavorite()}
             aria-pressed={item.collection_ids.includes('favorites')}
           >
             <Icon name={item.collection_ids.includes('favorites') ? 'heartFilled' : 'heart'} size={15} />
@@ -92,7 +92,7 @@ export function ItemEdit() {
           </button>
         )}
         {isAdmin && (
-          <button className="cc-btn cc-btn--danger" onClick={() => { remove() }}><Icon name="delete" size={15} />Delete</button>
+          <button className="cc-btn cc-btn--danger" onClick={() => void remove()}><Icon name="delete" size={15} />Delete</button>
         )}
       </div>
       <div className="cc-itemedit">
@@ -148,7 +148,7 @@ export function ItemEdit() {
               <ul>
                 {llmResult.descriptions.map((d, i) => <li key={i}>{d}</li>)}
               </ul>
-              <button className="cc-btn cc-btn--primary" onClick={() => { applyDescription() }} type="button">Apply to note</button>
+              <button className="cc-btn cc-btn--primary" onClick={() => void applyDescription()} type="button">Apply to note</button>
             </div>
           )}
         </div>

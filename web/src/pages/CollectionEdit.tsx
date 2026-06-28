@@ -43,7 +43,7 @@ export function CollectionEdit() {
           <h1 className="cc-h1">{collection.title}</h1>
         </div>
         {isAdmin && !collection.is_system && (
-          <button className="cc-btn cc-btn--danger" onClick={() => { remove() }}><Icon name="delete" size={15} />Delete</button>
+          <button className="cc-btn cc-btn--danger" onClick={() => void remove()}><Icon name="delete" size={15} />Delete</button>
         )}
       </div>
       {isAdmin && !collection.is_system && (
@@ -57,7 +57,7 @@ export function CollectionEdit() {
             <textarea id="description" className="cc-textarea" rows={4} value={collection.description} onChange={(e) => { setCollection({ ...collection, description: e.target.value }) }} />
           </div>
           <div>
-            <button className="cc-btn cc-btn--primary" onClick={() => { save() }}><Icon name="save" size={15} />Save</button>
+            <button className="cc-btn cc-btn--primary" onClick={() => void save()}><Icon name="save" size={15} />Save</button>
           </div>
         </div>
       )}
