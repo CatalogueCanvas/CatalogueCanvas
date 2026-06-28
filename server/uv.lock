@@ -165,12 +165,12 @@ dev = [
 requires-dist = [
     { name = "cairosvg", specifier = ">=2.7" },
     { name = "fastapi", specifier = ">=0.110" },
-    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "httpx", specifier = ">=0.27" },
     { name = "itsdangerous", specifier = ">=2.2" },
-    { name = "lz4", specifier = ">=4.4.5" },
+    { name = "lz4", specifier = ">=4.3" },
     { name = "markdown", specifier = ">=3.6" },
     { name = "passlib", extras = ["argon2"], specifier = ">=1.7" },
-    { name = "pillow", specifier = ">=12.2.0" },
+    { name = "pillow", specifier = ">=10" },
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.29" },
 ]
@@ -178,8 +178,8 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "coverage", extras = ["toml"], specifier = ">=7" },
-    { name = "pip-audit", specifier = ">=2.10.1" },
-    { name = "pytest", specifier = ">=9.1.1" },
+    { name = "pip-audit", specifier = ">=2.7" },
+    { name = "pytest", specifier = ">=8" },
     { name = "pytest-cov", specifier = ">=5" },
     { name = "respx", specifier = ">=0.21" },
 ]
