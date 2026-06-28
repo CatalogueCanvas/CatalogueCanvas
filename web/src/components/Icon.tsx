@@ -48,7 +48,6 @@ export type IconName = keyof typeof ICONS
 
 export function Icon({ name, size = 18, className = '' }: { name: IconName; size?: number; className?: string }) {
   const svg = ICONS[name]
-  if (!svg) return null
   return (
     <svg
       className={`cc-ico ${className}`}
