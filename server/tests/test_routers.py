@@ -104,3 +104,64 @@ def test_create_and_delete_collection(admin):
 
 def test_get_missing_item_404(admin):
     assert admin.get("/api/items/does-not-exist").status_code == 404
+
+
+# --- storage file path validation ---
+
+def test_storage_file_requires_auth(client):
+    """Storage endpoints require authentication."""
+    resp = client.get("/storage/any-lib/any-file.txt")
+    assert resp.status_code == 401
+
+
+def test_storage_nonexistent_library_404(admin):
+    """Requesting a file from a non-existent library returns 404."""
+    resp = admin.get("/storage/no-such-lib/file.txt")
+    assert resp.status_code == 404
+
+
+def test_storage_relative_to_blocks_traversal(tmp_path):
+    """relative_to() rejects resolved paths outside the library root."""
+    from pathlib import Path
+
+    lib_root = (tmp_path / "mylib").resolve()
+    lib_root.mkdir()
+    (lib_root / "safe.txt").write_text("ok")
+
+    secret = tmp_path / "secret.txt"
+    secret.write_text("secret")
+
+    for rel in ["../secret.txt", "../../etc/passwd", "sub/../../secret.txt"]:
+        target = (lib_root / rel).resolve()
+        escaped = True
+        try:
+            target.relative_to(lib_root)
+            escaped = False
+        except ValueError:
+            pass
+        assert escaped, f"relative_to did not reject '{rel}'"
+
+
+def test_storage_symlink_detected(tmp_path):
+    """Symlinks inside the library root are detected."""
+    lib_root = tmp_path / "lib"
+    lib_root.mkdir()
+
+    external = tmp_path / "external.txt"
+    external.write_text("external")
+
+    link = lib_root / "link.txt"
+    try:
+        link.symlink_to(external)
+    except (OSError, NotImplementedError):
+        return
+
+    assert link.is_symlink()
+    resolved = link.resolve()
+    escaped = True
+    try:
+        resolved.relative_to(lib_root.resolve())
+        escaped = False
+    except ValueError:
+        pass
+    assert escaped, "Symlink target was not detected as outside library root"
