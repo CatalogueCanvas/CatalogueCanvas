@@ -15,13 +15,11 @@
 
      
 
-**Your catalogue, your disks, your data.**
+CatalogueCanvas is a self-hosted catalogue server for organizing and sharing collections of digital work. You upload items as ZIP files, sort them into collections, enrich them with tags, notes, and AI-generated descriptions, and publish curated selections as shareable, slide-deck portfolios.
 
-CatalogueCanvas is a self-hosted home for your digital work. Drop in a ZIP and it becomes a catalogue item. From there you sort items into collections, tag them, add notes (or let a local vision model write the descriptions for you), and pull your best pieces into a portfolio you can hand to anyone with a link.
+It is domain-agnostic — equally at home cataloguing generative art, illustrations, code sketches, design assets, photographs, or any mixed-media archive — and runs from a single Docker container with no external services required.
 
-Collect whatever you like. Generative art, illustrations, code sketches, design assets, photos, or a messy pile of all of it. The whole thing runs in one Docker container on hardware you own, with no account to sign up for and nobody else holding your files.
-
-It is built for people who work in files. If you make art, you can show a body of work without first building a website. If you write generative code, the rendered image and the source that produced it live in the same item. And if you would rather run your own catalogue than pay for another seat somewhere, this is for you.
+Under the hood it is a FastAPI backend with a SQLite database and a React admin UI, serving both the management interface and the public portfolio pages.
 
 ## Architecture
 
