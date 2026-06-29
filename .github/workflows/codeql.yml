@@ -7,6 +7,7 @@ on:
   schedule:
     - cron: "27 4 * * 1"
   workflow_dispatch: null
+permissions: {}
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
@@ -20,14 +21,14 @@ jobs:
       matrix:
         language: [python, javascript-typescript]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
         with:
           languages: ${{ matrix.language }}
           # Both languages are interpreted/no-build, so autobuild isn't needed.
           build-mode: none
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
         with:
           category: "/language:${{ matrix.language }}"
