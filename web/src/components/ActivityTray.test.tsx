@@ -29,10 +29,12 @@ afterEach(() => {
 function makeTask(over: Partial<ActivityTask> = {}): ActivityTask {
   return {
     id: 'task-1',
+    kind: 'upload',
     title: 'Upload batch',
     origin: '/',
     status: 'done',
     items: [{ label: 'file.zip', status: 'done' }],
+    startedAt: 0,
     ...over,
   }
 }

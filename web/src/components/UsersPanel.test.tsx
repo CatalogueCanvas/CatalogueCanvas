@@ -21,7 +21,7 @@ const mocked = vi.mocked(api)
 afterEach(() => vi.clearAllMocks())
 
 function makeUser(over: Partial<User> = {}): User {
-  return { id: 1, username: 'bob', role: 'reader', ...over }
+  return { id: 1, username: 'bob', role: 'reader', created_at: '', ...over }
 }
 
 describe('UsersPanel', () => {
@@ -42,7 +42,7 @@ describe('UsersPanel', () => {
 
   it('creates a user', async () => {
     mocked.listUsers.mockResolvedValue([])
-    mocked.createUser.mockResolvedValue(undefined)
+    mocked.createUser.mockResolvedValue(makeUser())
     render(<UsersPanel />)
 
     await userEvent.type(screen.getByLabelText('Username'), 'alice')
@@ -62,7 +62,7 @@ describe('UsersPanel', () => {
 
   it('deletes a user after confirmation', async () => {
     mocked.listUsers.mockResolvedValue([makeUser()])
-    mocked.deleteUser.mockResolvedValue(undefined)
+    mocked.deleteUser.mockResolvedValue({ ok: true })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     render(<UsersPanel />)
     await waitFor(() => expect(screen.getByText('bob')).toBeInTheDocument())
@@ -73,7 +73,7 @@ describe('UsersPanel', () => {
 
   it('changes user role', async () => {
     mocked.listUsers.mockResolvedValue([makeUser()])
-    mocked.updateUser.mockResolvedValue(undefined)
+    mocked.updateUser.mockResolvedValue(makeUser())
     render(<UsersPanel />)
     await waitFor(() => expect(screen.getByText('bob')).toBeInTheDocument())
 
@@ -84,7 +84,7 @@ describe('UsersPanel', () => {
 
   it('resets password via prompt', async () => {
     mocked.listUsers.mockResolvedValue([makeUser()])
-    mocked.updateUser.mockResolvedValue(undefined)
+    mocked.updateUser.mockResolvedValue(makeUser())
     vi.spyOn(window, 'prompt').mockReturnValue('newpass')
     render(<UsersPanel />)
     await waitFor(() => expect(screen.getByText('bob')).toBeInTheDocument())

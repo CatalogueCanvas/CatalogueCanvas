@@ -29,7 +29,7 @@ const mocked = vi.mocked(api)
 afterEach(() => vi.clearAllMocks())
 
 function makeCol(over: Partial<Collection> = {}): Collection {
-  return { id: 'col-1', title: 'Test Collection', is_system: false, item_count: 0, ...over }
+  return { id: 'col-1', title: 'Test Collection', is_system: false, description: '', cover_item_id: null, created_at: '', ...over }
 }
 
 function renderPage() {
@@ -72,7 +72,7 @@ describe('Collections', () => {
 
   it('deletes a collection after confirmation', async () => {
     mocked.listCollections.mockResolvedValue([makeCol()])
-    mocked.deleteCollection.mockResolvedValue(undefined)
+    mocked.deleteCollection.mockResolvedValue({ ok: true })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderPage()
     await waitFor(() => expect(screen.getByText('Test Collection')).toBeInTheDocument())

@@ -34,8 +34,6 @@ function makePortfolio(over: Partial<PublicPortfolio> = {}): PublicPortfolio {
     description: 'A portfolio description',
     style: 'ledger',
     items: [makeItem()],
-    watermark_enabled: false,
-    watermark_text: '',
     ...over,
   }
 }

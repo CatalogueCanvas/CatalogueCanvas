@@ -50,7 +50,9 @@ function makeSettings(over: Partial<AppSettings> = {}): AppSettings {
   return {
     llm_api_url: '', llm_model: '', llm_item_type: '', llm_summary_focus: '',
     llm_bullet_count: '3', llm_bullet_max_words: '50', llm_auto_generate: 'false',
-    llm_prompt_template: '', llm_prompt_template_default: '', multi_user_enabled: 'false',
+    llm_prompt_template: '', llm_prompt_template_default: '',
+    theme: 'light', accent: 'default', nav: 'top', density: 'balanced', favorites_enabled: 'false',
+    multi_user_enabled: 'false',
     stats: { total_items: 0, total_collections: 0, missing_preview: 0 }, ...over,
   }
 }
@@ -123,7 +125,7 @@ describe('ItemEdit', () => {
     mocked.getItem.mockResolvedValue(makeItem())
     mocked.getSettings.mockResolvedValue(makeSettings())
     mocked.listItems.mockResolvedValue([makeItem()])
-    mocked.deleteItem.mockResolvedValue(undefined)
+    mocked.deleteItem.mockResolvedValue({ ok: true })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderPage()
     await waitFor(() => expect(screen.getByText('Delete')).toBeInTheDocument())

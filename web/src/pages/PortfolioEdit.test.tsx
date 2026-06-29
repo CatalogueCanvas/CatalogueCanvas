@@ -26,7 +26,7 @@ function makePortfolio(over: Partial<Portfolio> = {}): Portfolio {
   return {
     id: 'p-1', title: 'My Portfolio', slug: 'my-portfolio',
     is_public: false, item_ids: [], style: 'ledger',
-    description: '', watermark_enabled: false, watermark_text: '',
+    description: '', watermark_enabled: false, watermark_text: '', created_at: '',
     ...over,
   }
 }
@@ -100,7 +100,7 @@ describe('PortfolioEdit', () => {
   it('deletes portfolio after confirmation', async () => {
     mocked.getPortfolio.mockResolvedValue(makePortfolio())
     mocked.listItems.mockResolvedValue([])
-    mocked.deletePortfolio.mockResolvedValue(undefined)
+    mocked.deletePortfolio.mockResolvedValue({ ok: true })
     mocked.updatePortfolio.mockResolvedValue(makePortfolio())
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderPage()

@@ -26,15 +26,20 @@ vi.mock('../api/client', () => ({
   DELETE_BACKUP_CONFIRM: 'DELETE',
 }))
 
+// The returned objects MUST be stable references across renders. Settings has
+// `useEffect(() => setDraft(appearance), [appearance])`; a fresh object each
+// render retriggers the effect forever — an infinite render loop that OOMs the
+// worker. Hoisting them to module scope keeps the references identical.
+const mockAppearance = { theme: 'light', nav: 'side', density: 'balanced', accent: 'default', favoritesEnabled: false }
+const mockSetAppearance = vi.fn()
+const mockUseAppearanceResult = { appearance: mockAppearance, setAppearance: mockSetAppearance }
+
 vi.mock('../api/appearance', () => ({
   ACCENT_PRESETS: {
     default: { accent: null, dim: null, contrast: null },
     vermilion: { accent: '#e54d2e', dim: '#4a2218', contrast: '#fff' },
   },
-  useAppearance: () => ({
-    appearance: { theme: 'light', nav: 'side', density: 'balanced', accent: 'default', favoritesEnabled: false },
-    setAppearance: vi.fn(),
-  }),
+  useAppearance: () => mockUseAppearanceResult,
 }))
 
 vi.mock('../components/UsersPanel', () => ({
@@ -65,8 +70,7 @@ function makeSettings(over: Partial<AppSettings> = {}): AppSettings {
 
 describe('Settings', () => {
   it('shows loading state', async () => {
-    // Deferred (not never-resolving) so the worker can tear down — a dangling
-    // promise blocks vitest exit / v8 coverage flush when run in isolation.
+    // Deferred so we can assert the loading state before settings resolve.
     let resolve!: (s: AppSettings) => void
     const pending = new Promise<AppSettings>((r) => { resolve = r })
     mocked.getSettings.mockReturnValue(pending)
@@ -75,7 +79,10 @@ describe('Settings', () => {
     render(<Settings />)
     expect(screen.getByText('Loading...')).toBeInTheDocument()
     resolve(makeSettings())
-    await pending
+    // Wait for the component to consume the resolved promise and re-render,
+    // so no setState fires after the test ends (that dangling microtask
+    // keeps the jsdom env alive and hangs the worker on teardown).
+    await waitFor(() => expect(screen.getByText('Settings/Admin')).toBeInTheDocument())
   })
 
   it('renders settings form after loading', async () => {
@@ -137,7 +144,7 @@ describe('Settings', () => {
   it('renders library section', async () => {
     mocked.getSettings.mockResolvedValue(makeSettings())
     mocked.listLibraries.mockResolvedValue([
-      { id: 'lib1', name: 'Default', path: '/data/storage', is_default: true, item_count: 5, path_ok: true },
+      { id: 'lib1', name: 'Default', path: '/data/storage', is_default: true, created_at: '', item_count: 5, path_ok: true },
     ])
     mocked.listCsvBackups.mockResolvedValue({ backups: [] })
     render(<Settings />)

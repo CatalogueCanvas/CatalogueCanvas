@@ -53,7 +53,7 @@ function makeItem(over: Partial<Item> = {}): Item {
 }
 
 function makePortfolio(over: Partial<Portfolio> = {}): Portfolio {
-  return { id: 'p-1', title: 'P', slug: 'p', is_public: false, item_ids: [], ...over }
+  return { id: 'p-1', title: 'P', slug: 'p', description: '', is_public: false, item_ids: [], style: 'ledger', watermark_enabled: false, watermark_text: '', created_at: '', ...over }
 }
 
 const defaultProps = {
@@ -90,7 +90,7 @@ describe('BulkToolbar', () => {
 
   it('clears notes after confirmation', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
-    mocked.bulkClearNotes.mockResolvedValue(undefined)
+    mocked.bulkClearNotes.mockResolvedValue({ updated: [], missing: [] })
     renderToolbar()
     await userEvent.click(screen.getByText('Clear notes'))
     await waitFor(() => expect(mocked.bulkClearNotes).toHaveBeenCalledWith(['item-1']))
@@ -105,7 +105,7 @@ describe('BulkToolbar', () => {
   })
 
   it('adds tags from input', async () => {
-    mocked.bulkAddTags.mockResolvedValue(undefined)
+    mocked.bulkAddTags.mockResolvedValue({ updated: [], missing: [] })
     renderToolbar()
     await userEvent.type(screen.getByPlaceholderText('tag1, tag2...'), 'red, blue')
     await userEvent.click(screen.getByText('Add tags'))
@@ -113,21 +113,21 @@ describe('BulkToolbar', () => {
   })
 
   it('adds favorites', async () => {
-    mocked.bulkFavorite.mockResolvedValue(undefined)
+    mocked.bulkFavorite.mockResolvedValue({ updated: [], missing: [] })
     renderToolbar()
     await userEvent.click(screen.getByText('Add to Favorites'))
     await waitFor(() => expect(mocked.bulkFavorite).toHaveBeenCalledWith(['item-1']))
   })
 
   it('removes favorites', async () => {
-    mocked.bulkUnfavorite.mockResolvedValue(undefined)
+    mocked.bulkUnfavorite.mockResolvedValue({ updated: [], missing: [] })
     renderToolbar()
     await userEvent.click(screen.getByText('Remove from Favorites'))
     await waitFor(() => expect(mocked.bulkUnfavorite).toHaveBeenCalledWith(['item-1']))
   })
 
   it('applies portfolio action', async () => {
-    mocked.updatePortfolioItems.mockResolvedValue(undefined)
+    mocked.updatePortfolioItems.mockResolvedValue(makePortfolio())
     renderToolbar()
     await userEvent.selectOptions(screen.getAllByRole('combobox')[0], 'p-1')
     await userEvent.click(screen.getByText('Apply'))

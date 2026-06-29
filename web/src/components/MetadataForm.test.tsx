@@ -47,7 +47,7 @@ describe('MetadataForm', () => {
 
   it('renders collection checkboxes', async () => {
     mocked.listCollections.mockResolvedValue([
-      { id: 'col-1', title: 'Art', is_system: false, item_count: 3 },
+      { id: 'col-1', title: 'Art', description: '', cover_item_id: null, is_system: false, created_at: '' },
     ])
     render(<MetadataForm item={makeItem()} onSaved={vi.fn()} />)
     await waitFor(() => expect(screen.getByText('Art')).toBeInTheDocument())
@@ -83,7 +83,7 @@ describe('MetadataForm', () => {
 
   it('toggles collection selection', async () => {
     mocked.listCollections.mockResolvedValue([
-      { id: 'col-1', title: 'Art', is_system: false, item_count: 3 },
+      { id: 'col-1', title: 'Art', description: '', cover_item_id: null, is_system: false, created_at: '' },
     ])
     mocked.updateItem.mockResolvedValue(makeItem())
     const onSaved = vi.fn()

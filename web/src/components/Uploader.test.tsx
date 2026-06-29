@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Uploader } from './Uploader'
+import type { Item } from '../api/client'
 
 vi.mock('../api/client', () => ({
   listLibraries: vi.fn(),
@@ -25,6 +26,16 @@ const mocked = vi.mocked(api)
 
 afterEach(() => vi.clearAllMocks())
 
+function makeItem(over: Partial<Item> = {}): Item {
+  return {
+    id: 'new-item', content_hash: 'h', title: '', note: '',
+    mime_type: null, preview_path: null, preview_url: null,
+    other_files: [], download_urls: [], tags: [], collection_ids: [],
+    raw_meta: {}, ingested_at: '', imported_at: null,
+    width: null, height: null, library_id: 'lib1', ...over,
+  }
+}
+
 describe('Uploader', () => {
   it('renders the dropzone text', async () => {
     mocked.listLibraries.mockResolvedValue([])
@@ -34,8 +45,8 @@ describe('Uploader', () => {
 
   it('shows library selector when multiple libraries exist', async () => {
     mocked.listLibraries.mockResolvedValue([
-      { id: 'lib1', name: 'Default', path: '/data', is_default: true, item_count: 0, path_ok: true },
-      { id: 'lib2', name: 'Extra', path: '/extra', is_default: false, item_count: 0, path_ok: true },
+      { id: 'lib1', name: 'Default', path: '/data', is_default: true, created_at: '', item_count: 0, path_ok: true },
+      { id: 'lib2', name: 'Extra', path: '/extra', is_default: false, created_at: '', item_count: 0, path_ok: true },
     ])
     render(<Uploader onUploaded={vi.fn()} />)
     await waitFor(() => expect(screen.getByLabelText('Library')).toBeInTheDocument())
@@ -43,7 +54,7 @@ describe('Uploader', () => {
 
   it('does not show library selector with single library', async () => {
     mocked.listLibraries.mockResolvedValue([
-      { id: 'lib1', name: 'Default', path: '/data', is_default: true, item_count: 0, path_ok: true },
+      { id: 'lib1', name: 'Default', path: '/data', is_default: true, created_at: '', item_count: 0, path_ok: true },
     ])
     render(<Uploader onUploaded={vi.fn()} />)
     await waitFor(() => expect(mocked.listLibraries).toHaveBeenCalled())
@@ -52,7 +63,7 @@ describe('Uploader', () => {
 
   it('uploads a zip file and calls onUploaded', async () => {
     mocked.listLibraries.mockResolvedValue([])
-    mocked.uploadItem.mockResolvedValue({ created: true, item: { id: 'new-item' }, note: null })
+    mocked.uploadItem.mockResolvedValue({ created: true, item: makeItem({ id: 'new-item' }), note: null })
     const onUploaded = vi.fn()
     render(<Uploader onUploaded={onUploaded} />)
 

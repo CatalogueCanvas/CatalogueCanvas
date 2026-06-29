@@ -25,7 +25,7 @@ const mocked = vi.mocked(api)
 afterEach(() => vi.clearAllMocks())
 
 function makePortfolio(over: Partial<Portfolio> = {}): Portfolio {
-  return { id: 'p-1', title: 'My Portfolio', slug: 'my-portfolio', is_public: false, item_ids: [], ...over }
+  return { id: 'p-1', title: 'My Portfolio', slug: 'my-portfolio', description: '', is_public: false, item_ids: [], style: 'ledger', watermark_enabled: false, watermark_text: '', created_at: '', ...over }
 }
 
 function renderPage() {
@@ -72,7 +72,7 @@ describe('Portfolios', () => {
 
   it('deletes a portfolio after confirmation', async () => {
     mocked.listPortfolios.mockResolvedValue([makePortfolio()])
-    mocked.deletePortfolio.mockResolvedValue(undefined)
+    mocked.deletePortfolio.mockResolvedValue({ ok: true })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderPage()
     await waitFor(() => expect(screen.getByText('My Portfolio')).toBeInTheDocument())
