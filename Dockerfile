@@ -1,5 +1,5 @@
 # --- Stage 1: build the React SPA ---
-FROM node:22-slim AS web-build
+FROM node:22-slim@sha256:813a7480f28fdadac1f7f5c824bcdad435b5bc1322a5968bbbdef8d058f9dff4 AS web-build
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY web/ ./
 RUN npm run build
 
 # --- Stage 2: Python runtime ---
-FROM python:3.14-alpine AS runtime
+FROM python:3.14-alpine@sha256:26730869004e2b9c4b9ad09cab8625e81d256d1ce97e72df5520e806b1709f92 AS runtime
 
 RUN apk add --no-cache \
     cairo \

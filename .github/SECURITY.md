@@ -14,8 +14,11 @@ CatalogueCanvas is under active development. Security fixes are applied to the l
 
 Please report security vulnerabilities through GitHub's private vulnerability reporting, **not** through public issues, pull requests, or discussions.
 
-1. Go to the repository's **Security** tab.
-2. Select **Report a vulnerability**.
-3. Provide a clear description, affected version(s), and reproduction steps.
+Open a private report here:
+https://github.com/CatalogueCanvas/CatalogueCanvas/security/advisories/new
 
-We aim to acknowledge reports on a best-effort basis and will coordinate disclosure with you before any details are made public. Thank you for helping keep CatalogueCanvas and its users safe.
+Or, from the repository's **Security** tab, select **Report a vulnerability**. Please include a clear description, affected version(s), and reproduction steps.
+
+We aim to acknowledge new reports within 7 days and to coordinate disclosure within 90 days of acknowledgement. We will keep you updated on progress and agree a disclosure date with you before any details are made public. 
+
+Thank you for helping keep CatalogueCanvas and its users safe.
