@@ -42,8 +42,8 @@
 .cc-deck__indexgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: clamp(20px,3vw,40px); }
 .cc-deck__idxitem { text-decoration: none; color: inherit; min-width: 0; display: flex; flex-direction: column; }
 .cc-deck__idxnum { font-family: var(--font-mono); font-size: 12px; color: var(--text-ter); }
-.cc-deck__idxitem .cc-thumb { margin: 8px 0; aspect-ratio: 4 / 3; height: auto; background: none; display: grid; place-items: center; overflow: hidden; }
-.cc-deck__idxitem .cc-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.cc-deck__idxitem .cc-thumb { margin: 8px 0; aspect-ratio: auto; height: auto; background: none; display: grid; place-items: center; overflow: hidden; }
+.cc-deck__idxitem .cc-thumb img { width: auto; height: auto; max-width: 100%; max-height: 320px; object-fit: contain; }
 .cc-deck__idxtitle { font-family: var(--font-head); font-weight: var(--head-weight); font-size: 16px; letter-spacing: var(--head-tracking); min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 
 /* art plate */
@@ -55,9 +55,11 @@
     color-mix(in oklab, var(--accent) 5%, var(--surface-2));
   display: grid; place-items: center; box-shadow: var(--shadow-lift);
 }
-/* Plates holding a real image drop the placeholder stripe pattern (all themes). */
-.cc-deck__plate:has(img) { background: var(--surface); }
-.cc-deck__plate img { max-width: 100%; max-height: 100%; object-fit: contain; }
+/* Plates holding a real image drop the placeholder stripe pattern and the
+   fixed 4:3 box, sizing to the image's natural aspect (capped) like the item
+   page — so portrait and landscape work is never letterboxed (all themes). */
+.cc-deck__plate:has(img) { background: var(--surface); aspect-ratio: auto; }
+.cc-deck__plate img { width: auto; height: auto; max-width: 100%; max-height: 70vh; object-fit: contain; }
 .cc-deck__plate span { font-family: var(--font-mono); font-size: 12px; color: var(--text-ter); }
 .cc-deck__caption .cc-deck__kicker { margin-bottom: 14px; }
 .cc-deck__caption h3 {
