@@ -23,7 +23,7 @@ RUN apk add --no-cache --virtual .build-deps \
     gdk-pixbuf-dev \
     libffi-dev
 
-RUN pip install --no-cache-dir uv
+RUN pip install --no-cache-dir uv==0.11.26
 
 WORKDIR /app
 
