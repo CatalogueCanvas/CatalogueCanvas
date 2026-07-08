@@ -1,13 +1,43 @@
 name: Release
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
 permissions:
   contents: read
 jobs:
+  auto-tag:
+    name: Tag on version bump
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Check version and tag
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+        run: |
+          version=$(grep -m1 '^version = ' server/pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          tag="v${version}"
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists, skipping"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$tag"
+          git -c http.extraheader="AUTHORIZATION: basic $(echo -n "x-access-token:${GH_TOKEN}" | base64)" push origin "$tag"
+
   image:
     name: Build and push image
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: read
