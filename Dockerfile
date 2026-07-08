@@ -23,7 +23,9 @@ RUN apk add --no-cache --virtual .build-deps \
     gdk-pixbuf-dev \
     libffi-dev
 
-RUN pip install --no-cache-dir uv==0.11.26
+# uv, copied from its hash-pinned official image (musl static binary, Alpine-compatible).
+# Pinned by manifest-list digest so both linux/amd64 and linux/arm64 resolve correctly.
+COPY --from=ghcr.io/astral-sh/uv:0.11.26@sha256:3d868e555f8f1dbc324afa005066cd11e1053fc4743b9808ca8025283e65efa5 /uv /uvx /usr/local/bin/
 
 WORKDIR /app
 
