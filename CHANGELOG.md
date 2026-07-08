@@ -3,9 +3,15 @@
 All notable changes to CatalogueCanvas are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-This project has not yet tagged a release; entries are grouped by date.
+Released versions are tagged (see `v*` tags and the published `ghcr.io` image); earlier pre-release entries are grouped by date.
 
-## 2026-06-30
+## [0.1.1] - 2026-07-08
+
+### Security
+- Bumped dependencies via Dependabot (consolidated): raised Python floors (fastapi 0.139.0, uvicorn 0.51.0, markdown 3.10.2, coverage 7.15.0, respx 0.23.1), web devDependencies (@types/node 26.1.1, @vitest/coverage-v8 4.1.10, typescript-eslint 8.63.0, vite 8.1.3, vitest 4.1.10), and pinned GitHub Actions (docker setup-buildx 4.2.0, docker login 4.4.0, docker build-push 7.3.0, codeql-action 4.37.0, astral-sh/setup-uv 8.3.2).
+- Earlier Dependabot batch: pinned GitHub Actions (checkout, upload-artifact, docker login/setup-buildx/metadata) and raised Python (fastapi, uvicorn, cairosvg, passlib, python-multipart) and web npm floors.
+
+## [0.1.0] - 2026-06-30
 
 ### Added
 - Token-secured shared portfolio links: opt-in per-portfolio share token gates the public deck so a link without the token returns a 404; a valid token sets a cookie so the recipient can revisit without re-pasting it. Admins can require, regenerate, disable, and copy the link from the portfolio editor. Live server only — static exports remain unlisted.
