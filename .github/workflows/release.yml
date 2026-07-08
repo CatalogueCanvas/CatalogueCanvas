@@ -50,3 +50,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             CC_GIT_SHA=${{ github.sha }}
+
+      - name: Notify addon repo of new release
+        env:
+          GH_TOKEN: ${{ secrets.ADDON_REPO_PAT }}
+        run: |
+          curl -fsSL -X POST \
+            -H "Authorization: token ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/CatalogueCanvas/cataloguecanvas-homeassistant-addon/dispatches \
+            -d "{\"event_type\":\"cc-release\",\"client_payload\":{\"version\":\"${{ github.ref_name }}\"}}"
