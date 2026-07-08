@@ -11,7 +11,7 @@ dependencies = [
     "itsdangerous>=2.2",
     "passlib[argon2]>=1.7.4",
     "httpx>=0.28.1",
-    "markdown>=3.6",
+    "markdown>=3.10.2",
     "lz4>=4.4.5",
 ]
 
