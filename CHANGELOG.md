@@ -9,6 +9,7 @@ Released versions are tagged (see `v*` tags and the published `ghcr.io` image); 
 
 ### Fixed
 - LLM description pipeline: preview images (stored as WebP) were sent to the vision endpoint under a hardcoded `data:image/jpeg` label, so the bytes never matched the declared MIME type. This worked only on lenient runtimes and failed with `HTTP 400 Failed to load image or audio file` on LM Studio versions that trust the declared type (which accepts only jpeg/png). Previews are now transcoded to real JPEG before the request, and undecodable images raise a clear error.
+- Footer now displays the correct app version. `web/package.json` version was left at the default `0.0.0`, which Vite injects as `__APP_VERSION__` and the footer renders; bumped it to `0.1.1` to match the release.
 
 ## [0.1.1] - 2026-07-08
 
