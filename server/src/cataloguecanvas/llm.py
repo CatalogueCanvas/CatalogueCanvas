@@ -5,11 +5,13 @@ import json
 import re
 import socket
 import tomllib
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
+from PIL import Image
 
 PROMPT_TEMPLATE_PATH = Path(__file__).resolve().parent / "prompt.template.toml"
 
@@ -24,6 +26,23 @@ _BLOCKED_NETWORKS = [
 
 class LLMError(Exception):
     pass
+
+
+def _encode_jpeg_data(image_bytes: bytes) -> str:
+    """Transcode arbitrary image bytes to base64 JPEG.
+
+    Previews are stored as WebP, but the request labels the image as
+    ``data:image/jpeg`` and LM Studio's endpoint accepts only jpeg/png. Sending
+    raw WebP bytes under a jpeg label fails on runtimes that trust the declared
+    MIME type, so re-encode to real JPEG to make the bytes match the label.
+    """
+    try:
+        img = Image.open(BytesIO(image_bytes))
+        buf = BytesIO()
+        img.convert("RGB").save(buf, format="JPEG", quality=85)
+    except (OSError, ValueError) as exc:
+        raise LLMError(f"could not decode preview image for LLM request: {exc}") from exc
+    return base64.b64encode(buf.getvalue()).decode()
 
 
 def _snippet(text: str, limit: int = 300) -> str:
@@ -134,7 +153,7 @@ def describe(
         prompt = _build_prompt(item_type, summary_focus, bullet_count, bullet_max_words, prompt_template)
     except (tomllib.TOMLDecodeError, KeyError) as exc:
         raise LLMError(f"invalid prompt template: {exc}") from exc
-    b64 = base64.b64encode(image_bytes).decode()
+    b64 = _encode_jpeg_data(image_bytes)
 
     payload = {
         "model": model,
