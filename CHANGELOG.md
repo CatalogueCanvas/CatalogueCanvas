@@ -5,6 +5,11 @@ All notable changes to CatalogueCanvas are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Released versions are tagged (see `v*` tags and the published `ghcr.io` image); earlier pre-release entries are grouped by date.
 
+## [0.1.2] - 2026-07-10
+
+### Fixed
+- LLM description pipeline: preview images (stored as WebP) were sent to the vision endpoint under a hardcoded `data:image/jpeg` label, so the bytes never matched the declared MIME type. This worked only on lenient runtimes and failed with `HTTP 400 Failed to load image or audio file` on LM Studio versions that trust the declared type (which accepts only jpeg/png). Previews are now transcoded to real JPEG before the request, and undecodable images raise a clear error.
+
 ## [0.1.1] - 2026-07-08
 
 ### Security
