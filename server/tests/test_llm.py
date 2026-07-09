@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 import json
+from io import BytesIO
 
 import httpx
 import pytest
 import respx
+from PIL import Image
 
 from cataloguecanvas import llm
+
+
+def _webp_bytes() -> bytes:
+    """A minimal but real WebP image, mirroring how previews are stored."""
+    buf = BytesIO()
+    Image.new("RGB", (4, 4), (200, 100, 50)).save(buf, format="WEBP")
+    return buf.getvalue()
 
 
 # --- _normalize_api_url ---
@@ -150,7 +159,7 @@ def _chat_response(content: str) -> dict:
 def test_describe_parses_json_content(_allow_dns):
     payload = json.dumps({"descriptions": ["a", "b"], "summary": "s"})
     respx.post(_URL).mock(return_value=httpx.Response(200, json=_chat_response(payload)))
-    out = llm.describe(b"img", "http://example.com", "model")
+    out = llm.describe(_webp_bytes(), "http://example.com", "model")
     assert out == {"descriptions": ["a", "b"], "summary": "s"}
 
 
@@ -158,7 +167,7 @@ def test_describe_parses_json_content(_allow_dns):
 def test_describe_falls_back_to_markdown(_allow_dns):
     respx.post(_URL).mock(
         return_value=httpx.Response(200, json=_chat_response("- bullet one\nA summary")))
-    out = llm.describe(b"img", "http://example.com", "model")
+    out = llm.describe(_webp_bytes(), "http://example.com", "model")
     assert out["descriptions"] == ["bullet one"]
     assert out["summary"] == "A summary"
 
@@ -167,21 +176,21 @@ def test_describe_falls_back_to_markdown(_allow_dns):
 def test_describe_http_error(_allow_dns):
     respx.post(_URL).mock(return_value=httpx.Response(500, text="boom"))
     with pytest.raises(llm.LLMError, match="HTTP 500"):
-        llm.describe(b"img", "http://example.com", "model")
+        llm.describe(_webp_bytes(), "http://example.com", "model")
 
 
 @respx.mock
 def test_describe_no_choices(_allow_dns):
     respx.post(_URL).mock(return_value=httpx.Response(200, json={"error": "model not loaded"}))
     with pytest.raises(llm.LLMError, match="no 'choices'"):
-        llm.describe(b"img", "http://example.com", "model")
+        llm.describe(_webp_bytes(), "http://example.com", "model")
 
 
 @respx.mock
 def test_describe_strips_code_fence(_allow_dns):
     fenced = "```json\n" + json.dumps({"summary": "ok", "descriptions": []}) + "\n```"
     respx.post(_URL).mock(return_value=httpx.Response(200, json=_chat_response(fenced)))
-    out = llm.describe(b"img", "http://example.com", "model")
+    out = llm.describe(_webp_bytes(), "http://example.com", "model")
     assert out["summary"] == "ok"
 
 
@@ -189,9 +198,35 @@ def test_describe_strips_code_fence(_allow_dns):
 def test_describe_connection_failure(_allow_dns):
     respx.post(_URL).mock(side_effect=httpx.ConnectError("refused"))
     with pytest.raises(llm.LLMError, match="could not reach"):
-        llm.describe(b"img", "http://example.com", "model")
+        llm.describe(_webp_bytes(), "http://example.com", "model")
 
 
 def test_describe_invalid_template(_allow_dns):
     with pytest.raises(llm.LLMError, match="invalid prompt template"):
         llm.describe(b"img", "http://example.com", "model", prompt_template="not = [valid")
+
+
+@respx.mock
+def test_describe_transcodes_webp_to_jpeg(_allow_dns):
+    """WebP preview bytes must be sent as real JPEG under the image/jpeg label."""
+    import base64
+
+    captured: dict = {}
+
+    def _capture(request):
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json=_chat_response(json.dumps({"summary": "ok", "descriptions": []})))
+
+    respx.post(_URL).mock(side_effect=_capture)
+    llm.describe(_webp_bytes(), "http://example.com", "model")
+
+    url = captured["body"]["messages"][0]["content"][1]["image_url"]["url"]
+    prefix = "data:image/jpeg;base64,"
+    assert url.startswith(prefix)
+    # Bytes under the jpeg label must actually be JPEG (start with the SOI marker).
+    assert base64.b64decode(url[len(prefix):])[:2] == b"\xff\xd8"
+
+
+def test_encode_jpeg_data_rejects_non_image():
+    with pytest.raises(llm.LLMError, match="could not decode preview image"):
+        llm._encode_jpeg_data(b"not an image")
