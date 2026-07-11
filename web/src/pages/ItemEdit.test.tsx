@@ -62,6 +62,7 @@ function makeSettings(over: Partial<AppSettings> = {}): AppSettings {
     llm_prompt_template: '', llm_prompt_template_default: '',
     theme: 'light', accent: 'default', nav: 'top', density: 'balanced', favorites_enabled: 'false',
     multi_user_enabled: 'false',
+    update_check_enabled: 'false',
     stats: { total_items: 0, total_collections: 0, missing_preview: 0 }, ...over,
   }
 }

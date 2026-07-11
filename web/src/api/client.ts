@@ -92,7 +92,16 @@ export interface AppSettings {
   density: Density
   favorites_enabled: string
   multi_user_enabled: string
+  update_check_enabled: string
   stats: { total_items: number; total_collections: number; missing_preview: number }
+}
+
+export interface VersionInfo {
+  current: string
+  latest: string | null
+  update_available: boolean
+  checked: boolean
+  last_checked: string | null
 }
 
 export type Role = 'admin' | 'reader'
@@ -279,8 +288,11 @@ export const getSettings = () => request<AppSettings>('/api/settings')
 export const getAppearance = () =>
   request<Pick<AppSettings, 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled' | 'multi_user_enabled'>>('/api/settings/appearance')
 
-export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' | 'llm_model' | 'llm_item_type' | 'llm_summary_focus' | 'llm_bullet_count' | 'llm_bullet_max_words' | 'llm_auto_generate' | 'llm_prompt_template' | 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled' | 'multi_user_enabled'>>) =>
+export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' | 'llm_model' | 'llm_item_type' | 'llm_summary_focus' | 'llm_bullet_count' | 'llm_bullet_max_words' | 'llm_auto_generate' | 'llm_prompt_template' | 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled' | 'multi_user_enabled' | 'update_check_enabled'>>) =>
   request<AppSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(fields) })
+
+export const getVersion = (force = false) =>
+  request<VersionInfo>('/api/version' + (force ? '?force=true' : ''))
 
 export const exportDatabase = () =>
   downloadPost('/api/settings/export/db', undefined, 'catalogue.db')
