@@ -128,7 +128,7 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
             prompt_template: settings.llm_prompt_template,
             api_key: key || undefined,
           })
-          await api.updateItem(item.id, { note: result.summary })
+          await api.updateItem(item.id, { note: api.describeResultToNote(result) })
           updateItem(taskId, label, { status: 'done' })
         } catch (err) {
           failed = true
