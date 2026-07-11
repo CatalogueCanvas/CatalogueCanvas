@@ -50,7 +50,7 @@ export function ItemEdit() {
 
   const applyDescription = async () => {
     if (!llmResult) return
-    const note = [llmResult.summary, '', ...llmResult.descriptions.map((d) => `- ${d}`)].join('\n')
+    const note = api.describeResultToNote(llmResult)
     const updated = await api.updateItem(item.id, { note })
     setItem(updated)
     setLlmResult(null)

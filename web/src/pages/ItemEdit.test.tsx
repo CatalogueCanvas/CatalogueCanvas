@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ItemEdit } from './ItemEdit'
-import type { AppSettings, Item } from '../api/client'
+import type { AppSettings, DescribeResult, Item } from '../api/client'
 
 vi.mock('../api/client', () => ({
   getItem: vi.fn(),
@@ -15,6 +15,8 @@ vi.mock('../api/client', () => ({
   unfavoriteItem: vi.fn(),
   itemMetadataUrl: vi.fn(() => '/api/items/item-1/metadata'),
   itemArchiveUrl: vi.fn(() => '/api/items/item-1/archive'),
+  describeResultToNote: (r: DescribeResult) =>
+    [r.summary, '', ...r.descriptions.map((d) => `- ${d}`)].join('\n'),
 }))
 
 vi.mock('../api/appearance', () => ({
@@ -34,7 +36,14 @@ vi.mock('../components/NotesPanel', () => ({
 }))
 
 vi.mock('../components/LLMButton', () => ({
-  LLMButton: () => <div data-testid="llm-button">LLMButton</div>,
+  LLMButton: ({ onResult }: { onResult: (r: DescribeResult) => void }) => (
+    <button
+      data-testid="llm-button"
+      onClick={() => onResult({ summary: 'A cat', descriptions: ['fluffy', 'orange'] })}
+    >
+      LLMButton
+    </button>
+  ),
 }))
 
 vi.mock('../components/Icon', () => ({
@@ -141,6 +150,22 @@ describe('ItemEdit', () => {
     mocked.listItems.mockResolvedValue([makeItem()])
     renderPage()
     await waitFor(() => expect(screen.getByTestId('llm-button')).toBeInTheDocument())
+  })
+
+  it('applies the LLM result to the note as a formatted string', async () => {
+    mocked.getItem.mockResolvedValue(makeItem())
+    mocked.getSettings.mockResolvedValue(makeSettings({ llm_auto_generate: 'true' }))
+    mocked.listItems.mockResolvedValue([makeItem()])
+    mocked.updateItem.mockResolvedValue(makeItem({ note: 'A cat\n\n- fluffy\n- orange' }))
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('llm-button')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByTestId('llm-button'))
+    await userEvent.click(await screen.findByText('Apply to note'))
+
+    await waitFor(() =>
+      expect(mocked.updateItem).toHaveBeenCalledWith('item-1', { note: 'A cat\n\n- fluffy\n- orange' })
+    )
   })
 
   it('shows navigation links when there are adjacent items', async () => {
