@@ -6,7 +6,6 @@ opt-in gate, the weekly throttle, and the failure fallback.
 from __future__ import annotations
 
 import httpx
-import pytest
 
 from cataloguecanvas.routers import settings as settings_router
 
