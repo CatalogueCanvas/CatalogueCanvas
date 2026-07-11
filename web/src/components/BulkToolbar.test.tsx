@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { BulkToolbar } from './BulkToolbar'
-import type { Item, Portfolio } from '../api/client'
+import type { DescribeResult, Item, Portfolio } from '../api/client'
 
 vi.mock('../api/client', () => ({
   bulkClearNotes: vi.fn(),
@@ -15,6 +15,8 @@ vi.mock('../api/client', () => ({
   getSettings: vi.fn(),
   describeItem: vi.fn(),
   updateItem: vi.fn(),
+  describeResultToNote: (r: DescribeResult) =>
+    [r.summary, '', ...r.descriptions.map((d) => `- ${d}`)].join('\n'),
 }))
 
 vi.mock('../api/auth', () => ({
@@ -124,6 +126,20 @@ describe('BulkToolbar', () => {
     renderToolbar()
     await userEvent.click(screen.getByText('Remove from Favorites'))
     await waitFor(() => expect(mocked.bulkUnfavorite).toHaveBeenCalledWith(['item-1']))
+  })
+
+  it('generates descriptions and stores the full formatted note', async () => {
+    mocked.getSettings.mockResolvedValue({
+      llm_api_url: '', llm_model: '', llm_item_type: '', llm_summary_focus: '',
+      llm_bullet_count: '3', llm_bullet_max_words: '50', llm_prompt_template: '',
+    } as unknown as Awaited<ReturnType<typeof api.getSettings>>)
+    mocked.describeItem.mockResolvedValue({ summary: 'A cat', descriptions: ['fluffy', 'orange'] })
+    mocked.updateItem.mockResolvedValue(makeItem())
+    renderToolbar()
+    await userEvent.click(screen.getByText('Generate descriptions (LLM)'))
+    await waitFor(() =>
+      expect(mocked.updateItem).toHaveBeenCalledWith('item-1', { note: 'A cat\n\n- fluffy\n- orange' })
+    )
   })
 
   it('applies portfolio action', async () => {
