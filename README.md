@@ -141,6 +141,46 @@ npm run dev
 
 The Vite dev server proxies API requests to the backend; see `web/vite.config.ts` for the proxy target.
 
+## Updating
+
+Your data lives in the `./data` volume (SQLite database, uploaded assets, session key) and survives every update below.
+
+To be told when a new release exists, turn on **Check for updates** under **Settings → Updates**. When it is on, the app reads the latest version tag from GitHub once a week and sends nothing back. **Check now** runs the check immediately. Only the admin account sees the check and the "update available" badge.
+
+### Docker
+
+If you run the published image, pull the newest one and recreate the container:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+If you build from source, update the checkout and rebuild:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+### Bare metal
+
+Update the checkout, then reinstall dependencies and rebuild each part:
+
+```bash
+git pull
+
+# Backend
+cd server
+uv sync
+uv run uvicorn cataloguecanvas.main:app   # add --reload for development
+
+# Frontend
+cd ../web
+npm ci
+npm run build                             # or: npm run dev
+```
+
 ## Configuration
 
 Environment variables (set via `docker-compose.yml` or your shell):

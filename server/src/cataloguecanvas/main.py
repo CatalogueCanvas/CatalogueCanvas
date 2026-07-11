@@ -82,6 +82,7 @@ def create_app() -> FastAPI:
     app.include_router(portfolios.router)
     app.include_router(libraries.router)
     app.include_router(settings_router.router)
+    app.include_router(settings_router.version_router)
     app.include_router(users.router)
 
     def _resolve_storage_file(library_id: str, rel_path: str) -> Path:

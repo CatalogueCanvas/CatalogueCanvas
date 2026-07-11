@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as api from '../api/client'
-import type { Accent, AppSettings, CsvApplyResult, CsvBackup, CsvFieldChange, CsvPreview, Density, Library, NavLayout, Theme } from '../api/client'
+import type { Accent, AppSettings, CsvApplyResult, CsvBackup, CsvFieldChange, CsvPreview, Density, Library, NavLayout, Theme, VersionInfo } from '../api/client'
 import { ApiError, DELETE_BACKUP_CONFIRM } from '../api/client'
 import { ACCENT_PRESETS, type AccentPreset, useAppearance } from '../api/appearance'
 import { UsersPanel } from '../components/UsersPanel'
@@ -170,6 +170,41 @@ export function Settings() {
     }
   }
 
+  // --- update check ---
+  const [version, setVersion] = useState<VersionInfo | null>(null)
+  const [versionBusy, setVersionBusy] = useState(false)
+  const [versionError, setVersionError] = useState('')
+
+  const loadVersion = async (force = false) => {
+    setVersionBusy(true)
+    setVersionError('')
+    try {
+      setVersion(await api.getVersion(force))
+    } catch (err) {
+      setVersionError(err instanceof ApiError ? err.message : 'update check failed')
+    } finally {
+      setVersionBusy(false)
+    }
+  }
+
+  const setUpdateCheck = async (value: boolean) => {
+    if (!settings) return
+    setError('')
+    try {
+      const updated = await api.updateSettings({ update_check_enabled: value ? 'true' : 'false' })
+      setSettings(updated)
+      if (value) void loadVersion()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'failed to update setting')
+    }
+  }
+
+  useEffect(() => {
+    // Load cached version info once settings are known and the check is enabled.
+    if (settings?.update_check_enabled === 'true') void loadVersion()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings?.update_check_enabled])
+
   if (!settings) return <div className="container"><div className="cc-empty"><p className="cc-empty__title">{error || 'Loading...'}</p></div></div>
 
   const save = async () => {
@@ -326,6 +361,51 @@ export function Settings() {
           {settings.multi_user_enabled === 'true' && (
             <div style={{ marginTop: 'var(--space-4)' }}>
               <UsersPanel />
+            </div>
+          )}
+        </section>
+
+        <section className="cc-panel">
+          <h2 className="cc-h2" style={{ marginBottom: 'var(--space-4)' }}>Updates</h2>
+          <div className="cc-aprow">
+            <div className="cc-aprow__txt">
+              <span className="cc-label">Check for updates</span>
+              <p className="cc-hint">When on, CatalogueCanvas checks GitHub for a newer release at most once per week. No data is sent — it only reads the latest published version.</p>
+            </div>
+            <div className="cc-seg">
+              {([[true, 'On'], [false, 'Off']] as const).map(([value, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={(settings.update_check_enabled === 'true') === value}
+                  onClick={() => void setUpdateCheck(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {settings.update_check_enabled === 'true' && (
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <p className="cc-hint">
+                Current version: <strong>v{version?.current ?? '—'}</strong>
+                {version?.latest && <> · Latest: <strong>v{version.latest}</strong></>}
+                {version?.last_checked && <> · Last checked: {new Date(version.last_checked).toLocaleString()}</>}
+              </p>
+              {version?.update_available && (
+                <p className="cc-hint" style={{ color: 'var(--accent)' }}>
+                  A newer version is available.{' '}
+                  <a href="https://github.com/CatalogueCanvas/CatalogueCanvas#updating" target="_blank" rel="noreferrer">
+                    How to update
+                  </a>
+                </p>
+              )}
+              <div className="cc-row-tight" style={{ marginTop: 'var(--space-3)' }}>
+                <button className="cc-btn" type="button" onClick={() => void loadVersion(true)} disabled={versionBusy}>
+                  {versionBusy ? 'Checking…' : 'Check now'}
+                </button>
+              </div>
+              {versionError && <div className="error-text">{versionError}</div>}
             </div>
           )}
         </section>

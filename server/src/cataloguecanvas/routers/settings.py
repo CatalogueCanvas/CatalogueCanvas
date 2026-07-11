@@ -3,10 +3,11 @@ import os
 import sqlite3
 import tempfile
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
+import httpx
 from starlette.background import BackgroundTask
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, Response
@@ -14,11 +15,22 @@ from pydantic import BaseModel
 
 from ..auth import require_admin
 from ..db import get_all_libraries, get_db_stats, get_settings, set_settings
+from ..diagnostics import _app_version
 from ..llm import LLMError, _normalize_api_url, _validate_api_url, default_prompt_template
 from ..settings import settings
 from .auth import get_db
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
+
+# GitHub release source and how often we're allowed to poll it when the opt-in
+# update check is enabled. The result is cached in app_settings so a page load
+# never triggers more than one outbound call per week (unless forced).
+#
+# The repo publishes versions as git tags (vX.Y.Z) via CI; formal GitHub Releases
+# may not exist, so /releases/latest can 404. We therefore read /tags and pick the
+# highest semver, which works whether or not a Release has been published.
+GITHUB_TAGS_URL = "https://api.github.com/repos/CatalogueCanvas/CatalogueCanvas/tags"
+UPDATE_CHECK_INTERVAL = timedelta(days=7)
 
 LLM_DEFAULTS = {
     "llm_api_url": "",
@@ -39,12 +51,21 @@ APPEARANCE_DEFAULTS = {
     "multi_user_enabled": "false",
 }
 
+# Admin-only update-check state. Kept out of APPEARANCE_DEFAULTS so it is never
+# served on the public /appearance endpoint.
+UPDATE_DEFAULTS = {
+    "update_check_enabled": "false",
+    "update_last_checked": "",
+    "update_latest_version": "",
+}
+
 
 def _settings_response(conn: sqlite3.Connection) -> dict:
     stored = get_settings(conn)
     return {
         **{k: stored.get(k, v) for k, v in LLM_DEFAULTS.items()},
         **{k: stored.get(k, v) for k, v in APPEARANCE_DEFAULTS.items()},
+        **{k: stored.get(k, v) for k, v in UPDATE_DEFAULTS.items()},
         "llm_prompt_template": stored.get("llm_prompt_template") or default_prompt_template(),
         "llm_prompt_template_default": default_prompt_template(),
         "stats": get_db_stats(conn),
@@ -77,6 +98,7 @@ class SettingsUpdate(BaseModel):
     density: Optional[str] = None
     favorites_enabled: Optional[str] = None
     multi_user_enabled: Optional[str] = None
+    update_check_enabled: Optional[str] = None
 
 
 @router.put("")
@@ -96,6 +118,94 @@ def update_settings_endpoint(
             raise HTTPException(status_code=400, detail=str(exc)) from exc
     set_settings(conn, fields)
     return _settings_response(conn)
+
+
+# Update-check endpoint lives outside the /api/settings prefix.
+version_router = APIRouter(tags=["version"])
+
+
+def _version_tuple(v: str) -> tuple[int, ...]:
+    """Parse a version like '0.1.2' (or 'v0.1.2') into a comparable tuple.
+
+    Non-numeric or missing parts degrade to 0 so a malformed tag can never make
+    an update look available; comparison stays best-effort.
+    """
+    parts = v.strip().lstrip("v").split(".")
+    out = []
+    for p in parts:
+        num = "".join(ch for ch in p if ch.isdigit())
+        out.append(int(num) if num else 0)
+    return tuple(out)
+
+
+def _fetch_latest_release() -> Optional[str]:
+    """Return the highest semver tag from GitHub, or None if there are none.
+
+    Reads the tags list (not /releases/latest, which 404s when no formal Release
+    is published) and picks the tag with the greatest version tuple.
+    """
+    resp = httpx.get(
+        GITHUB_TAGS_URL,
+        timeout=10.0,
+        headers={"Accept": "application/vnd.github+json"},
+    )
+    resp.raise_for_status()
+    tags = [
+        t["name"].lstrip("v")
+        for t in resp.json()
+        if isinstance(t, dict) and isinstance(t.get("name"), str) and t["name"]
+    ]
+    if not tags:
+        return None
+    return max(tags, key=_version_tuple)
+
+
+@version_router.get("/api/version")
+def get_version(
+    force: bool = False,
+    conn: sqlite3.Connection = Depends(get_db),
+    _: None = Depends(require_admin),
+):
+    current = _app_version()
+    stored = get_settings(conn)
+    enabled = stored.get("update_check_enabled", "false") == "true"
+    cached_latest = stored.get("update_latest_version") or None
+    last_checked = stored.get("update_last_checked") or None
+
+    def _result(latest: Optional[str], checked: bool) -> dict:
+        available = bool(latest) and _version_tuple(latest) > _version_tuple(current)
+        return {
+            "current": current,
+            "latest": latest,
+            "update_available": available,
+            "checked": checked,
+            "last_checked": last_checked,
+        }
+
+    if not enabled:
+        # No outbound call; surface any previously cached result only.
+        return _result(cached_latest, False)
+
+    # Throttle: only poll GitHub when forced or the cache is older than a week.
+    due = force or not last_checked
+    if last_checked and not force:
+        try:
+            due = datetime.now(timezone.utc) - datetime.fromisoformat(last_checked) >= UPDATE_CHECK_INTERVAL
+        except ValueError:
+            due = True
+    if not due:
+        return _result(cached_latest, False)
+
+    try:
+        latest = _fetch_latest_release()
+    except (httpx.HTTPError, ValueError):
+        # Network/rate-limit/parse failure: keep the old cache and timestamp so
+        # the next enabled load retries rather than sticking on a stale success.
+        return _result(cached_latest, True)
+
+    last_checked = datetime.now(timezone.utc).isoformat()
+    set_settings(conn, {"update_latest_version": latest or "", "update_last_checked": last_checked})
+    return _result(latest, True)
 
 
 @router.post("/diagnostics")
