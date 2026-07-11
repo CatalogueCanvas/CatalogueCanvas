@@ -100,6 +100,17 @@ describe('request', () => {
   })
 })
 
+describe('describeResultToNote', () => {
+  it('joins summary and bulleted descriptions', () => {
+    const note = api.describeResultToNote({ summary: 'A cat', descriptions: ['fluffy', 'orange'] })
+    expect(note).toBe('A cat\n\n- fluffy\n- orange')
+  })
+
+  it('keeps the blank line when there are no descriptions', () => {
+    expect(api.describeResultToNote({ summary: 'Only summary', descriptions: [] })).toBe('Only summary\n')
+  })
+})
+
 describe('resource builders', () => {
   it('updateItem issues PATCH to the item URL', async () => {
     const spy = mockFetch({ jsonBody: {} })

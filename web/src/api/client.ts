@@ -66,6 +66,11 @@ export interface DescribeResult {
   summary: string
 }
 
+// Single source of truth for turning a DescribeResult into a note string, so
+// every code path (single-item and batch) stores the identical, full result.
+export const describeResultToNote = (r: DescribeResult): string =>
+  [r.summary, '', ...r.descriptions.map((d) => `- ${d}`)].join('\n')
+
 export type Theme = 'light' | 'dark'
 export type Accent = 'default' | 'cobalt' | 'terracotta' | 'forest' | 'mint' | 'ink'
 export type NavLayout = 'top' | 'side'
