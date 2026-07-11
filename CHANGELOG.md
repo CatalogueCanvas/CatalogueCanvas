@@ -5,6 +5,14 @@ All notable changes to CatalogueCanvas are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Released versions are tagged (see `v*` tags and the published `ghcr.io` image); earlier pre-release entries are grouped by date.
 
+## [0.1.3] - 2026-07-11
+
+### Added
+- Opt-in update check. An admin-only `/api/version` endpoint queries GitHub for the latest release (weekly throttle, no network unless enabled) and the footer surfaces when a newer version is available. Configurable from Settings.
+
+### Fixed
+- LLM descriptions are now stored identically whether generated for a single item or in batch. Both paths use a shared `describeResultToNote` helper, so the full summary and bullet list are saved to the note instead of only the summary in the batch flow.
+
 ## [0.1.2] - 2026-07-10
 
 ### Fixed
