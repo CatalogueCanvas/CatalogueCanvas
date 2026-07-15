@@ -5,8 +5,6 @@ All notable changes to CatalogueCanvas are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Released versions are tagged (see `v*` tags and the published `ghcr.io` image); earlier pre-release entries are grouped by date.
 
-## [Unreleased]
-
 ## [0.1.4] - 2026-07-15
 
 ### Added
