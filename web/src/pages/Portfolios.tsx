@@ -59,7 +59,7 @@ export function Portfolios() {
                 </div>
               </div>
               <div className="cc-row__actions">
-                {p.is_public && <a className="cc-btn cc-btn--sm" href={`/p/${p.slug}`} target="_blank" rel="noreferrer"><Icon name="view" size={14} />View</a>}
+                {p.is_public && <a className="cc-btn cc-btn--sm" href={p.share_token ? `/p/${p.slug}/${p.share_token}` : `/p/${p.slug}`} target="_blank" rel="noreferrer"><Icon name="view" size={14} />View</a>}
                 {isAdmin && <Link className="cc-btn cc-btn--sm" to={`/portfolios/${p.id}`}><Icon name="edit" size={14} />Edit</Link>}
                 {isAdmin && <button className="cc-btn cc-btn--danger cc-btn--sm" onClick={() => void remove(p.id)}><Icon name="delete" size={14} />Delete</button>}
               </div>
