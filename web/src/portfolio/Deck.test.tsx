@@ -33,6 +33,7 @@ function makePortfolio(over: Partial<PublicPortfolio> = {}): PublicPortfolio {
     slug: 'my-deck',
     description: 'A portfolio description',
     style: 'ledger',
+    layout: 'slide',
     items: [makeItem()],
     ...over,
   }
@@ -99,6 +100,29 @@ describe('Deck', () => {
     mocked.getPublicPortfolio.mockResolvedValue(makePortfolio())
     renderDeck()
     await waitFor(() => expect(screen.getByText('Print / Export PDF')).toBeInTheDocument())
+  })
+
+  it('hides the print button in scroll layout', async () => {
+    mocked.getPublicPortfolio.mockResolvedValue(makePortfolio({ layout: 'scroll' }))
+    renderDeck()
+    await waitFor(() => expect(screen.getByText('My Deck')).toBeInTheDocument())
+    expect(screen.queryByText('Print / Export PDF')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { style: 'ledger', layout: 'slide' },
+    { style: 'ledger', layout: 'scroll' },
+    { style: 'kinetic', layout: 'slide' },
+    { style: 'kinetic', layout: 'scroll' },
+    { style: 'brutalist', layout: 'scroll' },
+    { style: 'riso', layout: 'scroll' },
+  ] as const)('marks the deck root with $style style and $layout layout independently', async ({ style, layout }) => {
+    mocked.getPublicPortfolio.mockResolvedValue(makePortfolio({ style, layout }))
+    const { container } = renderDeck()
+    await waitFor(() => expect(screen.getByText('My Deck')).toBeInTheDocument())
+    const root = container.querySelector('.cc-deck')
+    expect(root).toHaveAttribute('data-portfolio-style', style)
+    expect(root).toHaveAttribute('data-portfolio-layout', layout)
   })
 
   it('renders the colophon section', async () => {

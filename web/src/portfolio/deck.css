@@ -88,12 +88,17 @@
   .cc-deck__art--rev { direction: ltr; }
 }
 
+/* Print pagination belongs to the slide layout only — every rule below is
+   gated on it so a scroll portfolio prints as a normal continuous document.
+   (@page can't be scoped to a selector; scroll decks hide the print button and
+   the paper size is inert without the pagination rules.) */
 @media print {
   @page { size: 1920px 1080px; margin: 0; }
-  html, body, .cc-deck { width: 1920px; height: 1080px; }
   .no-print { display: none !important; }
 
-  .cc-deck__sec {
+  html, body, .cc-deck[data-portfolio-layout="slide"] { width: 1920px; height: 1080px; }
+
+  .cc-deck[data-portfolio-layout="slide"] .cc-deck__sec {
     page-break-after: always;
     break-after: page;
     width: 1920px !important;
@@ -103,26 +108,26 @@
     padding: 80px 100px;
     border-bottom: 0;
   }
-  .cc-deck__sec:last-child { page-break-after: auto; break-after: auto; }
+  .cc-deck[data-portfolio-layout="slide"] .cc-deck__sec:last-child { page-break-after: auto; break-after: auto; }
 
-  .cc-deck__cover { min-height: unset; }
+  .cc-deck[data-portfolio-layout="slide"] .cc-deck__cover { min-height: unset; }
 
-  .cc-deck__indexgrid {
+  .cc-deck[data-portfolio-layout="slide"] .cc-deck__indexgrid {
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(2, 1fr);
     gap: 40px;
     height: 100%;
     min-height: 0;
   }
-  .cc-deck__idxitem { min-height: 0; overflow: hidden; }
-  .cc-deck__idxitem .cc-thumb { flex: 1 1 auto; min-height: 0; }
-  .cc-deck__idxtitle { flex: 0 0 auto; }
+  .cc-deck[data-portfolio-layout="slide"] .cc-deck__idxitem { min-height: 0; overflow: hidden; }
+  .cc-deck[data-portfolio-layout="slide"] .cc-deck__idxitem .cc-thumb { flex: 1 1 auto; min-height: 0; }
+  .cc-deck[data-portfolio-layout="slide"] .cc-deck__idxtitle { flex: 0 0 auto; }
 
-  .cc-deck__art.cc-deck__art--wide {
+  .cc-deck[data-portfolio-layout="slide"] .cc-deck__art.cc-deck__art--wide {
     grid-template-columns: 1fr;
     grid-template-rows: 2fr 1fr;
   }
-  .cc-deck__art.cc-deck__art--wide .cc-deck__plate { max-height: 650px; }
+  .cc-deck[data-portfolio-layout="slide"] .cc-deck__art.cc-deck__art--wide .cc-deck__plate { max-height: 650px; }
 }
 
 /* ============================================================================
@@ -335,4 +340,18 @@
 .cc-deck[data-portfolio-style="riso"] .cc-tag {
   border-radius: var(--radius-pill); background: color-mix(in oklab, var(--accent) 18%, transparent);
   border-color: color-mix(in oklab, var(--accent) 45%, transparent); color: var(--text);
+}
+
+/* ============================================================================
+   PORTFOLIO LAYOUT: SCROLL — publishes the same sections as a continuous
+   one-page site instead of full-height slides. Orthogonal to the themes above:
+   keyed on the layout attribute alone, so it dresses all four styles. Placed
+   last so `min-height: auto` wins over each theme's own cover height
+   (74/94vh etc) on cascade order rather than !important.
+   The default layout, "slide", needs no rules — it is the deck as authored.
+   ============================================================================ */
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__cover { min-height: auto; }
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__sec {
+  padding-top: clamp(40px, 6vw, 84px);
+  padding-bottom: clamp(40px, 6vw, 84px);
 }

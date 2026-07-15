@@ -18,6 +18,7 @@ export function Deck() {
   const followRef = useRef<HTMLDivElement>(null)
 
   const style = portfolio?.style || 'ledger'
+  const layout = portfolio?.layout || 'slide'
   const kinetic = style === 'kinetic'
 
   useEffect(() => {
@@ -51,10 +52,12 @@ export function Deck() {
   }
 
   return (
-    <div className="cc-deck" data-portfolio-style={style}>
-      <button className="cc-btn cc-deck__printbtn no-print" onClick={() => { window.print() }} type="button">
-        Print / Export PDF
-      </button>
+    <div className="cc-deck" data-portfolio-style={style} data-portfolio-layout={layout}>
+      {layout === 'slide' && (
+        <button className="cc-btn cc-deck__printbtn no-print" onClick={() => { window.print() }} type="button">
+          Print / Export PDF
+        </button>
+      )}
       <section className="cc-deck__sec cc-deck__cover">
         <p className="cc-deck__kicker">Portfolio · {total} works</p>
         <h1 className="cc-deck__title">{portfolio.title}</h1>

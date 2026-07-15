@@ -55,7 +55,7 @@ function makeItem(over: Partial<Item> = {}): Item {
 }
 
 function makePortfolio(over: Partial<Portfolio> = {}): Portfolio {
-  return { id: 'p-1', title: 'P', slug: 'p', description: '', is_public: false, item_ids: [], style: 'ledger', watermark_enabled: false, watermark_text: '', share_token: '', created_at: '', ...over }
+  return { id: 'p-1', title: 'P', slug: 'p', description: '', is_public: false, item_ids: [], style: 'ledger', layout: 'slide', watermark_enabled: false, watermark_text: '', share_token: '', created_at: '', ...over }
 }
 
 const defaultProps = {

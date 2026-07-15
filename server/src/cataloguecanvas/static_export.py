@@ -133,19 +133,25 @@ html,body{margin:0;padding:0}
 .cc-deck[data-portfolio-style="riso"] .cc-deck__plate:has(img){background:var(--surface)}
 .cc-deck[data-portfolio-style="riso"] .cc-tag{border-radius:var(--radius-pill);background:color-mix(in oklab,var(--accent) 18%,transparent);border-color:color-mix(in oklab,var(--accent) 45%,transparent);color:var(--text)}
 
-/* print: one 1920x1080 slide per section */
+/* LAYOUT: SCROLL — continuous one-page site. Orthogonal to the themes above:
+   keyed on the layout attribute alone, so it dresses all four styles. Last so
+   min-height:auto wins over each theme's cover height on cascade order. */
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__cover{min-height:auto}
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__sec{padding-top:clamp(40px,6vw,84px);padding-bottom:clamp(40px,6vw,84px)}
+
+/* print: one 1920x1080 slide per section — slide layout only */
 @media print{
 @page{size:1920px 1080px;margin:0}
-html,body,.cc-deck{width:1920px;height:1080px}
-.cc-deck__sec{page-break-after:always;break-after:page;width:1920px!important;height:1080px!important;box-sizing:border-box;overflow:hidden;padding:80px 100px;border-bottom:0}
-.cc-deck__sec:last-child{page-break-after:auto;break-after:auto}
-.cc-deck__cover{min-height:unset}
-.cc-deck__indexgrid{grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr);gap:40px;height:100%;min-height:0}
-.cc-deck__idxitem{min-height:0;overflow:hidden}
-.cc-deck__idxitem .cc-thumb{flex:1 1 auto;min-height:0}
-.cc-deck__idxtitle{flex:0 0 auto}
-.cc-deck__art.cc-deck__art--wide{grid-template-columns:1fr;grid-template-rows:2fr 1fr}
-.cc-deck__art.cc-deck__art--wide .cc-deck__plate{max-height:650px}
+html,body,.cc-deck[data-portfolio-layout="slide"]{width:1920px;height:1080px}
+.cc-deck[data-portfolio-layout="slide"] .cc-deck__sec{page-break-after:always;break-after:page;width:1920px!important;height:1080px!important;box-sizing:border-box;overflow:hidden;padding:80px 100px;border-bottom:0}
+.cc-deck[data-portfolio-layout="slide"] .cc-deck__sec:last-child{page-break-after:auto;break-after:auto}
+.cc-deck[data-portfolio-layout="slide"] .cc-deck__cover{min-height:unset}
+.cc-deck[data-portfolio-layout="slide"] .cc-deck__indexgrid{grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr);gap:40px;height:100%;min-height:0}
+.cc-deck[data-portfolio-layout="slide"] .cc-deck__idxitem{min-height:0;overflow:hidden}
+.cc-deck[data-portfolio-layout="slide"] .cc-deck__idxitem .cc-thumb{flex:1 1 auto;min-height:0}
+.cc-deck[data-portfolio-layout="slide"] .cc-deck__idxtitle{flex:0 0 auto}
+.cc-deck[data-portfolio-layout="slide"] .cc-deck__art.cc-deck__art--wide{grid-template-columns:1fr;grid-template-rows:2fr 1fr}
+.cc-deck[data-portfolio-layout="slide"] .cc-deck__art.cc-deck__art--wide .cc-deck__plate{max-height:650px}
 .cc-deck__follow,.cc-deck__marquee{display:none}
 }
 """
@@ -225,6 +231,7 @@ def build_static_site(
     resolved storage root for that library, used to locate + safely read previews.
     """
     style = portfolio.get("style") or "ledger"
+    layout = "scroll" if portfolio.get("layout") == "scroll" else "slide"
     title = portfolio.get("title") or "Portfolio"
     slug = portfolio.get("slug") or ""
     desc_html = _md(portfolio.get("description") or "")
@@ -243,7 +250,7 @@ def build_static_site(
         rel = f"assets/{_slugify_asset(it['id'], preview_path)}"
         asset_map[it["id"]] = (src, rel)
 
-    body = _render_html(style, title, slug, desc_html, items, asset_map)
+    body = _render_html(style, layout, title, slug, desc_html, items, asset_map)
 
     wm_text = portfolio.get("watermark_text") or ""
     wm_on = bool(portfolio.get("watermark_enabled")) and bool(wm_text.strip())
@@ -269,6 +276,7 @@ def build_static_site(
 
 def _render_html(
     style: str,
+    layout: str,
     title: str,
     slug: str,
     desc_html: str,
@@ -283,7 +291,7 @@ def _render_html(
         return entry[1] if entry else None
 
     parts: list[str] = []
-    parts.append(f'<div class="cc-deck" data-portfolio-style="{_e(style)}">')
+    parts.append(f'<div class="cc-deck" data-portfolio-style="{_e(style)}" data-portfolio-layout="{_e(layout)}">')
 
     # cover
     parts.append('<section class="cc-deck__sec cc-deck__cover">')

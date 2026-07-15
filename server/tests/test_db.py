@@ -124,6 +124,52 @@ def test_portfolio_crud_and_public_ids(conn):
     assert db.get_portfolio(conn, "p1") is None
 
 
+def test_portfolio_layout_defaults_to_slide(conn):
+    db.upsert_portfolio(conn, {
+        "id": "p1", "slug": "my-slug", "title": "P", "description": "",
+        "item_ids": [], "is_public": 0, "style": "ledger",
+    })
+    assert db.get_portfolio(conn, "p1")["layout"] == "slide"
+
+
+def test_portfolio_style_and_layout_are_independent(conn):
+    db.upsert_portfolio(conn, {
+        "id": "p1", "slug": "s1", "title": "P", "description": "",
+        "item_ids": [], "is_public": 0, "style": "riso", "layout": "scroll",
+    })
+    got = db.get_portfolio(conn, "p1")
+    assert (got["style"], got["layout"]) == ("riso", "scroll")
+
+    # Changing the layout leaves the style alone, and vice versa.
+    db.upsert_portfolio(conn, {"id": "p1", "slug": "s1", "layout": "slide"})
+    got = db.get_portfolio(conn, "p1")
+    assert (got["style"], got["layout"]) == ("riso", "slide")
+
+    db.upsert_portfolio(conn, {"id": "p1", "slug": "s1", "style": "kinetic"})
+    got = db.get_portfolio(conn, "p1")
+    assert (got["style"], got["layout"]) == ("kinetic", "slide")
+
+
+def test_ensure_schema_adds_layout_to_preexisting_portfolios(conn):
+    """A database created before layout modes existed gains the column, and its
+    portfolios keep the slide deck they were published as."""
+    conn.execute("DROP TABLE portfolios")
+    conn.execute("""
+        CREATE TABLE portfolios (
+            id TEXT PRIMARY KEY, slug TEXT NOT NULL UNIQUE, title TEXT,
+            description TEXT, item_ids TEXT, is_public INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    conn.execute("INSERT INTO portfolios (id, slug, title) VALUES ('old', 'old-slug', 'Old')")
+
+    db.ensure_schema(conn)
+    assert db.get_portfolio(conn, "old")["layout"] == "slide"
+
+    # Idempotent: a second run over the migrated DB is a no-op.
+    db.ensure_schema(conn)
+    assert db.get_portfolio(conn, "old")["layout"] == "slide"
+
+
 def test_is_public_storage_path(conn):
     lib_id = db.get_default_library(conn)["id"]
     db.upsert_item(conn, _item(preview_path="apple-001/preview.webp", library_id=lib_id))

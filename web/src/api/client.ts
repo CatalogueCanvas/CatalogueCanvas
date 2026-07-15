@@ -39,6 +39,10 @@ export interface Collection {
 
 export type PortfolioStyle = 'ledger' | 'kinetic' | 'brutalist' | 'riso'
 
+// Layout is orthogonal to style: any style can be published as either a
+// paginated slide deck or a continuous scrolling page.
+export type PortfolioLayout = 'slide' | 'scroll'
+
 export interface Portfolio {
   id: string
   slug: string
@@ -47,6 +51,7 @@ export interface Portfolio {
   item_ids: string[]
   is_public: boolean
   style: PortfolioStyle
+  layout: PortfolioLayout
   watermark_enabled: boolean
   watermark_text: string
   share_token: string
@@ -58,6 +63,7 @@ export interface PublicPortfolio {
   description: string
   slug: string
   style: PortfolioStyle
+  layout: PortfolioLayout
   items: Item[]
 }
 
@@ -260,10 +266,10 @@ export const listPortfolios = () => request<Portfolio[]>('/api/portfolios')
 
 export const getPortfolio = (id: string) => request<Portfolio>(`/api/portfolios/${id}`)
 
-export const createPortfolio = (data: { title: string; description?: string; slug?: string; item_ids?: string[]; is_public?: boolean; style?: PortfolioStyle; watermark_enabled?: boolean; watermark_text?: string }) =>
+export const createPortfolio = (data: { title: string; description?: string; slug?: string; item_ids?: string[]; is_public?: boolean; style?: PortfolioStyle; layout?: PortfolioLayout; watermark_enabled?: boolean; watermark_text?: string }) =>
   request<Portfolio>('/api/portfolios', { method: 'POST', body: JSON.stringify(data) })
 
-export const updatePortfolio = (id: string, fields: Partial<Pick<Portfolio, 'title' | 'description' | 'slug' | 'item_ids' | 'is_public' | 'style' | 'watermark_enabled' | 'watermark_text'>>) =>
+export const updatePortfolio = (id: string, fields: Partial<Pick<Portfolio, 'title' | 'description' | 'slug' | 'item_ids' | 'is_public' | 'style' | 'layout' | 'watermark_enabled' | 'watermark_text'>>) =>
   request<Portfolio>(`/api/portfolios/${id}`, { method: 'PATCH', body: JSON.stringify(fields) })
 
 export const deletePortfolio = (id: string) => request<{ ok: boolean }>(`/api/portfolios/${id}`, { method: 'DELETE' })
