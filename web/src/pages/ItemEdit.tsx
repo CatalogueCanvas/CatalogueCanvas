@@ -5,6 +5,7 @@ import type { Item, DescribeResult, AppSettings } from '../api/client'
 import { LLMButton } from '../components/LLMButton'
 import { MetadataForm } from '../components/MetadataForm'
 import { NotesPanel } from '../components/NotesPanel'
+import { Lightbox } from '../components/Lightbox'
 import { Icon } from '../components/Icon'
 import { useAppearance } from '../api/appearance'
 import { useAuth } from '../api/auth'
@@ -15,6 +16,7 @@ export function ItemEdit() {
   const [llmResult, setLlmResult] = useState<DescribeResult | null>(null)
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [itemIds, setItemIds] = useState<string[]>([])
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const navigate = useNavigate()
   const { appearance } = useAppearance()
   const { isAdmin } = useAuth()
@@ -37,6 +39,7 @@ export function ItemEdit() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if (lightboxOpen) return
       const el = e.target as HTMLElement
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return
       if (e.key === 'ArrowLeft' && prevId) { void navigate(`/items/${prevId}`) }
@@ -44,7 +47,7 @@ export function ItemEdit() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => { window.removeEventListener('keydown', onKeyDown) }
-  }, [prevId, nextId, navigate])
+  }, [prevId, nextId, navigate, lightboxOpen])
 
   if (!item) return <div className="container"><div className="cc-empty"><p className="cc-empty__title">Loading...</p></div></div>
 
@@ -98,7 +101,16 @@ export function ItemEdit() {
       <div className="cc-itemedit">
         <div className="cc-itemedit__media">
           <div className="cc-thumb cc-thumb--lg">
-            {item.preview_url ? <img src={item.preview_url} alt={item.title} /> : <span className="cc-thumb__label">no preview</span>}
+            {item.preview_url ? (
+              <button
+                className="cc-thumb__zoom"
+                type="button"
+                onClick={() => { setLightboxOpen(true) }}
+                aria-label={`View ${item.title} at full size`}
+              >
+                <img src={item.preview_url} alt={item.title} />
+              </button>
+            ) : <span className="cc-thumb__label">no preview</span>}
           </div>
           {item.download_urls.filter((d) => d.type === 'image').length > 0 && (
             <div className="cc-thumbrow">
@@ -154,6 +166,9 @@ export function ItemEdit() {
         </div>
       </div>
       <NotesPanel item={item} onSaved={setItem} readOnly={!isAdmin} />
+      {lightboxOpen && item.preview_url && (
+        <Lightbox src={item.preview_url} alt={item.title} onClose={() => { setLightboxOpen(false) }} />
+      )}
     </div>
   )
 }

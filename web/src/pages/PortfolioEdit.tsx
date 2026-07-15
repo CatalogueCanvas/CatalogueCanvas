@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import * as api from '../api/client'
-import type { Item, Portfolio, PortfolioStyle } from '../api/client'
+import type { Item, Portfolio, PortfolioStyle, PortfolioLayout } from '../api/client'
 import { Icon } from '../components/Icon'
 
 const STYLES: { value: PortfolioStyle; label: string }[] = [
@@ -9,6 +9,12 @@ const STYLES: { value: PortfolioStyle; label: string }[] = [
   { value: 'kinetic', label: 'Kinetic' },
   { value: 'brutalist', label: 'Brutalist' },
   { value: 'riso', label: 'Riso' },
+]
+
+// Independent of theme — every theme can be published either way.
+const LAYOUTS: { value: PortfolioLayout; label: string }[] = [
+  { value: 'slide', label: 'Slides' },
+  { value: 'scroll', label: 'Scrolling page' },
 ]
 
 type SaveState = 'idle' | 'saving' | 'saved'
@@ -45,6 +51,7 @@ export function PortfolioEdit() {
       item_ids: p.item_ids,
       is_public: p.is_public,
       style: p.style,
+      layout: p.layout,
       watermark_enabled: p.watermark_enabled,
       watermark_text: p.watermark_text,
     })
@@ -141,6 +148,28 @@ export function PortfolioEdit() {
               </label>
             ))}
           </div>
+        </div>
+        <div className="cc-field">
+          <label className="cc-label">Layout</label>
+          <div className="cc-row-tight">
+            {LAYOUTS.map((l) => (
+              <label className="cc-check" key={l.value}>
+                <input
+                  type="radio"
+                  name="layout"
+                  checked={portfolio.layout === l.value}
+                  onChange={() => { update({ layout: l.value }, true) }}
+                />
+                <span className="cc-check__box" />
+                {l.label}
+              </label>
+            ))}
+          </div>
+          <p className="cc-hint">
+            {portfolio.layout === 'scroll'
+              ? 'Published as one continuous page. Print / PDF export is unavailable in this layout.'
+              : 'Published as full-height slides, printable to PDF at 1920×1080.'}
+          </p>
         </div>
         <div className="cc-field">
           <label className="cc-check">

@@ -27,7 +27,7 @@ afterEach(() => vi.clearAllMocks())
 function makePortfolio(over: Partial<Portfolio> = {}): Portfolio {
   return {
     id: 'p-1', title: 'My Portfolio', slug: 'my-portfolio',
-    is_public: false, item_ids: [], style: 'ledger',
+    is_public: false, item_ids: [], style: 'ledger', layout: 'slide',
     description: '', watermark_enabled: false, watermark_text: '', share_token: '', created_at: '',
     ...over,
   }
@@ -155,6 +155,41 @@ describe('PortfolioEdit', () => {
 
     await userEvent.click(screen.getByText('Delete'))
     await waitFor(() => expect(mocked.deletePortfolio).toHaveBeenCalledWith('p-1'))
+  })
+
+  it('renders layout radio buttons', async () => {
+    mocked.getPortfolio.mockResolvedValue(makePortfolio())
+    mocked.listItems.mockResolvedValue([])
+    mocked.updatePortfolio.mockResolvedValue(makePortfolio())
+    renderPage()
+    await waitFor(() => expect(screen.getByText('Slides')).toBeInTheDocument())
+    expect(screen.getByText('Scrolling page')).toBeInTheDocument()
+  })
+
+  it('saves the layout immediately without changing the theme', async () => {
+    mocked.getPortfolio.mockResolvedValue(makePortfolio({ style: 'riso' }))
+    mocked.listItems.mockResolvedValue([])
+    mocked.updatePortfolio.mockResolvedValue(makePortfolio({ style: 'riso', layout: 'scroll' }))
+    renderPage()
+    await waitFor(() => expect(screen.getByText('Scrolling page')).toBeInTheDocument())
+    await userEvent.click(screen.getByText('Scrolling page'))
+    await waitFor(() => expect(mocked.updatePortfolio).toHaveBeenCalledWith(
+      'p-1',
+      expect.objectContaining({ layout: 'scroll', style: 'riso' }),
+    ))
+  })
+
+  it('saves the theme without changing the layout', async () => {
+    mocked.getPortfolio.mockResolvedValue(makePortfolio({ layout: 'scroll' }))
+    mocked.listItems.mockResolvedValue([])
+    mocked.updatePortfolio.mockResolvedValue(makePortfolio({ style: 'brutalist', layout: 'scroll' }))
+    renderPage()
+    await waitFor(() => expect(screen.getByText('Brutalist')).toBeInTheDocument())
+    await userEvent.click(screen.getByText('Brutalist'))
+    await waitFor(() => expect(mocked.updatePortfolio).toHaveBeenCalledWith(
+      'p-1',
+      expect.objectContaining({ style: 'brutalist', layout: 'scroll' }),
+    ))
   })
 
   it('shows watermark input when watermark is enabled', async () => {
