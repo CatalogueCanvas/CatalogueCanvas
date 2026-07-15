@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ItemEdit } from './ItemEdit'
@@ -54,6 +54,14 @@ import * as api from '../api/client'
 const mocked = vi.mocked(api)
 
 afterEach(() => vi.clearAllMocks())
+
+// The lightbox renders a real <dialog>, which jsdom cannot open.
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
+    this.setAttribute('open', '')
+  })
+  HTMLDialogElement.prototype.close = vi.fn()
+})
 
 function makeSettings(over: Partial<AppSettings> = {}): AppSettings {
   return {
@@ -179,5 +187,72 @@ describe('ItemEdit', () => {
     renderPage()
     await waitFor(() => expect(screen.getByLabelText('Previous item')).toBeInTheDocument())
     expect(screen.getByLabelText('Next item')).toBeInTheDocument()
+  })
+
+  it('opens the lightbox when the preview is clicked', async () => {
+    mocked.getItem.mockResolvedValue(makeItem())
+    mocked.getSettings.mockResolvedValue(makeSettings())
+    mocked.listItems.mockResolvedValue([makeItem()])
+    const { container } = renderPage()
+    await waitFor(() => expect(screen.getByLabelText('View Test Item at full size')).toBeInTheDocument())
+    expect(container.querySelector('dialog')).toBeNull()
+
+    await userEvent.click(screen.getByLabelText('View Test Item at full size'))
+    expect(container.querySelector('dialog')).toBeInTheDocument()
+  })
+
+  it('offers no zoom affordance when there is no preview', async () => {
+    mocked.getItem.mockResolvedValue(makeItem({ preview_url: null }))
+    mocked.getSettings.mockResolvedValue(makeSettings())
+    mocked.listItems.mockResolvedValue([makeItem({ preview_url: null })])
+    renderPage()
+    await waitFor(() => expect(screen.getByText('no preview')).toBeInTheDocument())
+    expect(screen.queryByLabelText('View Test Item at full size')).not.toBeInTheDocument()
+  })
+
+  it('navigates between items with the arrow keys', async () => {
+    mocked.getItem.mockResolvedValue(makeItem())
+    mocked.getSettings.mockResolvedValue(makeSettings())
+    mocked.listItems.mockResolvedValue([
+      makeItem({ id: 'item-0' }), makeItem(), makeItem({ id: 'item-2' }),
+    ])
+    renderPage()
+    await waitFor(() => expect(screen.getByLabelText('Next item')).toBeInTheDocument())
+
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    await waitFor(() => expect(mocked.getItem).toHaveBeenCalledWith('item-2'))
+  })
+
+  it('does not navigate with the arrow keys while the lightbox is open', async () => {
+    mocked.getItem.mockResolvedValue(makeItem())
+    mocked.getSettings.mockResolvedValue(makeSettings())
+    mocked.listItems.mockResolvedValue([
+      makeItem({ id: 'item-0' }), makeItem(), makeItem({ id: 'item-2' }),
+    ])
+    renderPage()
+    await waitFor(() => expect(screen.getByLabelText('View Test Item at full size')).toBeInTheDocument())
+    await userEvent.click(screen.getByLabelText('View Test Item at full size'))
+    mocked.getItem.mockClear()
+
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    fireEvent.keyDown(window, { key: 'ArrowLeft' })
+
+    expect(mocked.getItem).not.toHaveBeenCalled()
+  })
+
+  it('resumes arrow-key navigation once the lightbox is closed', async () => {
+    mocked.getItem.mockResolvedValue(makeItem())
+    mocked.getSettings.mockResolvedValue(makeSettings())
+    mocked.listItems.mockResolvedValue([
+      makeItem({ id: 'item-0' }), makeItem(), makeItem({ id: 'item-2' }),
+    ])
+    renderPage()
+    await waitFor(() => expect(screen.getByLabelText('View Test Item at full size')).toBeInTheDocument())
+    await userEvent.click(screen.getByLabelText('View Test Item at full size'))
+    await userEvent.click(screen.getByLabelText('Close'))
+    mocked.getItem.mockClear()
+
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    await waitFor(() => expect(mocked.getItem).toHaveBeenCalledWith('item-2'))
   })
 })

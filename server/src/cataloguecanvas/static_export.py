@@ -10,6 +10,7 @@ import html
 import os
 import re
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -274,79 +275,73 @@ def build_static_site(
                 zf.write(src, rel)
 
 
-def _render_html(
-    style: str,
-    layout: str,
-    title: str,
-    slug: str,
-    desc_html: str,
-    items: list[dict[str, Any]],
-    asset_map: dict[str, tuple[Path, str]],
-) -> str:
-    total = len(items)
-    kinetic = style == "kinetic"
+Asset = Callable[[str], "str | None"]
 
-    def asset(item_id: str) -> str | None:
-        entry = asset_map.get(item_id)
-        return entry[1] if entry else None
 
-    parts: list[str] = []
-    parts.append(f'<div class="cc-deck" data-portfolio-style="{_e(style)}" data-portfolio-layout="{_e(layout)}">')
-
-    # cover
-    parts.append('<section class="cc-deck__sec cc-deck__cover">')
-    parts.append(f'<p class="cc-deck__kicker">Portfolio · {total} works</p>')
-    parts.append(f'<h1 class="cc-deck__title">{_e(title)}</h1>')
+def _render_cover(title: str, slug: str, desc_html: str, total: int) -> str:
+    parts = [
+        '<section class="cc-deck__sec cc-deck__cover">',
+        f'<p class="cc-deck__kicker">Portfolio · {total} works</p>',
+        f'<h1 class="cc-deck__title">{_e(title)}</h1>',
+    ]
     if desc_html:
         parts.append(f'<div class="cc-deck__desc">{desc_html}</div>')
     parts.append('<div class="cc-deck__cover-foot">'
                  f'<span>CatalogueCanvas</span><span>/p/{_e(slug)}</span></div>')
     parts.append('</section>')
+    return "".join(parts)
 
-    # kinetic marquee
-    if kinetic:
-        spans = "".join(f"{_e(c)}<i>/</i>" for c in _CAPABILITIES)
-        parts.append('<section class="cc-deck__sec cc-deck__marquee" aria-hidden="true">'
-                     '<div class="cc-deck__marquee-track">'
-                     f'<span>{spans}</span><span>{spans}</span></div></section>')
 
-    # index
-    if kinetic:
-        parts.append('<section class="cc-deck__sec"><div class="cc-deck__indexhead">'
-                     f'<h2>Selected</h2><span class="cc-mono">{total:02d} works</span></div>'
-                     '<div class="cc-deck__kindex">')
-        for i, it in enumerate(items):
-            src = asset(it["id"]) or ""
-            tag0 = it["tags"][0] if it.get("tags") else ""
+def _render_marquee() -> str:
+    spans = "".join(f"{_e(c)}<i>/</i>" for c in _CAPABILITIES)
+    return ('<section class="cc-deck__sec cc-deck__marquee" aria-hidden="true">'
+            '<div class="cc-deck__marquee-track">'
+            f'<span>{spans}</span><span>{spans}</span></div></section>')
+
+
+def _render_kinetic_index(items: list[dict[str, Any]], asset: Asset, total: int) -> str:
+    parts = ['<section class="cc-deck__sec"><div class="cc-deck__indexhead">'
+             f'<h2>Selected</h2><span class="cc-mono">{total:02d} works</span></div>'
+             '<div class="cc-deck__kindex">']
+    for i, it in enumerate(items):
+        src = asset(it["id"]) or ""
+        tag0 = it["tags"][0] if it.get("tags") else ""
+        parts.append(
+            f'<a class="cc-deck__krow" href="#work-{_e(it["id"])}" data-src="{_e(src)}">'
+            f'<span class="cc-deck__krow-num">{i + 1:02d}</span>'
+            f'<span class="cc-deck__krow-title">{_e(it.get("title"))}</span>'
+            f'<span class="cc-deck__krow-meta cc-mono">{_e(tag0)}</span></a>'
+        )
+    parts.append('</div></section>')
+    return "".join(parts)
+
+
+def _render_paged_index(items: list[dict[str, Any]], asset: Asset, slug: str, total: int) -> str:
+    per_page = 8
+    parts: list[str] = []
+    for page_index in range(0, total, per_page):
+        page = items[page_index:page_index + per_page]
+        head = "Works" if page_index == 0 else "Works (cont.)"
+        parts.append('<section class="cc-deck__sec cc-deck__index">'
+                     '<div class="cc-deck__indexhead">'
+                     f'<h2>{head}</h2><span class="cc-mono">{_e(slug)}</span></div>'
+                     '<div class="cc-deck__indexgrid">')
+        for j, it in enumerate(page):
+            src = asset(it["id"])
+            thumb = (f'<img src="{_e(src)}" alt="{_e(it.get("title"))}">'
+                     if src else '<span class="cc-thumb__label">no preview</span>')
             parts.append(
-                f'<a class="cc-deck__krow" href="#work-{_e(it["id"])}" data-src="{_e(src)}">'
-                f'<span class="cc-deck__krow-num">{i + 1:02d}</span>'
-                f'<span class="cc-deck__krow-title">{_e(it.get("title"))}</span>'
-                f'<span class="cc-deck__krow-meta cc-mono">{_e(tag0)}</span></a>'
+                '<div class="cc-deck__idxitem">'
+                f'<span class="cc-deck__idxnum">{page_index + j + 1:02d}</span>'
+                f'<div class="cc-thumb">{thumb}</div>'
+                f'<div class="cc-deck__idxtitle">{_e(it.get("title"))}</div></div>'
             )
         parts.append('</div></section>')
-    else:
-        per_page = 8
-        for page_index in range(0, total, per_page):
-            page = items[page_index:page_index + per_page]
-            head = "Works" if page_index == 0 else "Works (cont.)"
-            parts.append('<section class="cc-deck__sec cc-deck__index">'
-                         '<div class="cc-deck__indexhead">'
-                         f'<h2>{head}</h2><span class="cc-mono">{_e(slug)}</span></div>'
-                         '<div class="cc-deck__indexgrid">')
-            for j, it in enumerate(page):
-                src = asset(it["id"])
-                thumb = (f'<img src="{_e(src)}" alt="{_e(it.get("title"))}">'
-                         if src else '<span class="cc-thumb__label">no preview</span>')
-                parts.append(
-                    '<div class="cc-deck__idxitem">'
-                    f'<span class="cc-deck__idxnum">{page_index + j + 1:02d}</span>'
-                    f'<div class="cc-thumb">{thumb}</div>'
-                    f'<div class="cc-deck__idxtitle">{_e(it.get("title"))}</div></div>'
-                )
-            parts.append('</div></section>')
+    return "".join(parts)
 
-    # art plates
+
+def _render_plates(items: list[dict[str, Any]], asset: Asset, total: int) -> str:
+    parts: list[str] = []
     for i, it in enumerate(items):
         src = asset(it["id"])
         wide = bool(it.get("width") and it.get("height") and it["width"] > it["height"])
@@ -368,25 +363,51 @@ def _render_html(
             f'<span class="cc-mono">{_e(it["id"])}</span>'
             f'{note}{tagblock}</div></section>'
         )
+    return "".join(parts)
 
-    # colophon
+
+def _render_colophon(items: list[dict[str, Any]], desc_html: str, total: int) -> str:
     worklist = "".join(
         f'<li><span class="cc-mono">{i + 1:02d}</span><span>{_e(it.get("title"))}</span></li>'
         for i, it in enumerate(items)
     )
-    parts.append('<section class="cc-deck__sec cc-deck__colo"><div><h2>About this work</h2>'
-                 f'{desc_html}<p>A portfolio of {total} works shared via CatalogueCanvas.</p></div>'
-                 f'<ul class="cc-deck__worklist">{worklist}</ul></section>')
+    return ('<section class="cc-deck__sec cc-deck__colo"><div><h2>About this work</h2>'
+            f'{desc_html}<p>A portfolio of {total} works shared via CatalogueCanvas.</p></div>'
+            f'<ul class="cc-deck__worklist">{worklist}</ul></section>')
 
-    # kinetic cursor-follow target
-    follow = ""
+
+def _render_html(
+    style: str,
+    layout: str,
+    title: str,
+    slug: str,
+    desc_html: str,
+    items: list[dict[str, Any]],
+    asset_map: dict[str, tuple[Path, str]],
+) -> str:
+    total = len(items)
+    kinetic = style == "kinetic"
+
+    def asset(item_id: str) -> str | None:
+        entry = asset_map.get(item_id)
+        return entry[1] if entry else None
+
+    parts: list[str] = []
+    parts.append(f'<div class="cc-deck" data-portfolio-style="{_e(style)}" data-portfolio-layout="{_e(layout)}">')
+    parts.append(_render_cover(title, slug, desc_html, total))
     if kinetic:
-        follow = ('<div class="cc-deck__follow" data-on="0" aria-hidden="true">'
-                  '<div class="cc-deck__plate cc-deck__followplate"><img src="" alt=""></div></div>')
-
+        parts.append(_render_marquee())
+        parts.append(_render_kinetic_index(items, asset, total))
+    else:
+        parts.append(_render_paged_index(items, asset, slug, total))
+    parts.append(_render_plates(items, asset, total))
+    parts.append(_render_colophon(items, desc_html, total))
     parts.append('</div>')
-    parts.append(follow)
+
+    # kinetic cursor-follow target, outside the deck root
     if kinetic:
+        parts.append('<div class="cc-deck__follow" data-on="0" aria-hidden="true">'
+                     '<div class="cc-deck__plate cc-deck__followplate"><img src="" alt=""></div></div>')
         parts.append(_FOLLOW_JS)
 
     return (
