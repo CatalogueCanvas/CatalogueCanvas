@@ -7,9 +7,15 @@ Released versions are tagged (see `v*` tags and the published `ghcr.io` image); 
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-07-15
+
 ### Added
 - Item images open at full size. Clicking the preview on an item page opens a lightbox that fits the image to the screen, toggles to 1:1 on click, and pans by dragging. Previews were already stored at full resolution, so no new assets are generated. Arrow-key item navigation is suspended while the lightbox is open.
 - Portfolio layout option, chosen per portfolio and independent of the theme: `slide` (the existing full-height deck, printable to PDF at 1920×1080) or `scroll` (a continuous one-page site with no page breaks and no print button). Any of the four themes can be published either way. Applies to the live portfolio and the static zip export. Existing portfolios default to `slide`.
+
+### Fixed
+- The lightbox now fits the image to the screen at all times. Clicking to zoom to 1:1 opened large images past the edge of the viewport, so the zoom and drag-to-pan behaviour is gone.
+- "Preview deck" and the portfolio list's "View" button now carry the share token. Both linked to the untokenized URL, which returns 404 for a gated portfolio.
 
 ## [0.1.3] - 2026-07-11
 
