@@ -83,8 +83,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.ADDON_REPO_PAT }}
         run: |
-          curl -fsSL -X POST \
-            -H "Authorization: token ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/CatalogueCanvas/cataloguecanvas-homeassistant-addon/dispatches \
-            -d "{\"event_type\":\"cc-release\",\"client_payload\":{\"version\":\"${{ steps.check.outputs.tag }}\"}}"
+          gh api --method POST \
+            /repos/CatalogueCanvas/cataloguecanvas-homeassistant-addon/dispatches \
+            -f event_type=cc-release \
+            -f "client_payload[version]=${{ steps.check.outputs.tag }}"
