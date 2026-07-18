@@ -92,6 +92,7 @@ export interface AppSettings {
   llm_auto_generate: string
   llm_prompt_template: string
   llm_prompt_template_default: string
+  llm_timeout: string
   theme: Theme
   accent: Accent
   nav: NavLayout
@@ -241,6 +242,7 @@ export interface DescribeParams {
   bullet_max_words?: number
   prompt_template?: string
   api_key?: string
+  timeout?: number
 }
 
 export const describeItem = (id: string, params: DescribeParams) =>
@@ -294,7 +296,7 @@ export const getSettings = () => request<AppSettings>('/api/settings')
 export const getAppearance = () =>
   request<Pick<AppSettings, 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled' | 'multi_user_enabled'>>('/api/settings/appearance')
 
-export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' | 'llm_model' | 'llm_item_type' | 'llm_summary_focus' | 'llm_bullet_count' | 'llm_bullet_max_words' | 'llm_auto_generate' | 'llm_prompt_template' | 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled' | 'multi_user_enabled' | 'update_check_enabled'>>) =>
+export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' | 'llm_model' | 'llm_item_type' | 'llm_summary_focus' | 'llm_bullet_count' | 'llm_bullet_max_words' | 'llm_auto_generate' | 'llm_prompt_template' | 'llm_timeout' | 'theme' | 'accent' | 'nav' | 'density' | 'favorites_enabled' | 'multi_user_enabled' | 'update_check_enabled'>>) =>
   request<AppSettings>('/api/settings', { method: 'PUT', body: JSON.stringify(fields) })
 
 export const getVersion = (force = false) =>

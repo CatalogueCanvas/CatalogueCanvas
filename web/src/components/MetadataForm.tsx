@@ -7,6 +7,7 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
   const [tags, setTags] = useState(item.tags.join(', '))
   const [collectionIds, setCollectionIds] = useState<string[]>(item.collection_ids.filter((id) => id !== 'favorites'))
   const [collections, setCollections] = useState<Collection[]>([])
+  const [editingCollections, setEditingCollections] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -23,6 +24,7 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
     setTitle(item.title)
     setTags(item.tags.join(', '))
     setCollectionIds(item.collection_ids.filter((id) => id !== 'favorites'))
+    setEditingCollections(false)
   }, [item])
 
   const toggleCollection = (id: string) => {
@@ -39,6 +41,7 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
         collection_ids: isFavorite ? [...collectionIds, 'favorites'] : collectionIds,
       })
       onSaved(updated)
+      setEditingCollections(false)
       setSaved(true)
       if (savedTimer.current) clearTimeout(savedTimer.current)
       savedTimer.current = setTimeout(() => { setSaved(false) }, 1800)
@@ -68,7 +71,7 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
         <label className="cc-label">Collections</label>
         {collections.length === 0 ? (
           <p className="cc-empty__sub">No collections yet.</p>
-        ) : (
+        ) : editingCollections ? (
           <div className="cc-checklist">
             {collections.map((c) => (
               <label className="cc-check" key={c.id}>
@@ -83,6 +86,27 @@ export function MetadataForm({ item, onSaved, readOnly = false }: { item: Item; 
               </label>
             ))}
           </div>
+        ) : (
+          <>
+            {collectionIds.length > 0 ? (
+              <div className="cc-card__tags cc-form__tags">
+                {collections
+                  .filter((c) => collectionIds.includes(c.id))
+                  .map((c) => <span className="cc-tag" key={c.id}>{c.title}</span>)}
+              </div>
+            ) : (
+              <p className="cc-empty__sub">None.</p>
+            )}
+            {!readOnly && (
+              <button
+                type="button"
+                className="cc-btn cc-btn--sm"
+                onClick={() => { setEditingCollections(true) }}
+              >
+                Edit
+              </button>
+            )}
+          </>
         )}
       </div>
       {!readOnly && (

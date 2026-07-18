@@ -127,6 +127,7 @@ export function BulkToolbar({ selectedIds, items, portfolios, totalCount, onDone
             bullet_max_words: Number(settings.llm_bullet_max_words) || 50,
             prompt_template: settings.llm_prompt_template,
             api_key: key || undefined,
+            timeout: Number(settings.llm_timeout) || 90,
           })
           await api.updateItem(item.id, { note: api.describeResultToNote(result) })
           updateItem(taskId, label, { status: 'done' })

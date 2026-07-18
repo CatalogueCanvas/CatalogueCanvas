@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import * as api from '../api/client'
-import type { Item, Portfolio } from '../api/client'
+import type { Collection, Item, Portfolio } from '../api/client'
 import { ItemCard } from '../components/ItemCard'
 import { BulkToolbar } from '../components/BulkToolbar'
 import { Icon } from '../components/Icon'
@@ -22,6 +23,10 @@ export function Dashboard() {
   const { appearance } = useAppearance()
   const { isAdmin } = useAuth()
 
+  const [searchParams] = useSearchParams()
+  const collectionFilter = searchParams.get('collection') ?? ''
+  const [collections, setCollections] = useState<Collection[]>([])
+
   const [allItems, setAllItems] = useState<Item[]>([])
 
   const refresh = useCallback(() => {
@@ -30,6 +35,7 @@ export function Dashboard() {
     void load.then(setItems).finally(() => { setLoading(false) })
     void api.listItems().then(setAllItems)
     void api.listPortfolios().then(setPortfolios)
+    void api.listCollections().then(setCollections)
   }, [query])
 
   // Debounce the server-side search so we don't fire a request per keystroke.
@@ -46,6 +52,9 @@ export function Dashboard() {
 
   const filtered = useMemo(() => {
     let result = items
+    if (collectionFilter) {
+      result = result.filter((i) => i.collection_ids.includes(collectionFilter))
+    }
     if (tagFilter) {
       result = result.filter((i) => i.tags.includes(tagFilter))
     }
@@ -71,7 +80,12 @@ export function Dashboard() {
         break
     }
     return result
-  }, [items, tagFilter, sortBy])
+  }, [items, collectionFilter, tagFilter, sortBy])
+
+  const collectionLabel = useMemo(
+    () => collections.find((c) => c.id === collectionFilter)?.title ?? collectionFilter,
+    [collections, collectionFilter],
+  )
 
   const onBulkDone = () => {
     clear()
@@ -108,6 +122,12 @@ export function Dashboard() {
           {tagFilter && <span className="cc-filterbar__badge">{tagFilter}</span>}
           <Icon name="chevronDown" size={14} className={filtersOpen ? 'cc-filterbar__chevron--open' : ''} />
         </button>
+        {collectionFilter && (
+          <Link to="/" className="cc-filterbar__badge cc-filterbar__badge--clearable" aria-label="Clear collection filter">
+            Collection: {collectionLabel}
+            <span aria-hidden="true">×</span>
+          </Link>
+        )}
         {filtersOpen && (
           <div className="cc-row-tight cc-filterbar__panel">
             <select className="cc-input cc-select" value={sortBy} onChange={(e) => { setSortBy(e.target.value as SortBy) }}>

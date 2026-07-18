@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -9,6 +9,7 @@ vi.mock('../api/client', () => ({
   listItems: vi.fn(),
   searchItems: vi.fn(),
   listPortfolios: vi.fn(),
+  listCollections: vi.fn(),
   favoriteItem: vi.fn(),
   unfavoriteItem: vi.fn(),
 }))
@@ -48,6 +49,10 @@ const mocked = vi.mocked(api)
 
 afterEach(() => vi.clearAllMocks())
 
+beforeEach(() => {
+  mocked.listCollections.mockResolvedValue([])
+})
+
 function makeItem(over: Partial<Item> = {}): Item {
   return {
     id: 'item-1', content_hash: 'h', title: 'Test Item', note: '',
@@ -58,8 +63,8 @@ function makeItem(over: Partial<Item> = {}): Item {
   }
 }
 
-function renderPage() {
-  return render(<MemoryRouter><Dashboard /></MemoryRouter>)
+function renderPage(path = '/') {
+  return render(<MemoryRouter initialEntries={[path]}><Dashboard /></MemoryRouter>)
 }
 
 describe('Dashboard', () => {
@@ -106,5 +111,38 @@ describe('Dashboard', () => {
     mocked.listPortfolios.mockResolvedValue([])
     renderPage()
     await waitFor(() => expect(screen.getByText('(2)')).toBeInTheDocument())
+  })
+
+  it('filters items by the collection URL param', async () => {
+    mocked.listItems.mockResolvedValue([
+      makeItem({ id: 'in', title: 'In Collection', collection_ids: ['col-1'] }),
+      makeItem({ id: 'out', title: 'Not In', collection_ids: [] }),
+    ])
+    mocked.listPortfolios.mockResolvedValue([])
+    mocked.listCollections.mockResolvedValue([
+      { id: 'col-1', title: 'My Collection', is_system: false, description: '', cover_item_id: null, created_at: '' },
+    ])
+    renderPage('/?collection=col-1')
+    await waitFor(() => expect(screen.getByText('In Collection')).toBeInTheDocument())
+    expect(screen.queryByText('Not In')).not.toBeInTheDocument()
+  })
+
+  it('shows a clearable chip with the collection title when filtered', async () => {
+    mocked.listItems.mockResolvedValue([makeItem({ collection_ids: ['col-1'] })])
+    mocked.listPortfolios.mockResolvedValue([])
+    mocked.listCollections.mockResolvedValue([
+      { id: 'col-1', title: 'My Collection', is_system: false, description: '', cover_item_id: null, created_at: '' },
+    ])
+    renderPage('/?collection=col-1')
+    await waitFor(() => expect(screen.getByText(/Collection: My Collection/)).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: /clear collection filter/i })).toHaveAttribute('href', '/')
+  })
+
+  it('shows no chip and all items when no collection param', async () => {
+    mocked.listItems.mockResolvedValue([makeItem({ collection_ids: [] })])
+    mocked.listPortfolios.mockResolvedValue([])
+    renderPage('/')
+    await waitFor(() => expect(screen.getByText('Test Item')).toBeInTheDocument())
+    expect(screen.queryByText(/^Collection:/)).not.toBeInTheDocument()
   })
 })

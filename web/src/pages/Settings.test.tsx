@@ -62,6 +62,7 @@ function makeSettings(over: Partial<AppSettings> = {}): AppSettings {
     llm_auto_generate: 'false',
     llm_prompt_template: 'template',
     llm_prompt_template_default: 'default-template',
+    llm_timeout: '90',
     multi_user_enabled: 'false',
     stats: { total_items: 10, total_collections: 3, missing_preview: 1 },
     ...over,
@@ -119,6 +120,34 @@ describe('Settings', () => {
     const llmSection = screen.getByText('LLM defaults').closest('section') as HTMLElement
     await userEvent.click(within(llmSection).getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mocked.updateSettings).toHaveBeenCalled())
+  })
+
+  it('edits the LLM timeout and includes it in the save payload', async () => {
+    mocked.getSettings.mockResolvedValue(makeSettings())
+    mocked.listLibraries.mockResolvedValue([])
+    mocked.listCsvBackups.mockResolvedValue({ backups: [] })
+    mocked.updateSettings.mockResolvedValue(makeSettings())
+    render(<Settings />)
+    await waitFor(() => expect(screen.getByText('Settings/Admin')).toBeInTheDocument())
+
+    const field = screen.getByLabelText('LLM response wait (seconds)')
+    await userEvent.clear(field)
+    await userEvent.type(field, '240')
+
+    const llmSection = screen.getByText('LLM defaults').closest('section') as HTMLElement
+    await userEvent.click(within(llmSection).getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocked.updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ llm_timeout: '240' }),
+    ))
+  })
+
+  it('shows the reworded update-check help text', async () => {
+    mocked.getSettings.mockResolvedValue(makeSettings())
+    mocked.listLibraries.mockResolvedValue([])
+    mocked.listCsvBackups.mockResolvedValue({ backups: [] })
+    render(<Settings />)
+    await waitFor(() => expect(screen.getByText(/checks GitHub for a newer release once per week/i)).toBeInTheDocument())
+    expect(screen.getByText(/and compares locally/i)).toBeInTheDocument()
   })
 
   it('shows UsersPanel when multi-user is enabled', async () => {

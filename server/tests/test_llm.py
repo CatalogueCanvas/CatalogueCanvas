@@ -201,6 +201,31 @@ def test_describe_connection_failure(_allow_dns):
         llm.describe(_webp_bytes(), "http://example.com", "model")
 
 
+def test_describe_forwards_timeout_to_httpx(_allow_dns, monkeypatch):
+    """The timeout argument must be passed through to httpx.post."""
+    captured = {}
+
+    def fake_post(url, **kwargs):
+        captured["timeout"] = kwargs.get("timeout")
+        return httpx.Response(200, json=_chat_response(json.dumps({"summary": "s", "descriptions": []})))
+
+    monkeypatch.setattr(llm.httpx, "post", fake_post)
+    llm.describe(_webp_bytes(), "http://example.com", "model", timeout=240.0)
+    assert captured["timeout"] == 240.0
+
+
+def test_describe_default_timeout(_allow_dns, monkeypatch):
+    captured = {}
+
+    def fake_post(url, **kwargs):
+        captured["timeout"] = kwargs.get("timeout")
+        return httpx.Response(200, json=_chat_response(json.dumps({"summary": "s", "descriptions": []})))
+
+    monkeypatch.setattr(llm.httpx, "post", fake_post)
+    llm.describe(_webp_bytes(), "http://example.com", "model")
+    assert captured["timeout"] == 90.0
+
+
 def test_describe_invalid_template(_allow_dns):
     with pytest.raises(llm.LLMError, match="invalid prompt template"):
         llm.describe(b"img", "http://example.com", "model", prompt_template="not = [valid")

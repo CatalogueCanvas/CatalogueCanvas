@@ -221,6 +221,7 @@ export function Settings() {
         llm_bullet_max_words: settings.llm_bullet_max_words,
         llm_auto_generate: settings.llm_auto_generate,
         llm_prompt_template: settings.llm_prompt_template,
+        llm_timeout: settings.llm_timeout,
       })
       setSettings(updated)
       setSaved(true)
@@ -370,7 +371,7 @@ export function Settings() {
           <div className="cc-aprow">
             <div className="cc-aprow__txt">
               <span className="cc-label">Check for updates</span>
-              <p className="cc-hint">When on, CatalogueCanvas checks GitHub for a newer release at most once per week. No data is sent — it only reads the latest published version.</p>
+              <p className="cc-hint">CatalogueCanvas checks GitHub for a newer release once per week. No data is sent — it only reads the latest published version and compares locally.</p>
             </div>
             <div className="cc-seg">
               {([[true, 'On'], [false, 'Off']] as const).map(([value, label]) => (
@@ -488,6 +489,18 @@ export function Settings() {
                 value={settings.llm_bullet_max_words}
                 onChange={(e) => { setSettings({ ...settings, llm_bullet_max_words: e.target.value }) }}
               />
+            </div>
+            <div className="cc-field">
+              <label className="cc-label" htmlFor="set-llm-timeout">LLM response wait (seconds)</label>
+              <input
+                id="set-llm-timeout"
+                className="cc-input"
+                type="number"
+                min="1"
+                value={settings.llm_timeout}
+                onChange={(e) => { setSettings({ ...settings, llm_timeout: e.target.value }) }}
+              />
+              <p className="cc-hint">How long to wait for the LLM server to respond before giving up. For local LLM instances (Ollama, LM Studio) the right value is found by experience — slow hardware or a cold model load can need well above 90s.</p>
             </div>
             <div className="cc-row-tight">
               <button className="cc-btn cc-btn--primary" onClick={() => void save()} disabled={busy} type="button">

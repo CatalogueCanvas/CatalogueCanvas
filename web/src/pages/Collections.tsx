@@ -57,6 +57,7 @@ export function Collections() {
                 <div className="cc-row__meta"><span>{c.id}</span></div>
               </div>
               <div className="cc-row__actions">
+                <Link className="cc-btn cc-btn--sm" to={`/?collection=${c.id}`}><Icon name="view" size={14} />View items</Link>
                 {c.is_system || !isAdmin ? (
                   <Link className="cc-btn cc-btn--sm" to={`/collections/${c.id}`}><Icon name="view" size={14} />Open</Link>
                 ) : (
