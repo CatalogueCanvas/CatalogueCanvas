@@ -50,6 +50,14 @@ describe('Collections', () => {
     expect(screen.getByText('Second')).toBeInTheDocument()
   })
 
+  it('links each collection to the filtered items page', async () => {
+    mocked.listCollections.mockResolvedValue([makeCol()])
+    renderPage()
+    await waitFor(() => expect(screen.getByText('Test Collection')).toBeInTheDocument())
+    const link = screen.getByRole('link', { name: /view items/i })
+    expect(link).toHaveAttribute('href', '/?collection=col-1')
+  })
+
   it('creates a collection and refreshes the list', async () => {
     mocked.listCollections.mockResolvedValue([])
     mocked.createCollection.mockResolvedValue(makeCol({ id: 'new', title: 'New' }))
