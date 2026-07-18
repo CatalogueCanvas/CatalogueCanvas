@@ -45,12 +45,50 @@ describe('MetadataForm', () => {
     expect(screen.getByText('No tags yet.')).toBeInTheDocument()
   })
 
-  it('renders collection checkboxes', async () => {
+  it('renders collection checkboxes once editing', async () => {
     mocked.listCollections.mockResolvedValue([
       { id: 'col-1', title: 'Art', description: '', cover_item_id: null, is_system: false, created_at: '' },
     ])
     render(<MetadataForm item={makeItem()} onSaved={vi.fn()} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument())
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(screen.getByText('Art')).toBeInTheDocument()
+  })
+
+  it('collapsed: shows only the selected collections as chips, not the full list', async () => {
+    mocked.listCollections.mockResolvedValue([
+      { id: 'col-1', title: 'Art', description: '', cover_item_id: null, is_system: false, created_at: '' },
+      { id: 'col-2', title: 'Sketch', description: '', cover_item_id: null, is_system: false, created_at: '' },
+    ])
+    render(<MetadataForm item={makeItem({ collection_ids: ['col-1'] })} onSaved={vi.fn()} />)
     await waitFor(() => expect(screen.getByText('Art')).toBeInTheDocument())
+    expect(screen.queryByText('Sketch')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+  })
+
+  it('shows "None." when the item belongs to no collections', async () => {
+    mocked.listCollections.mockResolvedValue([
+      { id: 'col-1', title: 'Art', description: '', cover_item_id: null, is_system: false, created_at: '' },
+    ])
+    render(<MetadataForm item={makeItem({ collection_ids: [] })} onSaved={vi.fn()} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument())
+    expect(screen.getByText('None.')).toBeInTheDocument()
+  })
+
+  it('collapses back to chips after saving', async () => {
+    mocked.listCollections.mockResolvedValue([
+      { id: 'col-1', title: 'Art', description: '', cover_item_id: null, is_system: false, created_at: '' },
+      { id: 'col-2', title: 'Sketch', description: '', cover_item_id: null, is_system: false, created_at: '' },
+    ])
+    mocked.updateItem.mockResolvedValue(makeItem({ collection_ids: ['col-1'] }))
+    render(<MetadataForm item={makeItem({ collection_ids: ['col-1'] })} onSaved={vi.fn()} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument())
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(screen.getByText('Sketch')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
+    await waitFor(() => expect(mocked.updateItem).toHaveBeenCalled())
+    await waitFor(() => expect(screen.queryByText('Sketch')).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
   })
 
   it('shows "No collections yet" when none exist', async () => {
@@ -88,6 +126,8 @@ describe('MetadataForm', () => {
     mocked.updateItem.mockResolvedValue(makeItem())
     const onSaved = vi.fn()
     render(<MetadataForm item={makeItem()} onSaved={onSaved} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument())
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
     await waitFor(() => expect(screen.getByText('Art')).toBeInTheDocument())
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Art' }))
