@@ -5,6 +5,19 @@ All notable changes to CatalogueCanvas are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Released versions are tagged (see `v*` tags and the published `ghcr.io` image); earlier pre-release entries are grouped by date.
 
+## [0.1.5] - 2026-07-18
+
+### Added
+- Configurable LLM response wait timeout, set from Settings (default 90s) and applied to both single-item and batch description generation. The setting notes that for local LLM instances (Ollama, LM Studio) the right value is found by experience, since slow hardware or a cold model load can exceed 90 seconds.
+- "View items" link on each collection that opens the main Items page filtered to that collection (via a `?collection=` URL parameter), with a clearable filter chip showing the active collection.
+
+### Changed
+- Item page now shows only an item's selected collections as chips by default, with an "Edit" button that reveals the full collection checklist and collapses back after saving. Previously every available collection was listed for every item, which grew unwieldy as collections accumulated.
+- Reworded the update-check help text in Settings for clarity.
+
+### Fixed
+- Prev/next navigation arrows on the item page no longer clip at the glyph tips; their horizontal offset is nudged inward.
+
 ## [0.1.4] - 2026-07-15
 
 ### Added
