@@ -40,6 +40,7 @@ LLM_DEFAULTS = {
     "llm_bullet_count": "3",
     "llm_bullet_max_words": "50",
     "llm_auto_generate": "false",
+    "llm_timeout": "90",
 }
 
 APPEARANCE_DEFAULTS = {
@@ -92,6 +93,7 @@ class SettingsUpdate(BaseModel):
     llm_bullet_max_words: Optional[str] = None
     llm_auto_generate: Optional[str] = None
     llm_prompt_template: Optional[str] = None
+    llm_timeout: Optional[str] = None
     theme: Optional[str] = None
     accent: Optional[str] = None
     nav: Optional[str] = None

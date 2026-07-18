@@ -667,6 +667,7 @@ class DescribeRequest(BaseModel):
     bullet_max_words: int = 50
     prompt_template: Optional[str] = None
     api_key: Optional[str] = None
+    timeout: float = 90.0
 
 
 @router.post("/{item_id}/describe")
@@ -699,6 +700,7 @@ def describe_item(
             bullet_max_words=body.bullet_max_words,
             prompt_template=body.prompt_template,
             api_key=body.api_key,
+            timeout=body.timeout,
         )
     except LLMError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc

@@ -67,7 +67,7 @@ function makeSettings(over: Partial<AppSettings> = {}): AppSettings {
   return {
     llm_api_url: '', llm_model: '', llm_item_type: '', llm_summary_focus: '',
     llm_bullet_count: '3', llm_bullet_max_words: '50', llm_auto_generate: 'false',
-    llm_prompt_template: '', llm_prompt_template_default: '',
+    llm_prompt_template: '', llm_prompt_template_default: '', llm_timeout: '90',
     theme: 'light', accent: 'default', nav: 'top', density: 'balanced', favorites_enabled: 'false',
     multi_user_enabled: 'false',
     update_check_enabled: 'false',

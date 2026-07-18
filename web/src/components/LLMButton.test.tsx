@@ -40,6 +40,7 @@ const defaultSettings: AppSettings = {
   llm_auto_generate: 'true',
   llm_prompt_template: '',
   llm_prompt_template_default: '',
+  llm_timeout: '90',
   theme: 'light',
   accent: 'default',
   nav: 'top',
@@ -88,6 +89,18 @@ describe('LLMButton', () => {
     await userEvent.click(screen.getByText('Generate description (LLM)'))
     await userEvent.click(screen.getByText('Generate'))
     await waitFor(() => expect(onResult).toHaveBeenCalledWith(result))
+  })
+
+  it('forwards the configured llm_timeout to describeItem', async () => {
+    mocked.getSettings.mockResolvedValue({ ...defaultSettings, llm_timeout: '240' })
+    mocked.describeItem.mockResolvedValue({ summary: 's', descriptions: [] })
+    renderButton()
+    await waitFor(() => expect(mocked.getSettings).toHaveBeenCalled())
+
+    await userEvent.click(screen.getByText('Generate description (LLM)'))
+    await userEvent.click(screen.getByText('Generate'))
+    await waitFor(() => expect(mocked.describeItem).toHaveBeenCalled())
+    expect(mocked.describeItem).toHaveBeenCalledWith('item-1', expect.objectContaining({ timeout: 240 }))
   })
 
   it('shows error on failure', async () => {

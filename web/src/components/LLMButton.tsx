@@ -45,6 +45,7 @@ export function LLMButton({ itemId, itemTitle, onResult }: Props) {
         bullet_max_words: Number(settings.llm_bullet_max_words) || 50,
         prompt_template: settings.llm_prompt_template,
         api_key: apiKey || undefined,
+        timeout: Number(settings.llm_timeout) || 90,
       })
       updateItem(taskId, label, { status: 'done' })
       finishTask(taskId, 'done')

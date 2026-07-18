@@ -59,6 +59,16 @@ def test_get_settings(admin):
     body = admin.get("/api/settings").json()
     assert "llm_prompt_template" in body
     assert "stats" in body
+    # LLM response wait timeout has a default and is exposed.
+    assert body["llm_timeout"] == "90"
+
+
+def test_update_llm_timeout(admin):
+    resp = admin.put("/api/settings", json={"llm_timeout": "240"}, headers=_csrf_headers(admin))
+    assert resp.status_code == 200
+    assert resp.json()["llm_timeout"] == "240"
+    # persisted across a fresh read
+    assert admin.get("/api/settings").json()["llm_timeout"] == "240"
 
 
 def test_appearance_is_public(client):
