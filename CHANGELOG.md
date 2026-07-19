@@ -5,6 +5,14 @@ All notable changes to CatalogueCanvas are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Released versions are tagged (see `v*` tags and the published `ghcr.io` image); earlier pre-release entries are grouped by date.
 
+## [0.1.6] - Unreleased
+
+### Added
+- Portfolio index entries are now links. Each thumbnail in the "Works" index jumps to that item's section (`#work-<id>`), in both the live deck and the static zip export.
+
+### Changed
+- Scroll-layout portfolios read as one continuous page: section rules are dropped everywhere except under the cover, which gains breathing room below it, and the index no longer repeats its heading or leaves a gap between pages.
+
 ## [0.1.5] - 2026-07-18
 
 ### Added
