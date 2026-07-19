@@ -12,6 +12,12 @@ Released versions are tagged (see `v*` tags and the published `ghcr.io` image); 
 
 ### Changed
 - Scroll-layout portfolios read as one continuous page: section rules are dropped everywhere except under the cover, which gains breathing room below it, and the index no longer repeats its heading or leaves a gap between pages.
+- `scripts/coverage-to-codacy.sh` accepts `--auto`/`--yes`/`--skip-regenerate` so it can run unattended, and fetches a version-pinned Codacy reporter binary verified against its published SHA-512 checksum instead of piping a rolling installer script straight into `bash`.
+- Web coverage thresholds now sit just below the measured level (lines 75, statements 72, functions 60, branches 60). The previous `branches: 80` floor was above actual coverage and failed the coverage run outright, while the lines/statements floors of 30 were far below it.
+
+### Fixed
+- Docker builds no longer report success when they fail. A `;` before a trailing `true` ended the `&&` chain in the dependency-install step, so `true` set the step's exit status and a failing `uv sync --frozen` or `apk del` still produced an image. The cache-purge failure is now suppressed with a braced `{ ...; || true; }` group, which scopes the guard to that one command; a bare trailing `|| true` would have applied to the whole chain and masked the same failures.
+- Codacy token parsing no longer strips spaces from inside the token value; only surrounding whitespace and quotes are trimmed.
 
 ## [0.1.5] - 2026-07-18
 

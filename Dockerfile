@@ -33,7 +33,7 @@ COPY server/pyproject.toml server/uv.lock /app/server/
 COPY server/src /app/server/src
 RUN cd server && uv sync --frozen --no-dev \
     && apk del .build-deps \
-    && pip cache purge 2>/dev/null; true
+    && { pip cache purge 2>/dev/null || true; }
 
 COPY --from=web-build /app/web/dist /app/web/dist
 
