@@ -107,7 +107,7 @@ export function Deck() {
             </div>
             <div className="cc-deck__indexgrid">
               {page.map((item, i) => (
-                <div className="cc-deck__idxitem" key={item.id}>
+                <a className="cc-deck__idxitem" href={`#work-${item.id}`} key={item.id}>
                   <span className="cc-deck__idxnum">{String(pageIndex * INDEX_PER_PAGE + i + 1).padStart(2, '0')}</span>
                   <div className="cc-thumb">
                     {item.preview_url
@@ -115,7 +115,7 @@ export function Deck() {
                       : <span className="cc-thumb__label">no preview</span>}
                   </div>
                   <div className="cc-deck__idxtitle">{item.title}</div>
-                </div>
+                </a>
               ))}
             </div>
           </section>

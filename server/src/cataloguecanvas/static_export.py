@@ -139,6 +139,10 @@ html,body{margin:0;padding:0}
    min-height:auto wins over each theme's cover height on cascade order. */
 .cc-deck[data-portfolio-layout="scroll"] .cc-deck__cover{min-height:auto}
 .cc-deck[data-portfolio-layout="scroll"] .cc-deck__sec{padding-top:clamp(40px,6vw,84px);padding-bottom:clamp(40px,6vw,84px)}
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__sec{border-bottom:0}
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__cover{border-bottom:1px solid var(--border);margin-bottom:clamp(48px,9vw,120px)}
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__index + .cc-deck__index{padding-top:0}
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__index:not(:first-of-type) .cc-deck__indexhead{display:none}
 
 /* print: one 1920x1080 slide per section — slide layout only */
 @media print{
@@ -331,10 +335,10 @@ def _render_paged_index(items: list[dict[str, Any]], asset: Asset, slug: str, to
             thumb = (f'<img src="{_e(src)}" alt="{_e(it.get("title"))}">'
                      if src else '<span class="cc-thumb__label">no preview</span>')
             parts.append(
-                '<div class="cc-deck__idxitem">'
+                f'<a class="cc-deck__idxitem" href="#work-{_e(it["id"])}">'
                 f'<span class="cc-deck__idxnum">{page_index + j + 1:02d}</span>'
                 f'<div class="cc-thumb">{thumb}</div>'
-                f'<div class="cc-deck__idxtitle">{_e(it.get("title"))}</div></div>'
+                f'<div class="cc-deck__idxtitle">{_e(it.get("title"))}</div></a>'
             )
         parts.append('</div></section>')
     return "".join(parts)

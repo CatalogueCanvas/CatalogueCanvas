@@ -355,3 +355,12 @@
   padding-top: clamp(40px, 6vw, 84px);
   padding-bottom: clamp(40px, 6vw, 84px);
 }
+/* Break lines only under the cover/title in scroll mode. */
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__sec { border-bottom: 0; }
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__cover { border-bottom: 1px solid var(--border); }
+/* Empty space after the title. */
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__cover { margin-bottom: clamp(48px, 9vw, 120px); }
+/* Index reads as one continuous block: collapse the gap between pages and drop
+   the repeated "Works (cont.)" head. */
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__index + .cc-deck__index { padding-top: 0; }
+.cc-deck[data-portfolio-layout="scroll"] .cc-deck__index:not(:first-of-type) .cc-deck__indexhead { display: none; }
