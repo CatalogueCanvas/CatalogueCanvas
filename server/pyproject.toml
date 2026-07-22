@@ -3,7 +3,7 @@ name = "cataloguecanvas-server"
 version = "0.1.5"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.139.0",
+    "fastapi>=0.139.2",
     "uvicorn[standard]>=0.51.0",
     "pillow>=12.3.0",
     "cairosvg>=2.9.0",
@@ -19,7 +19,7 @@ dependencies = [
 dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
-    "coverage[toml]>=7.15.1",
+    "coverage[toml]>=7.15.2",
     "respx>=0.23.1",
     "pip-audit>=2.10.1",
 ]
