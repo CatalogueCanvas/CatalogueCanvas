@@ -5,6 +5,24 @@ All notable changes to CatalogueCanvas are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Released versions are tagged (see `v*` tags and the published `ghcr.io` image); earlier pre-release entries are grouped by date.
 
+## [0.1.6] - 2026-07-22
+
+### Added
+- Portfolio index entries are now links. Each thumbnail in the "Works" index jumps to that item's section (`#work-<id>`), in both the live deck and the static zip export.
+
+### Changed
+- Scroll-layout portfolios read as one continuous page: section rules are dropped everywhere except under the cover, which gains breathing room below it, and the index no longer repeats its heading or leaves a gap between pages.
+- `scripts/coverage-to-codacy.sh` accepts `--auto`/`--yes`/`--skip-regenerate` so it can run unattended, and fetches a version-pinned Codacy reporter binary verified against its published SHA-512 checksum instead of piping a rolling installer script straight into `bash`.
+- Web coverage thresholds now sit just below the measured level (lines 75, statements 72, functions 60, branches 60). The previous `branches: 80` floor was above actual coverage and failed the coverage run outright, while the lines/statements floors of 30 were far below it.
+- Dependency bumps: `codeql-action` init/analyze, `astral-sh/setup-uv`, `coverage`, `fastapi`, React/Vite/typescript-eslint minor-patch group, and `@testing-library/jest-dom` (major, 6→7).
+
+### Fixed
+- Docker builds no longer report success when they fail. A `;` before a trailing `true` ended the `&&` chain in the dependency-install step, so `true` set the step's exit status and a failing `uv sync --frozen` or `apk del` still produced an image. The cache-purge failure is now suppressed with a braced `{ ...; || true; }` group, which scopes the guard to that one command; a bare trailing `|| true` would have applied to the whole chain and masked the same failures.
+- Codacy token parsing no longer strips spaces from inside the token value; only surrounding whitespace and quotes are trimmed.
+
+### Security
+- Bumped `brace-expansion` (transitive, via eslint/minimatch) to 5.0.7, fixing a ReDoS vulnerability ([GHSA-3jxr-9vmj-r5cp](https://github.com/advisories/GHSA-3jxr-9vmj-r5cp)).
+
 ## [0.1.5] - 2026-07-18
 
 ### Added

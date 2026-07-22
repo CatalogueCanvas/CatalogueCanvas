@@ -17,13 +17,14 @@ export default defineConfig({
       reportsDirectory: 'coverage',
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/main.tsx', 'src/vite-env.d.ts'],
-      // Floors set at the currently achieved level so CI catches regressions.
-      // Large page components are not yet tested; ratchet these up as that grows.
+      // Floors sit just under the measured level so CI catches regressions.
+      // Ratchet these up as coverage grows; Settings.tsx and Dashboard.tsx are
+      // the largest gaps and drag the function/branch numbers down.
       thresholds: {
-        lines: 30,
+        lines: 75,
         functions: 60,
-        branches: 80,
-        statements: 30,
+        branches: 60,
+        statements: 72,
       },
     },
   },
