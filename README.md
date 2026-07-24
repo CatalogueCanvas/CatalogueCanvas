@@ -141,6 +141,15 @@ npm run dev
 
 The Vite dev server proxies API requests to the backend; see `web/vite.config.ts` for the proxy target.
 
+## Telemetry & privacy
+
+CatalogueCanvas collects **nothing by default**. Two optional, anonymous trackers exist, each opted in separately, keyed only by a random per-instance ID stored under `./data/instance_id`. No hostname, IP, file paths, or catalogue content is ever sent.
+
+- **Install ping** — one-time, on first boot, only when `CC_INSTALL_TRACKING=1`. Sends: app version, install type (Docker or bare metal), OS.
+- **Weekly usage stats** — off by default, enabled under **Settings → Usage statistics**. Sends at most once per week: app version, install type, OS, database size, number of items, total RAM.
+
+Events go to PostHog (EU region). Point at your own instance with `CC_POSTHOG_HOST` / `CC_POSTHOG_KEY`, or leave both trackers off to send nothing.
+
 ## Updating
 
 Your data lives in the `./data` volume (SQLite database, uploaded assets, session key) and survives every update below.

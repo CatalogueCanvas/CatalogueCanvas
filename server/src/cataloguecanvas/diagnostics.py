@@ -33,6 +33,7 @@ _TRACKED_PACKAGES = (
     "pillow",
     "cairosvg",
     "lz4",
+    "psutil",
 )
 
 # Repo root and server dir, derived from this module's location:
@@ -298,6 +299,12 @@ def build_report() -> str:
     out.append(f"- Build date: {settings.build_date}")
     out.append(f"- Python: {platform.python_version()} ({sys.implementation.name})")
     out.append(f"- Platform: {platform.platform()}")
+    try:
+        import psutil
+
+        out.append(f"- Total RAM: {_fmt_bytes(psutil.virtual_memory().total)}")
+    except Exception:
+        pass
     out.append("")
     out.append("### Python packages")
     for name in _TRACKED_PACKAGES:

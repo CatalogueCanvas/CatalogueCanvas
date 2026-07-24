@@ -66,6 +66,12 @@ def create_app() -> FastAPI:
     ensure_admin(conn)
     conn.close()
 
+    # One-time anonymous install ping (no-op unless CC_INSTALL_TRACKING=1 and not
+    # already sent). Never raises.
+    from . import telemetry
+
+    telemetry.send_install_ping()
+
     app = FastAPI(title="CatalogueCanvas")
     app.add_middleware(SecurityHeadersMiddleware)
 

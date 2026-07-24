@@ -39,6 +39,13 @@ class Settings:
         }
         self.git_sha = os.environ.get("CC_GIT_SHA", "unknown")
         self.build_date = os.environ.get("CC_BUILD_DATE", "unknown")
+        # Anonymous opt-in telemetry. The PostHog project (capture) key is
+        # write-only/public by design, so a project default is safe to bake in;
+        # operators may override or point at their own PostHog instance.
+        self.posthog_key = os.environ.get("CC_POSTHOG_KEY", "phc_rxXHDk5dvHcLkLors6CKXFwPYAQdJvpNHdwU7XxoWg7o")
+        self.posthog_host = os.environ.get("CC_POSTHOG_HOST", "https://eu.i.posthog.com")
+        # One-time install ping is opt-in: off unless explicitly set to 1.
+        self.install_tracking = os.environ.get("CC_INSTALL_TRACKING", "0") == "1"
 
     def _load_or_create_secret(self) -> str:
         key_path = self.data_dir / "secret.key"

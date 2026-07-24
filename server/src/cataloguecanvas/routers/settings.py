@@ -60,6 +60,13 @@ UPDATE_DEFAULTS = {
     "update_latest_version": "",
 }
 
+# Admin-only telemetry state. Kept out of APPEARANCE_DEFAULTS so it is never
+# served on the public /appearance endpoint.
+TELEMETRY_DEFAULTS = {
+    "usage_stats_enabled": "false",
+    "usage_last_sent": "",
+}
+
 
 def _settings_response(conn: sqlite3.Connection) -> dict:
     stored = get_settings(conn)
@@ -67,6 +74,7 @@ def _settings_response(conn: sqlite3.Connection) -> dict:
         **{k: stored.get(k, v) for k, v in LLM_DEFAULTS.items()},
         **{k: stored.get(k, v) for k, v in APPEARANCE_DEFAULTS.items()},
         **{k: stored.get(k, v) for k, v in UPDATE_DEFAULTS.items()},
+        **{k: stored.get(k, v) for k, v in TELEMETRY_DEFAULTS.items()},
         "llm_prompt_template": stored.get("llm_prompt_template") or default_prompt_template(),
         "llm_prompt_template_default": default_prompt_template(),
         "stats": get_db_stats(conn),
@@ -101,6 +109,7 @@ class SettingsUpdate(BaseModel):
     favorites_enabled: Optional[str] = None
     multi_user_enabled: Optional[str] = None
     update_check_enabled: Optional[str] = None
+    usage_stats_enabled: Optional[str] = None
 
 
 @router.put("")
@@ -168,6 +177,13 @@ def get_version(
     conn: sqlite3.Connection = Depends(get_db),
     _: None = Depends(require_admin),
 ):
+    # Piggyback the throttled weekly usage ping on this endpoint: it runs on
+    # Settings page load and is admin-gated, giving a once-a-week outbound
+    # wakeup without any scheduler. No-op unless usage stats are enabled.
+    from .. import telemetry
+
+    telemetry.maybe_send_weekly(conn)
+
     current = _app_version()
     stored = get_settings(conn)
     enabled = stored.get("update_check_enabled", "false") == "true"

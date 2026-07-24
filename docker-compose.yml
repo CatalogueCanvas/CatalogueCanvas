@@ -15,5 +15,12 @@ services:
       CC_SITE_AUTHOR: ${CC_SITE_AUTHOR:-}
       # Secure cookies by default; set to false only for plain-HTTP LAN access.
       CC_COOKIE_SECURE: ${CC_COOKIE_SECURE:-true}
+      # Telemetry (all anonymous, all opt-in). See README "Telemetry & privacy".
+      #   Set to 1 to send a single anonymous install ping (version, OS) on first
+      #   boot. Weekly usage stats are a separate toggle in Settings (default off).
+      CC_INSTALL_TRACKING: ${CC_INSTALL_TRACKING:-0}
+      #   Override to point telemetry at your own PostHog instance, or leave unset.
+      # CC_POSTHOG_KEY: ${CC_POSTHOG_KEY:-}
+      # CC_POSTHOG_HOST: ${CC_POSTHOG_HOST:-https://eu.i.posthog.com}
     volumes:
       - ./data:/data
