@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import * as api from '../api/client'
 import type { Collection } from '../api/client'
 import { Icon } from '../components/Icon'

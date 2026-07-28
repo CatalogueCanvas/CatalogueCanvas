@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams } from 'react-router'
 import ReactMarkdown from 'react-markdown'
 import * as api from '../api/client'
 import type { Item, PublicPortfolio } from '../api/client'

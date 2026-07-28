@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router'
 import * as api from '../api/client'
 import type { Item, Portfolio } from '../api/client'
 import { Icon } from './Icon'

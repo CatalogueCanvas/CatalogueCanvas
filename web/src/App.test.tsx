@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 
 let mockAuth = { authenticated: true, loading: false, isAdmin: true, role: 'admin' as string | null, username: 'admin' as string | null, multiUser: false, login: vi.fn(), logout: vi.fn() }
 

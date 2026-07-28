@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router'
 import * as api from '../api/client'
 import type { Item, DescribeResult, AppSettings } from '../api/client'
 import { LLMButton } from '../components/LLMButton'

@@ -24,3 +24,16 @@ services:
       # CC_POSTHOG_HOST: ${CC_POSTHOG_HOST:-https://eu.i.posthog.com}
     volumes:
       - ./data:/data
+
+  # Dev-only toolchain for the web app: install deps, lint, type-check, test.
+  # The cataloguecanvas image is a production build (no devDependencies, only
+  # web/dist survives the multi-stage copy), so it can't run any of these.
+  # Pinned to the same node:22-slim digest as the Dockerfile's web-build stage
+  # so the lockfile is resolved by the same npm that builds the shipped image.
+  # Under the "dev" profile, so a plain `docker compose up` ignores it.
+  web-dev:
+    image: node:22-slim@sha256:813a7480f28fdadac1f7f5c824bcdad435b5bc1322a5968bbbdef8d058f9dff4
+    working_dir: /app/web
+    volumes:
+      - ./web:/app/web
+    profiles: ["dev"]

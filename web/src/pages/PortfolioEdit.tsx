@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router'
 import * as api from '../api/client'
 import type { Item, Portfolio, PortfolioStyle, PortfolioLayout } from '../api/client'
 import { Icon } from '../components/Icon'

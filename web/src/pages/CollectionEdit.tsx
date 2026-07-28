@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router'
 import * as api from '../api/client'
 import type { Collection, Item } from '../api/client'
 import { ItemCard } from '../components/ItemCard'
