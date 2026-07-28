@@ -9,6 +9,7 @@ Used by the `GET /api/settings/diagnostics` admin endpoint and the
 """
 from __future__ import annotations
 import json
+import logging
 import os
 import platform
 import shutil
@@ -22,6 +23,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .settings import settings
+
+logger = logging.getLogger(__name__)
 
 _TRACKED_PACKAGES = (
     "fastapi",
@@ -304,7 +307,10 @@ def build_report() -> str:
 
         out.append(f"- Total RAM: {_fmt_bytes(psutil.virtual_memory().total)}")
     except Exception:
-        pass
+        # psutil is optional here and can fail on restricted hosts (no /proc,
+        # sandboxed container). A diagnostics report missing one line is fine;
+        # failing to render the whole report is not.
+        logger.debug("could not read total RAM for diagnostics", exc_info=True)
     out.append("")
     out.append("### Python packages")
     for name in _TRACKED_PACKAGES:

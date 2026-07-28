@@ -39,9 +39,16 @@ class Settings:
         }
         self.git_sha = os.environ.get("CC_GIT_SHA", "unknown")
         self.build_date = os.environ.get("CC_BUILD_DATE", "unknown")
-        # Anonymous opt-in telemetry. The PostHog project (capture) key is
-        # write-only/public by design, so a project default is safe to bake in;
-        # operators may override or point at their own PostHog instance.
+        # Anonymous opt-in telemetry. This PostHog project (capture) key is
+        # write-only by design and is *intentionally* public: it can only POST
+        # events, never read them, so publishing it in the repo and in shipped
+        # images exposes no data. The tradeoff is that events can be forged by
+        # anyone holding it, which is accepted here -- the data is coarse usage
+        # counts, not anything decisions hinge on. Do not treat this as a secret
+        # or move it to a secret store; it must ship with the image for
+        # out-of-the-box telemetry to work at all. Nothing is sent regardless
+        # unless CC_INSTALL_TRACKING=1 or the usage-stats setting is enabled.
+        # Operators may override it to point at their own PostHog instance.
         self.posthog_key = os.environ.get("CC_POSTHOG_KEY", "phc_rxXHDk5dvHcLkLors6CKXFwPYAQdJvpNHdwU7XxoWg7o")
         self.posthog_host = os.environ.get("CC_POSTHOG_HOST", "https://eu.i.posthog.com")
         # One-time install ping is opt-in: off unless explicitly set to 1.

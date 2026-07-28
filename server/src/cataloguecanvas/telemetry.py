@@ -15,6 +15,7 @@ LLM config is ever sent. All network failures are swallowed: telemetry must neve
 break a boot or a request.
 """
 from __future__ import annotations
+import logging
 import platform
 import sqlite3
 import uuid
@@ -28,7 +29,17 @@ from .db import get_db_stats, get_settings, set_settings
 from .diagnostics import _app_version, _git_sha
 from .settings import settings
 
+logger = logging.getLogger(__name__)
+
 WEEKLY_INTERVAL = timedelta(days=7)
+
+# The install ping runs during app startup, so it uses a much shorter timeout
+# than the weekly ping: a blackholed connection must not stall boot.
+INSTALL_TIMEOUT = 2.0
+CAPTURE_TIMEOUT = 10.0
+# Back-off between install-ping attempts when the send fails (e.g. the machine
+# is offline at first boot), so a restart loop doesn't retry on every start.
+INSTALL_RETRY_INTERVAL = timedelta(days=1)
 
 
 def _instance_id() -> str:
@@ -42,6 +53,9 @@ def _instance_id() -> str:
         if existing:
             return existing
     except OSError:
+        # No readable id yet (first boot) or the data dir is unreadable. Either
+        # way the fallback is the same: mint a new one below. Nothing to log --
+        # this is the expected path on every first run.
         pass
     new_id = uuid.uuid4().hex
     try:
@@ -49,7 +63,10 @@ def _instance_id() -> str:
         path.write_text(new_id)
         path.chmod(0o600)
     except OSError:
-        pass
+        # Read-only data dir. The id stays in-memory for this process, so events
+        # still send but can't be correlated across restarts. Deliberately not
+        # fatal: telemetry must never break a boot over a non-writable volume.
+        logger.debug("could not persist telemetry instance id at %s", path, exc_info=True)
     return new_id
 
 
@@ -66,6 +83,9 @@ def _ram_total_bytes() -> Optional[int]:
 
         return int(psutil.virtual_memory().total)
     except Exception:
+        # Restricted hosts can fail to read memory info. A missing field is
+        # reported as None rather than dropping the whole event.
+        logger.debug("could not read total RAM for telemetry", exc_info=True)
         return None
 
 
@@ -74,7 +94,10 @@ def _base_props() -> dict:
         "version": _app_version(),
         "git_sha": _git_sha(),
         "install_type": _install_type(),
-        "os": platform.platform(),
+        # Deliberately platform.system() ("Linux"/"Darwin"/"Windows") and not
+        # platform.platform(), which returns the full kernel/glibc string and
+        # would be a usable fingerprint alongside a stable instance id.
+        "os": platform.system(),
     }
 
 
@@ -92,7 +115,7 @@ def _collect_stats(conn: sqlite3.Connection) -> dict:
     return props
 
 
-def capture(event: str, properties: dict) -> bool:
+def capture(event: str, properties: dict, timeout: float = CAPTURE_TIMEOUT) -> bool:
     """POST one event to PostHog. Returns True on a 2xx, False on any failure.
 
     Never raises — telemetry must not affect the caller.
@@ -108,11 +131,15 @@ def capture(event: str, properties: dict) -> bool:
                 "distinct_id": _instance_id(),
                 "properties": properties,
             },
-            timeout=10.0,
+            timeout=timeout,
         )
         resp.raise_for_status()
         return True
     except (httpx.HTTPError, ValueError, OSError):
+        # Telemetry is best-effort: an unreachable or erroring endpoint is not a
+        # caller problem. Reported via the return value so callers can decide
+        # whether to persist a "sent" flag.
+        logger.debug("telemetry capture for %s failed", event, exc_info=True)
         return False
 
 
@@ -127,10 +154,25 @@ def send_install_ping() -> None:
     conn = sqlite3.connect(str(settings.db_path))
     conn.row_factory = sqlite3.Row
     try:
-        if get_settings(conn).get("install_ping_sent") == "true":
+        stored = get_settings(conn)
+        if stored.get("install_ping_sent") == "true":
             return
-        if capture("catalogue_install", _base_props()):
+
+        # Back off after a failed attempt. Without this an offline or firewalled
+        # box retries on every boot, paying the timeout each time; a container in
+        # a restart loop would do so continuously.
+        last_try = stored.get("install_ping_last_try") or None
+        if last_try:
+            try:
+                if datetime.now(timezone.utc) - datetime.fromisoformat(last_try) < INSTALL_RETRY_INTERVAL:
+                    return
+            except ValueError:
+                pass  # malformed timestamp: treat as due
+
+        if capture("catalogue_install", _base_props(), timeout=INSTALL_TIMEOUT):
             set_settings(conn, {"install_ping_sent": "true"})
+        else:
+            set_settings(conn, {"install_ping_last_try": datetime.now(timezone.utc).isoformat()})
     finally:
         conn.close()
 
