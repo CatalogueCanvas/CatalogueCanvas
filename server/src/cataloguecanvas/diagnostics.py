@@ -9,6 +9,7 @@ Used by the `GET /api/settings/diagnostics` admin endpoint and the
 """
 from __future__ import annotations
 import json
+import logging
 import os
 import platform
 import shutil
@@ -23,6 +24,8 @@ from urllib.parse import urlparse
 
 from .settings import settings
 
+logger = logging.getLogger(__name__)
+
 _TRACKED_PACKAGES = (
     "fastapi",
     "uvicorn",
@@ -33,6 +36,7 @@ _TRACKED_PACKAGES = (
     "pillow",
     "cairosvg",
     "lz4",
+    "psutil",
 )
 
 # Repo root and server dir, derived from this module's location:
@@ -298,6 +302,15 @@ def build_report() -> str:
     out.append(f"- Build date: {settings.build_date}")
     out.append(f"- Python: {platform.python_version()} ({sys.implementation.name})")
     out.append(f"- Platform: {platform.platform()}")
+    try:
+        import psutil
+
+        out.append(f"- Total RAM: {_fmt_bytes(psutil.virtual_memory().total)}")
+    except Exception:
+        # psutil is optional here and can fail on restricted hosts (no /proc,
+        # sandboxed container). A diagnostics report missing one line is fine;
+        # failing to render the whole report is not.
+        logger.debug("could not read total RAM for diagnostics", exc_info=True)
     out.append("")
     out.append("### Python packages")
     for name in _TRACKED_PACKAGES:

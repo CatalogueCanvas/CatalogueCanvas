@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router'
 import { useAuth } from './api/auth'
 import { ACCENT_PRESETS, useAppearance } from './api/appearance'
 import { SelectionProvider } from './api/selection'

@@ -205,6 +205,17 @@ export function Settings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings?.update_check_enabled])
 
+  const setUsageStats = async (value: boolean) => {
+    if (!settings) return
+    setError('')
+    try {
+      const updated = await api.updateSettings({ usage_stats_enabled: value ? 'true' : 'false' })
+      setSettings(updated)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'failed to update setting')
+    }
+  }
+
   if (!settings) return <div className="container"><div className="cc-empty"><p className="cc-empty__title">{error || 'Loading...'}</p></div></div>
 
   const save = async () => {
@@ -409,6 +420,28 @@ export function Settings() {
               {versionError && <div className="error-text">{versionError}</div>}
             </div>
           )}
+        </section>
+
+        <section className="cc-panel">
+          <h2 className="cc-h2" style={{ marginBottom: 'var(--space-4)' }}>Usage statistics</h2>
+          <div className="cc-aprow">
+            <div className="cc-aprow__txt">
+              <span className="cc-label">Share anonymous usage stats</span>
+              <p className="cc-hint">Off by default. When on, CatalogueCanvas sends an anonymous ping at most once per week containing only: app version, install type (Docker or bare metal), operating system, database size, number of items, and total RAM. No hostname, IP, file paths, or content is ever sent.</p>
+            </div>
+            <div className="cc-seg">
+              {([[true, 'On'], [false, 'Off']] as const).map(([value, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={(settings.usage_stats_enabled === 'true') === value}
+                  onClick={() => void setUsageStats(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
 
         <section className="cc-panel">

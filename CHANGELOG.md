@@ -5,6 +5,18 @@ All notable changes to CatalogueCanvas are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Released versions are tagged (see `v*` tags and the published `ghcr.io` image); earlier pre-release entries are grouped by date.
 
+## [0.2.0] - 2026-07-28
+
+### Added
+- Anonymous, opt-in telemetry via PostHog (EU region). Nothing is sent by default. A one-time install ping (app version, install type, OS) fires on first boot only when `CC_INSTALL_TRACKING=1`. A weekly usage-stats ping (version, install type, OS, database size, item count, total RAM) is toggled under Settings → Usage statistics and defaults off; it is throttled to once per week and piggybacks the existing `/api/version` request rather than adding a scheduler. Both are keyed by a random per-instance ID stored under the data volume — no hostname, IP, paths, or catalogue content is ever sent. Operators can point at their own PostHog with `CC_POSTHOG_HOST`/`CC_POSTHOG_KEY`. This is necessary to know how CC is being used, off by default. 
+
+### Changed
+- Added a dev-only `web-dev` service to `docker-compose.yml` for the web toolchain (install, lint, type-check, test). The shipped image is a production build with no devDependencies, so it cannot run these; the new service is pinned to the same `node:22-slim` digest as the Dockerfile's build stage and sits behind the `dev` compose profile, leaving `docker compose up` unchanged.
+
+### Security
+- Migrated `react-router-dom` 7.18.1 → `react-router` 8.3.0, fixing a CSRF bypass in RSC code paths ([GHSA-qwww-vcr4-c8h2](https://github.com/advisories/GHSA-qwww-vcr4-c8h2)). The `react-router-dom` package no longer exists as of v8 — its exports moved into `react-router` itself, so this is an import-path rename across the web app with no API changes. The advisory only affects apps using the unstable RSC APIs, which this app does not.
+- Bumped `brace-expansion` (dev-only transitive, via eslint/minimatch) to 5.0.8, fixing a denial of service via unbounded expansion length ([GHSA-mh99-v99m-4gvg](https://github.com/advisories/GHSA-mh99-v99m-4gvg)).
+
 ## [0.1.6] - 2026-07-22
 
 ### Added

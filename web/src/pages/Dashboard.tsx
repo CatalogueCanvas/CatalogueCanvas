@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router'
 import * as api from '../api/client'
 import type { Collection, Item, Portfolio } from '../api/client'
 import { ItemCard } from '../components/ItemCard'

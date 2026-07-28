@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import { LLMButton } from './LLMButton'
 import type { AppSettings } from '../api/client'
 
@@ -48,6 +48,7 @@ const defaultSettings: AppSettings = {
   favorites_enabled: 'false',
   multi_user_enabled: 'false',
   update_check_enabled: 'false',
+  usage_stats_enabled: 'false',
   stats: { total_items: 0, total_collections: 0, missing_preview: 0 },
 }
 

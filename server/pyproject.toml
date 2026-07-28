@@ -1,6 +1,6 @@
 [project]
 name = "cataloguecanvas-server"
-version = "0.1.6"
+version = "0.2.0"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.139.2",
@@ -13,6 +13,7 @@ dependencies = [
     "httpx>=0.28.1",
     "markdown>=3.10.2",
     "lz4>=4.4.5",
+    "psutil>=6.0.0",
 ]
 
 [dependency-groups]

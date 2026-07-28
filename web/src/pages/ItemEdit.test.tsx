@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import { ItemEdit } from './ItemEdit'
 import type { AppSettings, DescribeResult, Item } from '../api/client'
 
@@ -71,6 +71,7 @@ function makeSettings(over: Partial<AppSettings> = {}): AppSettings {
     theme: 'light', accent: 'default', nav: 'top', density: 'balanced', favorites_enabled: 'false',
     multi_user_enabled: 'false',
     update_check_enabled: 'false',
+    usage_stats_enabled: 'false',
     stats: { total_items: 0, total_collections: 0, missing_preview: 0 }, ...over,
   }
 }
