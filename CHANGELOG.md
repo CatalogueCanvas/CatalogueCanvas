@@ -13,6 +13,9 @@ Released versions are tagged (see `v*` tags and the published `ghcr.io` image); 
 ### Added
 - `CC_PREVIEW_MAX_EDGE` (default `2500`) caps the longest edge of a generated SVG preview. Previews were rendered at a blind `scale=2.5` multiplier, so a 1870×2645 plotter SVG rasterized to 4675×6612 — cost grows with the square of the output and was unbounded. Capping the longest edge cuts a representative dense SVG from 7.2s to 2.2s locally while preserving aspect ratio, and never upscales inputs already below the cap. Set to `0` to disable. Applies to new ingests; existing previews are unchanged.
 
+### Changed
+- Dependency bumps merged from Dependabot: `fastapi` (>=0.139.2 → >=0.140.13), `uvicorn[standard]` (>=0.51.0 → >=0.52.0), `psutil` (>=6.0.0 → >=7.2.2), `jsdom` (29.1.1 → 30.0.1, dev), and the npm minor/patch group covering `@types/node`, `eslint` and `globals` (dev). Workflow action pins moved to `docker/login-action` v4.6.0 and `ossf/scorecard-action` v2.4.4.
+
 ## [0.2.0] - 2026-07-28
 
 ### Added
