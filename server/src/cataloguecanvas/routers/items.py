@@ -11,6 +11,7 @@ from typing import Any, Optional
 
 import lz4.frame
 from starlette.background import BackgroundTask
+from starlette.concurrency import run_in_threadpool
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
@@ -592,7 +593,14 @@ async def upload_item(
 
     import_dt = datetime.now(timezone.utc).isoformat(timespec="seconds")
     try:
-        result = ingest_zip_bytes(
+        # Ingest rasterizes SVG previews, which is CPU-bound and can run for
+        # minutes on a dense file. Calling it inline would block the event loop
+        # and stall every other request on this worker, so hand it to a thread.
+        # Safe for the sqlite handle: get_db yields a fresh connection per
+        # request, opened with check_same_thread=False, and this coroutine
+        # awaits rather than touching conn concurrently.
+        result = await run_in_threadpool(
+            ingest_zip_bytes,
             data,
             file.filename,
             conn,

@@ -206,6 +206,7 @@ Environment variables (set via `docker-compose.yml` or your shell):
 | `CC_DB_PATH` | `<CC_DATA_DIR>/catalogue.db` | SQLite database file path |
 | `CC_STORAGE_DIR` | `<CC_DATA_DIR>/storage` | Directory for uploaded item assets |
 | `CC_STATIC_DIR` | `web/dist` | Directory of built frontend assets to serve |
+| `CC_PREVIEW_MAX_EDGE` | `2500` | Longest edge in px for generated SVG previews. Caps rasterization cost so a dense SVG can't stall an upload; `0` disables the cap |
 
 ## Usage
 

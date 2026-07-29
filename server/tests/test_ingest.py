@@ -103,6 +103,53 @@ def test_ingest_zip_dedup_by_hash(conn, tmp_path):
     assert again.note == "already ingested"
 
 
+def _cairo_available() -> bool:
+    try:
+        import cairosvg  # noqa: F401
+    except (ImportError, OSError):
+        return False
+    return True
+
+
+_BIG_SVG = (
+    b'<svg xmlns="http://www.w3.org/2000/svg" width="4000" height="2000">'
+    b'<rect width="100%" height="100%" fill="red"/></svg>'
+)
+
+
+@pytest.mark.skipif(not _cairo_available(), reason="native cairo library unavailable")
+def test_ingest_zip_caps_svg_preview_edge(conn, tmp_path):
+    lib = db.get_default_library(conn)
+    zip_bytes = _make_zip({"art.svg": _BIG_SVG})
+    result = ingest.ingest_zip_bytes(
+        zip_bytes, "big.zip", conn, lib["id"], tmp_path, preview_max_edge=500)
+    assert result.created is True
+    with Image.open(tmp_path / result.item["preview_path"]) as img:
+        assert max(img.size) <= 500
+    # stored dimensions must match the capped preview, not the source SVG
+    assert max(result.item["width"], result.item["height"]) <= 500
+
+
+@pytest.mark.skipif(not _cairo_available(), reason="native cairo library unavailable")
+def test_ingest_zip_uses_settings_cap_by_default(conn, tmp_path, monkeypatch):
+    monkeypatch.setattr(ingest.settings, "preview_max_edge", 300)
+    lib = db.get_default_library(conn)
+    result = ingest.ingest_zip_bytes(
+        _make_zip({"art.svg": _BIG_SVG}), "d.zip", conn, lib["id"], tmp_path)
+    with Image.open(tmp_path / result.item["preview_path"]) as img:
+        assert max(img.size) <= 300
+
+
+@pytest.mark.skipif(not _cairo_available(), reason="native cairo library unavailable")
+def test_ingest_zip_cap_disabled_uses_scale(conn, tmp_path):
+    lib = db.get_default_library(conn)
+    result = ingest.ingest_zip_bytes(
+        _make_zip({"art.svg": _BIG_SVG}), "u.zip", conn, lib["id"], tmp_path,
+        image_scale=1.0, preview_max_edge=0)
+    with Image.open(tmp_path / result.item["preview_path"]) as img:
+        assert img.size == (4000, 2000)
+
+
 def test_ingest_zip_rejects_too_many_entries(conn, tmp_path, monkeypatch):
     monkeypatch.setattr(ingest.settings, "max_zip_entries", 1)
     zip_bytes = _make_zip({"a.txt": b"1", "b.txt": b"2"})

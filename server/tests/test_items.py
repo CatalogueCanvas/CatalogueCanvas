@@ -177,3 +177,59 @@ def test_item_metadata_jsonld(admin, app_conn):
     doc = admin.get("/api/items/meta-1/metadata").json()
     assert doc["@context"] == "https://schema.org"
     assert doc["identifier"] == "meta-1"
+
+
+# --- upload ---
+
+def _zip_with_png(marker: str = "") -> bytes:
+    """A minimal valid item ZIP. `marker` varies the content hash so separate
+    tests don't collide on the ingest dedup path (the app DB is shared)."""
+    import zipfile
+    from PIL import Image
+
+    png = io.BytesIO()
+    Image.new("RGB", (16, 16), (10, 20, 30)).save(png, format="PNG")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("art.png", png.getvalue())
+        if marker:
+            zf.writestr("notes.txt", marker)
+    return buf.getvalue()
+
+
+def test_upload_zip_creates_item(admin):
+    """Covers the run_in_threadpool path — ingest runs off the event loop."""
+    upload = ("Piece.zip", io.BytesIO(_zip_with_png("create")), "application/zip")
+    resp = admin.post("/api/items/upload", files={"file": upload}, headers=csrf(admin))
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["created"] is True
+    assert body["item"]["title"] == "Piece"
+
+
+def test_upload_zip_dedups_on_reupload(admin):
+    data = _zip_with_png("dedup")
+    first = admin.post("/api/items/upload",
+                       files={"file": ("Dup.zip", io.BytesIO(data), "application/zip")},
+                       headers=csrf(admin))
+    assert first.json()["created"] is True
+    again = admin.post("/api/items/upload",
+                       files={"file": ("Dup.zip", io.BytesIO(data), "application/zip")},
+                       headers=csrf(admin))
+    assert again.status_code == 200
+    assert again.json()["created"] is False
+    assert again.json()["note"] == "already ingested"
+
+
+def test_upload_rejects_non_zip(admin):
+    upload = ("x.txt", io.BytesIO(b"nope"), "text/plain")
+    resp = admin.post("/api/items/upload", files={"file": upload}, headers=csrf(admin))
+    assert resp.status_code == 400
+
+
+def test_upload_oversize_zip_rejected(admin, monkeypatch):
+    from cataloguecanvas.routers import items as items_mod
+    monkeypatch.setattr(items_mod.settings, "max_upload_bytes", 10)
+    upload = ("big.zip", io.BytesIO(_zip_with_png()), "application/zip")
+    resp = admin.post("/api/items/upload", files={"file": upload}, headers=csrf(admin))
+    assert resp.status_code == 413
