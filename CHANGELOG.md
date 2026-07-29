@@ -5,6 +5,17 @@ All notable changes to CatalogueCanvas are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Released versions are tagged (see `v*` tags and the published `ghcr.io` image); earlier pre-release entries are grouped by date.
 
+## [0.2.1] - 2026-07-29
+
+### Fixed
+- Uploading a ZIP no longer stalls the whole server. `POST /api/items/upload` ran the ingest — including SVG rasterization — directly on the event loop, so a single dense file blocked every other request on the worker until it finished. Behind a reverse proxy this surfaced as a `504` on the upload *and* on unrelated `GET /api/items`, `/api/portfolios` and `/api/collections`, while the app's own log showed only `200 OK`. Ingest now runs in a threadpool. The sqlite handle is unaffected: `get_db` already yields a fresh per-request connection opened with `check_same_thread=False`.
+
+### Added
+- `CC_PREVIEW_MAX_EDGE` (default `2500`) caps the longest edge of a generated SVG preview. Previews were rendered at a blind `scale=2.5` multiplier, so a 1870×2645 plotter SVG rasterized to 4675×6612 — cost grows with the square of the output and was unbounded. Capping the longest edge cuts a representative dense SVG from 7.2s to 2.2s locally while preserving aspect ratio, and never upscales inputs already below the cap. Set to `0` to disable. Applies to new ingests; existing previews are unchanged.
+
+### Changed
+- Dependency bumps merged from Dependabot: `fastapi` (>=0.139.2 → >=0.140.13), `uvicorn[standard]` (>=0.51.0 → >=0.52.0), `psutil` (>=6.0.0 → >=7.2.2), `jsdom` (29.1.1 → 30.0.1, dev), and the npm minor/patch group covering `@types/node`, `eslint` and `globals` (dev). Workflow action pins moved to `docker/login-action` v4.6.0 and `ossf/scorecard-action` v2.4.4.
+
 ## [0.2.0] - 2026-07-28
 
 ### Added

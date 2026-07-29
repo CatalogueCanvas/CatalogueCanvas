@@ -29,6 +29,10 @@ class Settings:
         self.max_zip_member_bytes = int(os.environ.get("CC_MAX_ZIP_MEMBER_BYTES", str(500 * 1024 * 1024)))
         self.max_zip_total_bytes = int(os.environ.get("CC_MAX_ZIP_TOTAL_BYTES", str(1024 * 1024 * 1024)))
         self.max_zip_entries = int(os.environ.get("CC_MAX_ZIP_ENTRIES", "10000"))
+        # Longest edge (px) of a generated SVG preview. SVG rasterization cost
+        # grows with the square of the output size and a dense plotter SVG can
+        # otherwise block the server for minutes. 0 disables the cap.
+        self.preview_max_edge = int(os.environ.get("CC_PREVIEW_MAX_EDGE", "2500"))
         # Optional SSRF guard: when set, the LLM api_url host must be one of these.
         # Self-hosted setups that point at internal devices (Ollama, LM Studio on
         # the LAN) opt those hosts in explicitly rather than allowing any address.

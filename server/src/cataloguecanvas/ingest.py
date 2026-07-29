@@ -108,6 +108,7 @@ def ingest_zip_bytes(
     image_scale: float = 2.5,
     force: bool = False,
     import_dt: Optional[str] = None,
+    preview_max_edge: Optional[int] = None,
 ) -> IngestResult:
     """Ingest a single ZIP file's bytes as one item.
 
@@ -115,6 +116,7 @@ def ingest_zip_bytes(
     (False if skipped/deduplicated by content hash and not forced), and an
     optional human-readable `note`.
     """
+    max_edge = settings.preview_max_edge if preview_max_edge is None else preview_max_edge
     content_hash = hashlib.sha256(data).hexdigest()
 
     existing = hash_exists(conn, content_hash)
@@ -178,7 +180,7 @@ def ingest_zip_bytes(
             if preview_choice and name == preview_choice[0]:
                 preview_mime = preview_choice[1]
                 out_file = items_dir / "preview.webp"
-                to_webp(member_data, preview_mime, out_file, scale=image_scale)
+                to_webp(member_data, preview_mime, out_file, scale=image_scale, max_edge=max_edge)
                 preview_path = str(out_file.relative_to(library_path))
                 with Image.open(out_file) as img:
                     preview_width, preview_height = img.size
