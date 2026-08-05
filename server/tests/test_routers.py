@@ -247,3 +247,89 @@ def test_storage_symlink_detected(tmp_path):
     except ValueError:
         pass
     assert escaped, "Symlink target was not detected as outside library root"
+
+
+# --- activity log endpoints ---
+
+def test_activity_requires_admin(client):
+    assert client.get("/api/settings/activity").status_code == 401
+
+
+def test_activity_records_admin_actions(admin):
+    """A mutation through the API leaves a matching entry in the log."""
+    created = admin.post(
+        "/api/collections",
+        json={"title": "Audited Collection"},
+        headers=_csrf_headers(admin),
+    )
+    assert created.status_code in (200, 201), created.text
+    col_id = created.json()["id"]
+
+    body = admin.get("/api/settings/activity").json()
+    entries = body["entries"]
+    match = next(
+        (e for e in entries if e["action"] == "collection.create" and e["target"] == col_id),
+        None,
+    )
+    assert match is not None, f"no collection.create entry for {col_id}"
+    assert match["actor"], "entry must name the acting user"
+    assert match["role"] == "admin"
+
+
+def test_activity_never_records_secret_values(admin):
+    """Settings updates log field names only -- never the values."""
+    # A literal IP so the endpoint's DNS validation passes; the point is that
+    # whatever the value is, it must not reach the log.
+    resp = admin.put(
+        "/api/settings",
+        json={"llm_api_url": "http://10.99.88.77:1234"},
+        headers=_csrf_headers(admin),
+    )
+    assert resp.status_code == 200, resp.text
+
+    raw = admin.post("/api/settings/activity/export", headers=_csrf_headers(admin)).text
+    assert "10.99.88.77" not in raw
+    assert "settings.update" in raw
+    assert "llm_api_url" in raw  # the field name is fine
+
+
+def test_activity_export_is_csv(admin):
+    resp = admin.post("/api/settings/activity/export", headers=_csrf_headers(admin))
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    assert "attachment" in resp.headers["content-disposition"]
+    assert resp.text.splitlines()[0] == "at,actor,role,action,target,detail"
+
+
+def test_activity_delete_requires_exact_phrase(admin):
+    resp = admin.request(
+        "DELETE", "/api/settings/activity",
+        json={"confirm": "delete it"},
+        headers=_csrf_headers(admin),
+    )
+    assert resp.status_code == 400
+    assert "delete activity log" in resp.json()["detail"]
+
+
+def test_activity_delete_clears_and_records_itself(admin):
+    # Generate at least one entry to clear.
+    admin.put("/api/settings", json={"llm_model": "m"}, headers=_csrf_headers(admin))
+
+    resp = admin.request(
+        "DELETE", "/api/settings/activity",
+        json={"confirm": "delete activity log"},
+        headers=_csrf_headers(admin),
+    )
+    assert resp.status_code == 200
+
+    entries = admin.get("/api/settings/activity").json()["entries"]
+    # The clear itself is recorded after truncation, so a wiped log still shows
+    # who wiped it rather than looking untouched.
+    assert any(e["action"] == "activity.clear" for e in entries)
+    assert not any(e["action"] == "settings.update" for e in entries)
+
+
+def test_settings_reports_access_policy(admin):
+    access = admin.get("/api/settings").json()["access"]
+    assert "allow_external_requests" in access
+    assert isinstance(access["trusted_proxies"], list)

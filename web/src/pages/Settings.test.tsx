@@ -46,6 +46,10 @@ vi.mock('../components/UsersPanel', () => ({
   UsersPanel: () => <div data-testid="users-panel">UsersPanel</div>,
 }))
 
+vi.mock('../components/ActivityLogPanel', () => ({
+  ActivityLogPanel: () => <div data-testid="activity-log-panel">ActivityLogPanel</div>,
+}))
+
 import * as api from '../api/client'
 const mocked = vi.mocked(api)
 
@@ -65,6 +69,7 @@ function makeSettings(over: Partial<AppSettings> = {}): AppSettings {
     llm_timeout: '90',
     multi_user_enabled: 'false',
     stats: { total_items: 10, total_collections: 3, missing_preview: 1 },
+    access: { allow_external_requests: false, trusted_proxies: [] },
     ...over,
   } as AppSettings
 }

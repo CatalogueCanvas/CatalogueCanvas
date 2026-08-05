@@ -50,6 +50,7 @@ const defaultSettings: AppSettings = {
   update_check_enabled: 'false',
   usage_stats_enabled: 'false',
   stats: { total_items: 0, total_collections: 0, missing_preview: 0 },
+  access: { allow_external_requests: false, trusted_proxies: [] },
 }
 
 function renderButton(onResult = vi.fn()) {
