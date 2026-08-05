@@ -141,6 +141,23 @@ npm run dev
 
 The Vite dev server proxies API requests to the backend; see `web/vite.config.ts` for the proxy target.
 
+### Running the tests
+
+The shipped image is a production build (no devDependencies, no dev dependency
+group), so neither suite runs in it. Two dev-profile compose services exist for
+that, and a plain `docker compose up` ignores both:
+
+```bash
+# Backend (pytest, coverage floor enforced by pyproject)
+docker compose run --rm server-dev uv run pytest
+
+# Frontend (lint, type-check/build, unit tests)
+docker compose run --rm web-dev npm ci
+docker compose run --rm web-dev npm run lint
+docker compose run --rm web-dev npm run build
+docker compose run --rm web-dev npm test
+```
+
 ## Telemetry & privacy
 
 CatalogueCanvas collects **nothing by default**. Two optional, anonymous trackers exist, each opted in separately, keyed only by a random per-instance ID stored under `./data/instance_id`. No hostname, IP, file paths, or catalogue content is ever sent.
@@ -207,6 +224,78 @@ Environment variables (set via `docker-compose.yml` or your shell):
 | `CC_STORAGE_DIR` | `<CC_DATA_DIR>/storage` | Directory for uploaded item assets |
 | `CC_STATIC_DIR` | `web/dist` | Directory of built frontend assets to serve |
 | `CC_PREVIEW_MAX_EDGE` | `2500` | Longest edge in px for generated SVG previews. Caps rasterization cost so a dense SVG can't stall an upload; `0` disables the cap |
+| `CC_ALLOW_EXTERNAL_REQUESTS` | `false` | When false, only clients on a private/loopback address are served; public IPs get a `403`. Prevents an accidental port forward from exposing the catalogue. Set to `true` for a deliberately public deployment |
+| `CC_TRUSTED_PROXIES` | _(empty)_ | Comma-separated peer addresses whose `X-Forwarded-For` header is trusted. Required behind a reverse proxy; while empty the header is ignored so a caller can't spoof a private address |
+| `CC_AUDIT_LOG` | `1` | Record who uploaded/edited/deleted what. Set to `0` to disable |
+| `CC_AUDIT_LOG_PATH` | `<CC_DATA_DIR>/logs/audit.log` | Activity log file (JSONL, one event per line) |
+| `CC_AUDIT_LOG_MAX_BYTES` | `5242880` | Roll the activity log over past this size, keeping one previous file; `0` disables rotation |
+
+### Network access
+
+By default CatalogueCanvas refuses requests from public IP addresses. This is a
+guard against the most common self-hosting accident — a port forward that
+quietly puts the whole catalogue on the internet — and it applies to every
+route, **including public portfolio links**.
+
+If you deliberately serve the app publicly:
+
+```dotenv
+CC_ALLOW_EXTERNAL_REQUESTS=true
+```
+
+If you run behind a reverse proxy (nginx, Caddy, Traefik, Cloudflare Tunnel),
+list the proxy's address so the real client IP is read from `X-Forwarded-For`:
+
+```dotenv
+CC_TRUSTED_PROXIES=172.18.0.2
+```
+
+Without that, the header is ignored entirely: honouring it from any peer would
+let a caller claim to be `127.0.0.1` and walk straight past the check.
+
+## Activity log
+
+Every change is recorded to `<CC_DATA_DIR>/logs/audit.log`, one JSON object per
+line: who did it, when, what action, and which item, collection, portfolio,
+user or library it touched. Logins, failed logins, uploads, deletions, batch
+edits, settings changes and data exports are all covered.
+
+Values are never recorded — only field *names*. Passwords, password hashes,
+share tokens, notes, prompt templates and the LLM API URL never reach the log.
+
+Admins can view recent entries, download the whole log as CSV, and clear it
+(behind a typed confirmation) under **Settings → Activity log**. Tail it from
+the host with:
+
+```bash
+docker compose exec cataloguecanvas cat /data/logs/audit.log
+```
+
+## Command line tools
+
+The image installs a `cc` command for maintenance that would otherwise need the
+browser or manual database surgery:
+
+```bash
+# Set a password and revoke every active session
+docker compose exec cataloguecanvas cc reset-password --user admin
+
+# Write a backup (database + all library files) to the data volume
+docker compose exec cataloguecanvas cc backup --out /data/backups
+
+# Restore one. Refuses to overwrite a populated database without --force,
+# and keeps the previous database as catalogue.db.pre-restore-<timestamp>
+docker compose exec cataloguecanvas cc restore /data/backups/<file>.zip
+
+# Bulk-ingest every .zip under a mounted folder (./import on the host)
+docker compose exec cataloguecanvas cc ingest /data/import
+
+# Print the same redacted diagnostic report the Settings page downloads
+docker compose exec cataloguecanvas cc diagnostics
+```
+
+Run `cc <command> --help` for the full options. On a bare-metal install the
+same commands are available as `uv run cc ...` from the `server/` directory.
 
 ## Usage
 

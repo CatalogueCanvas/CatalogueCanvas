@@ -22,8 +22,22 @@ services:
       #   Override to point telemetry at your own PostHog instance, or leave unset.
       # CC_POSTHOG_KEY: ${CC_POSTHOG_KEY:-}
       # CC_POSTHOG_HOST: ${CC_POSTHOG_HOST:-https://eu.i.posthog.com}
+      # Refuse requests from public IPs. Default off, so an accidental port
+      # forward can't expose the catalogue. Set to true for a deliberately
+      # public deployment -- note this also gates public portfolio links.
+      CC_ALLOW_EXTERNAL_REQUESTS: ${CC_ALLOW_EXTERNAL_REQUESTS:-false}
+      # Behind a reverse proxy, list its address here so the real client IP can
+      # be read from X-Forwarded-For. Unset means the header is ignored, since
+      # trusting it from any peer would let a caller spoof a private address.
+      CC_TRUSTED_PROXIES: ${CC_TRUSTED_PROXIES:-}
+      # Activity log (who uploaded/edited/deleted what). On by default; set to 0
+      # to disable. Written to <data dir>/logs/audit.log as JSONL.
+      CC_AUDIT_LOG: ${CC_AUDIT_LOG:-1}
     volumes:
       - ./data:/data
+      # Source folder for `cc ingest /data/import`. Read-only: ingest copies
+      # into the library, it never writes back here.
+      - ./import:/data/import:ro
 
   # Dev-only toolchain for the web app: install deps, lint, type-check, test.
   # The cataloguecanvas image is a production build (no devDependencies, only
@@ -36,4 +50,23 @@ services:
     working_dir: /app/web
     volumes:
       - ./web:/app/web
+    profiles: ["dev"]
+
+  # Dev-only backend toolchain: runs pytest against the same Python base the
+  # production image uses. The shipped image installs with --no-dev and drops
+  # the build toolchain, so it can't run the suite itself.
+  # Also under the "dev" profile, so `docker compose up` ignores it.
+  server-dev:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    working_dir: /app/server
+    volumes:
+      - ./server:/app/server
+    environment:
+      # Throwaway config: tests must never touch a real data dir.
+      CC_DATA_DIR: /tmp/cc-test-data
+      CC_ADMIN_PASSWORD: hunter2
+      CC_SECRET_KEY: test-secret-key-not-for-production
+      CC_COOKIE_SECURE: "false"
     profiles: ["dev"]

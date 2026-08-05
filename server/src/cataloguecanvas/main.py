@@ -1,4 +1,6 @@
 from __future__ import annotations
+import ipaddress
+import time
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -7,10 +9,89 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from . import audit
 from .auth import ensure_admin, require_session
 from .db import ensure_schema, get_connection, get_library, is_public_storage_path
 from .routers import auth, collections, items, libraries, portfolios, settings as settings_router, users
 from .settings import settings
+
+# How often a single source IP can add a "blocked" entry to the activity log.
+# Without this a port scanner would fill the disk one line at a time.
+_BLOCK_LOG_INTERVAL_SECONDS = 60
+# Upper bound on how many source addresses the rate-limiter remembers at once.
+_BLOCK_LOG_MAX_TRACKED = 1024
+
+
+def _is_private_address(host: str) -> bool:
+    """True for loopback, RFC1918/ULA private, and link-local addresses.
+
+    An address that can't be parsed is treated as external: failing closed is
+    the whole point of this control.
+    """
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return ip.is_loopback or ip.is_private or ip.is_link_local
+
+
+class ExternalRequestMiddleware(BaseHTTPMiddleware):
+    """Reject requests from public IPs unless CC_ALLOW_EXTERNAL_REQUESTS is set.
+
+    Guards against the common self-hosting accident: a port forward that quietly
+    exposes the whole catalogue to the internet. Applies to every route,
+    including public portfolios -- an operator who deliberately publishes one
+    opts in explicitly.
+    """
+
+    def __init__(self, app):
+        super().__init__(app)
+        self._last_logged: dict[str, float] = {}
+
+    def _client_host(self, request: Request) -> str:
+        peer = request.client.host if request.client else ""
+        # X-Forwarded-For is only meaningful when the immediate peer is a proxy
+        # we trust. Honouring it unconditionally would let any caller claim to
+        # be 127.0.0.1 and walk straight through this check.
+        if peer and peer in settings.trusted_proxies:
+            forwarded = request.headers.get("x-forwarded-for", "")
+            if forwarded:
+                return forwarded.split(",")[0].strip()
+        return peer
+
+    def _log_blocked(self, host: str, path: str) -> None:
+        now = time.monotonic()
+        last = self._last_logged.get(host)
+        if last is not None and now - last < _BLOCK_LOG_INTERVAL_SECONDS:
+            return
+        self._last_logged[host] = now
+        # Bound the dict so a scanner rotating source addresses can't grow it
+        # without limit. Drop expired entries first; if a burst of distinct
+        # addresses is still under the interval, evict the oldest by force --
+        # the worst case is a duplicate log line for an address we forgot.
+        if len(self._last_logged) > _BLOCK_LOG_MAX_TRACKED:
+            cutoff = now - _BLOCK_LOG_INTERVAL_SECONDS
+            self._last_logged = {k: v for k, v in self._last_logged.items() if v >= cutoff}
+            if len(self._last_logged) > _BLOCK_LOG_MAX_TRACKED:
+                keep = sorted(self._last_logged.items(), key=lambda kv: kv[1], reverse=True)
+                self._last_logged = dict(keep[:_BLOCK_LOG_MAX_TRACKED])
+        audit.log_event("request.blocked_external", target=host, path=path)
+
+    async def dispatch(self, request, call_next):
+        if not settings.allow_external_requests:
+            host = self._client_host(request)
+            if not _is_private_address(host):
+                self._log_blocked(host or "unknown", request.url.path)
+                return JSONResponse(
+                    {
+                        "detail": (
+                            "external requests are disabled. Set CC_ALLOW_EXTERNAL_REQUESTS=true "
+                            "to serve public clients, or add your reverse proxy to CC_TRUSTED_PROXIES."
+                        )
+                    },
+                    status_code=403,
+                )
+        return await call_next(request)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -74,6 +155,9 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="CatalogueCanvas")
     app.add_middleware(SecurityHeadersMiddleware)
+    # Added last so it wraps outermost (Starlette applies middleware in reverse
+    # registration order): a blocked request is rejected before anything else runs.
+    app.add_middleware(ExternalRequestMiddleware)
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
