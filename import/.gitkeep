@@ -1,0 +1,3 @@
+# Drop .zip files here, then run:
+#   docker compose exec cataloguecanvas cc ingest /data/import
+# Mounted read-only into the container. Contents are gitignored.
