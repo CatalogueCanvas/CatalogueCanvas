@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 
+from .. import audit
 from ..auth import (
     CSRF_COOKIE,
     SESSION_COOKIE,
@@ -58,11 +59,14 @@ def login(body: LoginRequest, request: Request, response: Response, conn: sqlite
     prune_login_failures(conn, window_start)
 
     if count_recent_login_failures(conn, scope, window_start) >= _LOGIN_MAX_ATTEMPTS:
+        audit.log_event("auth.login_throttled", actor=body.username or None)
         raise HTTPException(status_code=429, detail="too many login attempts, try again later")
 
     role = verify_login(conn, body.username, body.password)
     if role is None:
         record_login_failure(conn, scope, now)
+        # Attempted username only -- never the password, never the client IP.
+        audit.log_event("auth.login_failed", actor=body.username or None)
         raise HTTPException(status_code=401, detail="invalid credentials")
 
     clear_login_failures(conn, scope)
@@ -88,14 +92,17 @@ def login(body: LoginRequest, request: Request, response: Response, conn: sqlite
         samesite="strict",
         secure=settings.cookie_secure,
     )
+    audit.log_event("auth.login", actor=username, role=role)
     return {"ok": True, "role": role, "username": username}
 
 
 @router.post("/logout")
 def logout(request: Request, response: Response, conn: sqlite3.Connection = Depends(get_db)):
-    sid = session_sid(request.cookies.get(SESSION_COOKIE))
+    token = request.cookies.get(SESSION_COOKIE)
+    sid = session_sid(token)
     if sid:
         delete_session(conn, sid)
+        audit.log_event("auth.logout", actor=session_username(token), role=session_role(token))
     response.delete_cookie(SESSION_COOKIE)
     response.delete_cookie(CSRF_COOKIE)
     return {"ok": True}

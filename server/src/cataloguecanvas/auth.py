@@ -160,11 +160,17 @@ def require_session(request: Request) -> str:
     return role
 
 
-def require_admin(request: Request) -> None:
-    role = session_role(request.cookies.get(SESSION_COOKIE))
+def require_admin(request: Request) -> str:
+    """Require an admin session. Returns the acting username, so handlers can
+    attribute the change in the activity log."""
+    token = request.cookies.get(SESSION_COOKIE)
+    role = session_role(token)
     if role is None:
         raise HTTPException(status_code=401, detail="not authenticated")
     if role != "admin":
         raise HTTPException(status_code=403, detail="admin privileges required")
     _check_cross_origin(request)
     _check_csrf(request)
+    # Single-admin installs mint tokens without a username; fall back to the
+    # configured admin name so the log never records an anonymous actor.
+    return session_username(token) or settings.admin_username

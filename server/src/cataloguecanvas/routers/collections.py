@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from .. import audit
 from ..auth import require_admin, require_session
 from ..db import delete_collection, get_all_collections, get_collection, get_collection_items, upsert_collection
 from .auth import get_db
@@ -48,7 +49,7 @@ class CollectionCreate(BaseModel):
 
 
 @router.post("")
-def create_collection(body: CollectionCreate, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def create_collection(body: CollectionCreate, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     col_id = body.id or _slugify(body.title)
     if get_collection(conn, col_id):
         raise HTTPException(status_code=409, detail="collection id already exists")
@@ -59,6 +60,7 @@ def create_collection(body: CollectionCreate, conn: sqlite3.Connection = Depends
         "cover_item_id": body.cover_item_id,
         "visibility": "readers" if body.visibility == "readers" else "admin",
     })
+    audit.log_event("collection.create", actor=actor, role="admin", target=col_id, title=body.title)
     return get_collection(conn, col_id)
 
 
@@ -70,7 +72,7 @@ class CollectionUpdate(BaseModel):
 
 
 @router.patch("/{col_id}")
-def update_collection(col_id: str, body: CollectionUpdate, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def update_collection(col_id: str, body: CollectionUpdate, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     existing = get_collection(conn, col_id)
     if not existing:
         raise HTTPException(status_code=404, detail="collection not found")
@@ -84,17 +86,23 @@ def update_collection(col_id: str, body: CollectionUpdate, conn: sqlite3.Connect
         "cover_item_id": merged["cover_item_id"],
         "visibility": "readers" if merged.get("visibility") == "readers" else "admin",
     })
+    changed = sorted(k for k, v in body.model_dump().items() if v is not None)
+    audit.log_event("collection.update", actor=actor, role="admin", target=col_id, fields=changed)
     return get_collection(conn, col_id)
 
 
 @router.delete("/{col_id}")
-def delete_collection_endpoint(col_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def delete_collection_endpoint(col_id: str, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     existing = get_collection(conn, col_id)
     if not existing:
         raise HTTPException(status_code=404, detail="collection not found")
     if existing["is_system"]:
         raise HTTPException(status_code=403, detail="system collection cannot be deleted")
     delete_collection(conn, col_id)
+    audit.log_event(
+        "collection.delete", actor=actor, role="admin", target=col_id,
+        title=existing.get("title") or "",
+    )
     return {"ok": True}
 
 
