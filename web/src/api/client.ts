@@ -102,6 +102,8 @@ export interface AppSettings {
   update_check_enabled: string
   usage_stats_enabled: string
   stats: { total_items: number; total_collections: number; missing_preview: number }
+  // Set by environment variables, not editable from the UI.
+  access: { allow_external_requests: boolean; trusted_proxies: string[] }
 }
 
 export interface VersionInfo {
@@ -302,6 +304,36 @@ export const updateSettings = (fields: Partial<Pick<AppSettings, 'llm_api_url' |
 
 export const getVersion = (force = false) =>
   request<VersionInfo>('/api/version' + (force ? '?force=true' : ''))
+
+// --- activity log ---
+export interface ActivityEntry {
+  at: string
+  actor: string | null
+  role: string | null
+  action: string
+  target: string | null
+  detail: Record<string, unknown>
+}
+
+export interface ActivityResponse {
+  entries: ActivityEntry[]
+  enabled: boolean
+  path: string
+}
+
+export const DELETE_ACTIVITY_CONFIRM = 'delete activity log'
+
+export const listActivity = (limit = 200) =>
+  request<ActivityResponse>(`/api/settings/activity?limit=${String(limit)}`)
+
+export const exportActivityCsv = () =>
+  downloadPost('/api/settings/activity/export', undefined, 'cataloguecanvas-activity.csv')
+
+export const deleteActivityLog = (confirm: string) =>
+  request<{ ok: boolean }>('/api/settings/activity', {
+    method: 'DELETE',
+    body: JSON.stringify({ confirm }),
+  })
 
 export const exportDatabase = () =>
   downloadPost('/api/settings/export/db', undefined, 'catalogue.db')
