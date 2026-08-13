@@ -3,15 +3,15 @@ name = "cataloguecanvas-server"
 version = "0.2.1"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.140.13",
-    "uvicorn[standard]>=0.52.0",
+    "fastapi>=0.141.1",
+    "uvicorn[standard]>=0.52.1",
     "pillow>=12.3.0",
     "cairosvg>=2.9.0",
     "python-multipart>=0.0.32",
     "itsdangerous>=2.2",
     "passlib[argon2]>=1.7.4",
     "httpx>=0.28.1",
-    "markdown>=3.10.2",
+    "markdown>=3.10.3",
     "lz4>=4.4.5",
     "psutil>=7.2.2",
 ]
@@ -23,7 +23,7 @@ cc = "cataloguecanvas.cli:main"
 dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
-    "coverage[toml]>=7.15.2",
+    "coverage[toml]>=7.15.4",
     "respx>=0.23.1",
     "pip-audit>=2.10.1",
 ]
