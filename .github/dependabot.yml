@@ -32,3 +32,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # init/analyze/upload-sarif share a version and must bump together.
+      actions-all:
+        patterns:
+          - "*"
