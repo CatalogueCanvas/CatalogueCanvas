@@ -222,5 +222,11 @@ def ingest_zip_bytes(
         "imported_at": import_dt,
         "library_id": library_id,
     }
-    upsert_item(conn, record)
+    try:
+        upsert_item(conn, record)
+    except sqlite3.IntegrityError:
+        raced = hash_exists(conn, content_hash)
+        if raced is None:
+            raise
+        return IngestResult(item=get_item(conn, raced), created=False, note="already ingested")
     return IngestResult(item=get_item(conn, item_id), created=True, note=note)
