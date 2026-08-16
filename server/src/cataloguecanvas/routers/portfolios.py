@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+from .. import audit
 from ..auth import require_admin, require_session
 from ..db import (
     delete_portfolio,
@@ -104,7 +105,7 @@ class PortfolioCreate(BaseModel):
 
 
 @router.post("/api/portfolios")
-def create_portfolio(body: PortfolioCreate, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def create_portfolio(body: PortfolioCreate, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     if body.slug:
         slug = body.slug
         if get_portfolio_by_slug(conn, slug):
@@ -125,6 +126,10 @@ def create_portfolio(body: PortfolioCreate, conn: sqlite3.Connection = Depends(g
         "watermark_enabled": int(body.watermark_enabled),
         "watermark_text": body.watermark_text or "",
     })
+    audit.log_event(
+        "portfolio.create", actor=actor, role="admin", target=p_id,
+        slug=slug, title=body.title, is_public=body.is_public,
+    )
     return _enrich_portfolio(get_portfolio(conn, p_id))
 
 
@@ -142,7 +147,7 @@ class PortfolioUpdate(BaseModel):
 
 
 @router.patch("/api/portfolios/{p_id}")
-def update_portfolio(p_id: str, body: PortfolioUpdate, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def update_portfolio(p_id: str, body: PortfolioUpdate, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     existing = get_portfolio(conn, p_id)
     if not existing:
         raise HTTPException(status_code=404, detail="portfolio not found")
@@ -174,6 +179,13 @@ def update_portfolio(p_id: str, body: PortfolioUpdate, conn: sqlite3.Connection 
         updates["watermark_text"] = existing["watermark_text"] or ""
 
     upsert_portfolio(conn, updates)
+    changed = sorted(k for k, v in body.model_dump().items() if v is not None)
+    # is_public is the one value worth recording outright: flipping a portfolio
+    # public is the change an operator is most likely to need to trace.
+    audit.log_event(
+        "portfolio.update", actor=actor, role="admin", target=p_id,
+        fields=changed, is_public=bool(updates["is_public"]),
+    )
     return _enrich_portfolio(get_portfolio(conn, p_id))
 
 
@@ -183,7 +195,7 @@ class PortfolioItemsUpdate(BaseModel):
 
 
 @router.post("/api/portfolios/{p_id}/items")
-def update_portfolio_items(p_id: str, body: PortfolioItemsUpdate, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def update_portfolio_items(p_id: str, body: PortfolioItemsUpdate, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     existing = get_portfolio(conn, p_id)
     if not existing:
         raise HTTPException(status_code=404, detail="portfolio not found")
@@ -197,27 +209,34 @@ def update_portfolio_items(p_id: str, body: PortfolioItemsUpdate, conn: sqlite3.
         new_ids = [i for i in current if i not in body.item_ids]
 
     upsert_portfolio(conn, {**existing, "item_ids": new_ids})
+    audit.log_event(
+        f"portfolio.items_{body.action}", actor=actor, role="admin", target=p_id,
+        item_count=len(body.item_ids), total_after=len(new_ids),
+    )
     return _enrich_portfolio(get_portfolio(conn, p_id))
 
 
 @router.post("/api/portfolios/{p_id}/share-token")
-def mint_share_token(p_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def mint_share_token(p_id: str, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     """Mint (or regenerate) a share token, gating public access behind it."""
     existing = get_portfolio(conn, p_id)
     if not existing:
         raise HTTPException(status_code=404, detail="portfolio not found")
     token = generate_share_token()
     upsert_portfolio(conn, {**existing, "share_token": token})
+    # The token itself is a credential -- record that one was minted, not its value.
+    audit.log_event("portfolio.share_token_mint", actor=actor, role="admin", target=p_id)
     return {"share_token": token}
 
 
 @router.delete("/api/portfolios/{p_id}/share-token")
-def clear_share_token(p_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def clear_share_token(p_id: str, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     """Remove the share token, reverting to ungated public access."""
     existing = get_portfolio(conn, p_id)
     if not existing:
         raise HTTPException(status_code=404, detail="portfolio not found")
     upsert_portfolio(conn, {**existing, "share_token": ""})
+    audit.log_event("portfolio.share_token_clear", actor=actor, role="admin", target=p_id)
     return {"ok": True}
 
 
@@ -227,7 +246,7 @@ class ExportOptions(BaseModel):
 
 
 @router.post("/api/portfolios/{p_id}/export")
-def export_portfolio_static(p_id: str, body: Optional[ExportOptions] = None, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def export_portfolio_static(p_id: str, body: Optional[ExportOptions] = None, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     """Render the portfolio to a self-contained static site and return it as a zip."""
     p = get_portfolio(conn, p_id)
     if not p:
@@ -258,6 +277,10 @@ def export_portfolio_static(p_id: str, body: Optional[ExportOptions] = None, con
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     safe_slug = re.sub(r"[^a-zA-Z0-9_-]", "-", p["slug"]) or "portfolio"
     filename = f"{safe_slug}-site-{timestamp}.zip"
+    audit.log_event(
+        "portfolio.export_static", actor=actor, role="admin", target=p_id,
+        slug=p["slug"], item_count=len(items),
+    )
     return FileResponse(
         zip_path,
         media_type="application/zip",
@@ -267,10 +290,15 @@ def export_portfolio_static(p_id: str, body: Optional[ExportOptions] = None, con
 
 
 @router.delete("/api/portfolios/{p_id}")
-def delete_portfolio_endpoint(p_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
-    if not get_portfolio(conn, p_id):
+def delete_portfolio_endpoint(p_id: str, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
+    existing = get_portfolio(conn, p_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="portfolio not found")
     delete_portfolio(conn, p_id)
+    audit.log_event(
+        "portfolio.delete", actor=actor, role="admin", target=p_id,
+        slug=existing.get("slug") or "", title=existing.get("title") or "",
+    )
     return {"ok": True}
 
 

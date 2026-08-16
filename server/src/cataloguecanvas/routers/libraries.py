@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from .. import audit
 from ..auth import require_admin
 from ..db import (
     create_library,
@@ -50,14 +51,19 @@ class LibraryCreate(BaseModel):
 
 @router.post("")
 def create_library_endpoint(
-    body: LibraryCreate, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)
+    body: LibraryCreate, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)
 ):
     err = _validate_path(body.path)
     if err:
         raise HTTPException(status_code=400, detail=err)
     if any(lib["path"] == body.path for lib in get_all_libraries(conn)):
         raise HTTPException(status_code=400, detail="a library with this path already exists")
-    return create_library(conn, body.name, body.path, body.is_default)
+    created = create_library(conn, body.name, body.path, body.is_default)
+    audit.log_event(
+        "library.create", actor=actor, role="admin", target=created["id"],
+        name=body.name, path=body.path, is_default=body.is_default,
+    )
+    return created
 
 
 class LibraryUpdate(BaseModel):
@@ -67,7 +73,7 @@ class LibraryUpdate(BaseModel):
 
 @router.put("/{lib_id}")
 def update_library_endpoint(
-    lib_id: str, body: LibraryUpdate, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)
+    lib_id: str, body: LibraryUpdate, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)
 ):
     lib = get_library(conn, lib_id)
     if not lib:
@@ -78,21 +84,28 @@ def update_library_endpoint(
         err = _validate_path(body.path)
         if err:
             raise HTTPException(status_code=400, detail=err)
-    return update_library(conn, lib_id, body.model_dump(exclude_unset=True))
+    updated = update_library(conn, lib_id, body.model_dump(exclude_unset=True))
+    audit.log_event(
+        "library.update", actor=actor, role="admin", target=lib_id,
+        fields=sorted(body.model_dump(exclude_unset=True).keys()),
+    )
+    return updated
 
 
 @router.post("/{lib_id}/default")
 def set_default_endpoint(
-    lib_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)
+    lib_id: str, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)
 ):
     if not get_library(conn, lib_id):
         raise HTTPException(status_code=404, detail="library not found")
-    return set_default_library(conn, lib_id)
+    result = set_default_library(conn, lib_id)
+    audit.log_event("library.set_default", actor=actor, role="admin", target=lib_id)
+    return result
 
 
 @router.delete("/{lib_id}")
 def delete_library_endpoint(
-    lib_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)
+    lib_id: str, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)
 ):
     lib = get_library(conn, lib_id)
     if not lib:
@@ -102,4 +115,8 @@ def delete_library_endpoint(
     if lib["is_default"]:
         raise HTTPException(status_code=400, detail="cannot delete the default library")
     delete_library(conn, lib_id)
+    audit.log_event(
+        "library.delete", actor=actor, role="admin", target=lib_id,
+        name=lib.get("name") or "", path=lib.get("path") or "",
+    )
     return {"ok": True}

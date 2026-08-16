@@ -72,7 +72,8 @@ function makeSettings(over: Partial<AppSettings> = {}): AppSettings {
     multi_user_enabled: 'false',
     update_check_enabled: 'false',
     usage_stats_enabled: 'false',
-    stats: { total_items: 0, total_collections: 0, missing_preview: 0 }, ...over,
+    stats: { total_items: 0, total_collections: 0, missing_preview: 0 },
+    access: { allow_external_requests: false, trusted_proxies: [] }, ...over,
   }
 }
 

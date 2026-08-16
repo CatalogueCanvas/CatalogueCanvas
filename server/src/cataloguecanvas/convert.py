@@ -91,11 +91,12 @@ def to_webp(
         png_bytes = cairosvg.svg2png(
             bytestring=image_bytes, **_raster_kwargs(tree, scale, max_edge)
         )
-        img = Image.open(io.BytesIO(png_bytes))
+        source = io.BytesIO(png_bytes)
     else:
-        img = Image.open(io.BytesIO(image_bytes))
+        source = io.BytesIO(image_bytes)
 
-    img.save(out_path, format="WEBP", quality=85)
+    with Image.open(source) as img:
+        img.save(out_path, format="WEBP", quality=85)
     return out_path
 
 

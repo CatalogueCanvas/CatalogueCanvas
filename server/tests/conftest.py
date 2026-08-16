@@ -21,6 +21,13 @@ os.environ.setdefault("CC_STORAGE_DIR", str(_TMP_ROOT / "storage"))
 os.environ.setdefault("CC_SECRET_KEY", "test-secret-key-not-for-production")
 os.environ.setdefault("CC_ADMIN_PASSWORD", "hunter2")
 os.environ.setdefault("CC_COOKIE_SECURE", "false")
+# TestClient presents a synthetic peer address ("testclient") that is not a
+# parseable IP, so the external-request guard would fail closed and 403 every
+# endpoint test. Opt in here; test_external_requests.py exercises the guard
+# itself with explicit client addresses.
+os.environ.setdefault("CC_ALLOW_EXTERNAL_REQUESTS", "true")
+# Keep the activity log out of the developer's real data dir during tests.
+os.environ.setdefault("CC_AUDIT_LOG_PATH", str(_TMP_ROOT / "data" / "logs" / "audit.log"))
 
 from cataloguecanvas import db  # noqa: E402
 from cataloguecanvas.settings import settings  # noqa: E402

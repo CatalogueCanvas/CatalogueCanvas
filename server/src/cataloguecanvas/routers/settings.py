@@ -1,8 +1,6 @@
 from __future__ import annotations
-import os
 import sqlite3
 import tempfile
-import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -13,8 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
+from .. import audit
 from ..auth import require_admin
-from ..db import get_all_libraries, get_db_stats, get_settings, set_settings
+from ..backup import create_backup
+from ..db import get_db_stats, get_settings, set_settings
 from ..diagnostics import _app_version
 from ..llm import LLMError, _normalize_api_url, _validate_api_url, default_prompt_template
 from ..settings import settings
@@ -78,6 +78,12 @@ def _settings_response(conn: sqlite3.Connection) -> dict:
         "llm_prompt_template": stored.get("llm_prompt_template") or default_prompt_template(),
         "llm_prompt_template_default": default_prompt_template(),
         "stats": get_db_stats(conn),
+        # Env-controlled, read-only from the UI's point of view -- surfaced so an
+        # admin can see the effective access policy without shell access.
+        "access": {
+            "allow_external_requests": settings.allow_external_requests,
+            "trusted_proxies": sorted(settings.trusted_proxies),
+        },
     }
 
 
@@ -116,7 +122,7 @@ class SettingsUpdate(BaseModel):
 def update_settings_endpoint(
     body: SettingsUpdate,
     conn: sqlite3.Connection = Depends(get_db),
-    _: None = Depends(require_admin),
+    actor: str = Depends(require_admin),
 ):
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
     # Re-validate the LLM endpoint here so a non-allowlisted or malformed host is
@@ -128,6 +134,8 @@ def update_settings_endpoint(
         except LLMError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
     set_settings(conn, fields)
+    # Keys only: values carry the LLM api_url and the whole prompt template.
+    audit.log_event("settings.update", actor=actor, role="admin", fields=sorted(fields.keys()))
     return _settings_response(conn)
 
 
@@ -226,8 +234,53 @@ def get_version(
     return _result(latest, True)
 
 
+# --- activity log ---
+
+# Typed confirmation phrase, mirroring the CSV backup delete. Exported to the
+# client so both sides agree on the exact string.
+DELETE_ACTIVITY_CONFIRM = "delete activity log"
+
+
+@router.get("/activity")
+def get_activity(limit: int = 200, _: str = Depends(require_admin)):
+    """Recent activity entries, newest first, for the Settings panel."""
+    limit = max(1, min(2000, limit))
+    return {
+        "entries": audit.read_events(limit=limit),
+        "enabled": settings.audit_log_enabled,
+        "path": str(settings.audit_log_path),
+    }
+
+
+@router.post("/activity/export")
+def export_activity(actor: str = Depends(require_admin)):
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    audit.log_event("activity.export", actor=actor, role="admin")
+    return Response(
+        content=audit.export_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="cataloguecanvas-activity-{timestamp}.csv"'},
+    )
+
+
+class DeleteActivity(BaseModel):
+    confirm: str
+
+
+@router.delete("/activity")
+def delete_activity(body: DeleteActivity, actor: str = Depends(require_admin)):
+    """Clear the activity log. Requires a typed confirmation phrase."""
+    if body.confirm.strip() != DELETE_ACTIVITY_CONFIRM:
+        raise HTTPException(status_code=400, detail=f'type "{DELETE_ACTIVITY_CONFIRM}" to confirm')
+    audit.clear()
+    # Written after the truncation, so a cleared log still shows who cleared it
+    # rather than looking like it was never used.
+    audit.log_event("activity.clear", actor=actor, role="admin")
+    return {"ok": True}
+
+
 @router.post("/diagnostics")
-def diagnostics(_: None = Depends(require_admin)):
+def diagnostics(_: str = Depends(require_admin)):
     from ..diagnostics import build_report
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
@@ -240,8 +293,9 @@ def diagnostics(_: None = Depends(require_admin)):
 
 
 @router.post("/export/db")
-def export_db(_: None = Depends(require_admin)):
+def export_db(actor: str = Depends(require_admin)):
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    audit.log_event("export.database", actor=actor, role="admin")
     tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
     tmp_path = Path(tmp.name)
     tmp.close()
@@ -261,39 +315,15 @@ def export_db(_: None = Depends(require_admin)):
 
 
 @router.post("/export/all")
-def export_all(conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def export_all(conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-
-    tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-    tmp_path = Path(tmp.name)
-    tmp.close()
-
-    db_conn = sqlite3.connect(str(settings.db_path))
-    try:
-        db_conn.execute("VACUUM INTO ?", (str(tmp_path),))
-    finally:
-        db_conn.close()
+    audit.log_event("export.full_backup", actor=actor, role="admin")
 
     zip_tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
     zip_path = Path(zip_tmp.name)
     zip_tmp.close()
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.write(tmp_path, "catalogue.db")
-        for lib in get_all_libraries(conn):
-            lib_root = Path(lib["path"])
-            if not lib_root.exists():
-                continue
-            lib_root = lib_root.resolve()
-            for path in lib_root.rglob("*"):
-                # Skip symlinks (and anything they point outside the root) so the
-                # backup can't be tricked into exfiltrating arbitrary files.
-                if path.is_symlink() or not path.is_file():
-                    continue
-                resolved = path.resolve()
-                if resolved != lib_root and not str(resolved).startswith(str(lib_root) + os.sep):
-                    continue
-                zf.write(path, Path("storage") / lib["id"] / path.relative_to(lib_root))
-    tmp_path.unlink(missing_ok=True)
+    # Same archive layout the `cc backup` CLI writes and `cc restore` reads.
+    create_backup(conn, zip_path)
 
     filename = f"cataloguecanvas-backup-{timestamp}.zip"
     return FileResponse(

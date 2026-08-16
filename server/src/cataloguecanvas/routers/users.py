@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from .. import audit
 from ..auth import hash_password, pwd_context, require_admin
 from ..db import (
     count_admins,
@@ -72,7 +73,7 @@ def list_users_endpoint(conn: sqlite3.Connection = Depends(get_db), _: None = De
 def create_user_endpoint(
     body: UserCreate,
     conn: sqlite3.Connection = Depends(get_db),
-    _: None = Depends(require_admin),
+    actor: str = Depends(require_admin),
 ):
     _validate_role(body.role)
     if not body.username.strip():
@@ -85,6 +86,11 @@ def create_user_endpoint(
         raise HTTPException(status_code=400, detail="password must differ from other users")
     user_id = create_user(conn, body.username, hash_password(body.password), body.role)
     created = get_user(conn, user_id)
+    # Username and role only. The password and its hash never reach the log.
+    audit.log_event(
+        "user.create", actor=actor, role="admin", target=body.username,
+        assigned_role=body.role,
+    )
     return {k: created[k] for k in ("id", "username", "role", "created_at")}
 
 
@@ -93,7 +99,7 @@ def update_user_endpoint(
     user_id: int,
     body: UserUpdate,
     conn: sqlite3.Connection = Depends(get_db),
-    _: None = Depends(require_admin),
+    actor: str = Depends(require_admin),
 ):
     user = get_user(conn, user_id)
     if not user:
@@ -124,6 +130,13 @@ def update_user_endpoint(
         role=new_role,
     )
     updated = get_user(conn, user_id)
+    audit.log_event(
+        "user.update", actor=actor, role="admin", target=updated["username"],
+        # Flag *that* the password changed, never what it changed to.
+        password_changed=bool(body.password),
+        role_changed_to=new_role,
+        renamed_from=user["username"] if body.username and body.username != user["username"] else None,
+    )
     return {k: updated[k] for k in ("id", "username", "role", "created_at")}
 
 
@@ -131,7 +144,7 @@ def update_user_endpoint(
 def delete_user_endpoint(
     user_id: int,
     conn: sqlite3.Connection = Depends(get_db),
-    _: None = Depends(require_admin),
+    actor: str = Depends(require_admin),
 ):
     user = get_user(conn, user_id)
     if not user:
@@ -139,4 +152,8 @@ def delete_user_endpoint(
     if user["role"] == "admin" and count_admins(conn) <= 1:
         raise HTTPException(status_code=400, detail="cannot delete the last admin")
     delete_user(conn, user_id)
+    audit.log_event(
+        "user.delete", actor=actor, role="admin", target=user["username"],
+        deleted_role=user["role"],
+    )
     return {"ok": True}

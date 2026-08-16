@@ -103,6 +103,37 @@ def test_ingest_zip_dedup_by_hash(conn, tmp_path):
     assert again.note == "already ingested"
 
 
+def test_ingest_zip_dedup_race_on_content_hash(conn, tmp_path, monkeypatch):
+    """Simulates two concurrent uploads of the same content: the early
+    hash_exists check passes for both, but the second upsert hits the
+    items.content_hash UNIQUE constraint. That should be caught and turned
+    into a clean 'already ingested' result, not a raw IntegrityError."""
+    lib = db.get_default_library(conn)
+    zip_bytes = _make_zip({"art.png": _png_bytes()})
+
+    first = ingest.ingest_zip_bytes(zip_bytes, "a.zip", conn, lib["id"], tmp_path, image_scale=1.0)
+    assert first.created is True
+
+    # Fake the race: the *pre-insert* dedup check misses the row that's
+    # about to be there (as if a concurrent request hadn't committed yet),
+    # but any check made from inside the except block (post-race) sees it.
+    real_hash_exists = ingest.hash_exists
+    calls = {"n": 0}
+
+    def racy_hash_exists(conn, content_hash):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return None
+        return real_hash_exists(conn, content_hash)
+
+    monkeypatch.setattr(ingest, "hash_exists", racy_hash_exists)
+
+    again = ingest.ingest_zip_bytes(zip_bytes, "a.zip", conn, lib["id"], tmp_path, image_scale=1.0)
+    assert again.created is False
+    assert again.note == "already ingested"
+    assert again.item["id"] == first.item["id"]
+
+
 def _cairo_available() -> bool:
     try:
         import cairosvg  # noqa: F401

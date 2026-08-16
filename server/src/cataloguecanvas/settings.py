@@ -29,10 +29,36 @@ class Settings:
         self.max_zip_member_bytes = int(os.environ.get("CC_MAX_ZIP_MEMBER_BYTES", str(500 * 1024 * 1024)))
         self.max_zip_total_bytes = int(os.environ.get("CC_MAX_ZIP_TOTAL_BYTES", str(1024 * 1024 * 1024)))
         self.max_zip_entries = int(os.environ.get("CC_MAX_ZIP_ENTRIES", "10000"))
+        # Caps how many uploads are ingested (decompressed + rasterized) at once.
+        # Each in-flight ingest can transiently hold up to ~max_zip_total_bytes in
+        # RAM, and anyio's general threadpool (default 40 threads) has no
+        # per-workload limit of its own -- without this, a burst of concurrent
+        # large uploads can spike memory far past any single-upload cap.
+        self.max_concurrent_uploads = int(os.environ.get("CC_MAX_CONCURRENT_UPLOADS", "4"))
         # Longest edge (px) of a generated SVG preview. SVG rasterization cost
         # grows with the square of the output size and a dense plotter SVG can
         # otherwise block the server for minutes. 0 disables the cap.
         self.preview_max_edge = int(os.environ.get("CC_PREVIEW_MAX_EDGE", "2500"))
+        # Activity log: who uploaded/deleted/edited what, appended as JSONL under
+        # the data dir so it can be tailed from the host or shipped elsewhere.
+        self.audit_log_enabled = os.environ.get("CC_AUDIT_LOG", "1").lower() not in ("0", "false", "no")
+        self.audit_log_path = Path(
+            os.environ.get("CC_AUDIT_LOG_PATH", str(self.data_dir / "logs" / "audit.log"))
+        )
+        # Roll over past this size, keeping one previous file. 0 disables rotation.
+        self.audit_log_max_bytes = int(os.environ.get("CC_AUDIT_LOG_MAX_BYTES", str(5 * 1024 * 1024)))
+        # Refuse requests from public IPs by default, so an instance that gets
+        # port-forwarded by accident is not silently open to the internet. Set to
+        # true for a deliberately public deployment (or list the reverse proxy in
+        # CC_TRUSTED_PROXIES so real client IPs can be read from X-Forwarded-For).
+        self.allow_external_requests = os.environ.get("CC_ALLOW_EXTERNAL_REQUESTS", "false").lower() in ("1", "true", "yes")
+        # Peers whose X-Forwarded-For header is trusted. Empty means the header
+        # is ignored entirely -- otherwise any caller could spoof a private IP.
+        self.trusted_proxies = {
+            p.strip()
+            for p in os.environ.get("CC_TRUSTED_PROXIES", "").split(",")
+            if p.strip()
+        }
         # Optional SSRF guard: when set, the LLM api_url host must be one of these.
         # Self-hosted setups that point at internal devices (Ollama, LM Studio on
         # the LAN) opt those hosts in explicitly rather than allowing any address.
@@ -74,6 +100,7 @@ class Settings:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.audit_log_path.parent.mkdir(parents=True, exist_ok=True)
 
 
 settings = Settings()

@@ -5,6 +5,31 @@ All notable changes to CatalogueCanvas are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Released versions are tagged (see `v*` tags and the published `ghcr.io` image); earlier pre-release entries are grouped by date.
 
+## [0.2.2] - 2026-08-16
+
+### Fixed
+- Upload memory/thread growth: concurrent uploads had no cap of their own, so each could transiently hold up to `CC_MAX_ZIP_TOTAL_BYTES` (1 GiB) in memory while pooled across anyio's default 40-thread limit, and glibc's allocator never returned freed memory to the OS afterward — RAM ratcheted up across upload bursts and stayed there. Fixed with a dedicated `CC_MAX_CONCURRENT_UPLOADS` (default 4) semaphore around ingest, an explicit `malloc_trim(0)` call after each ingest, and closing an unclosed `PIL.Image` handle in `to_webp`.
+
+### Added
+- Activity log. Every change is appended to `<CC_DATA_DIR>/logs/audit.log` as JSONL — who did it, when, what action, and what it touched — covering logins and failed logins, uploads, deletions, metadata and batch edits, collection/portfolio/user/library changes, settings updates, and data exports. Only field *names* are recorded: passwords, password hashes, share tokens, notes, prompt templates and the LLM API URL never reach the log. The file rotates at `CC_AUDIT_LOG_MAX_BYTES` (default 5 MiB) keeping one previous generation, and writes are best-effort — a read-only volume or full disk degrades to no logging rather than failing the request that triggered it. Disable with `CC_AUDIT_LOG=0`.
+- **Settings → Activity log** panel: recent entries in a table, "Download log (CSV)", and "Delete log" behind the same typed-confirmation pattern the metadata backups already use. Clearing the log records the clear itself, so a wiped log shows who wiped it rather than looking untouched.
+- `cc` command line tool, installed in the image and available as `docker compose exec cataloguecanvas cc <command>`:
+  - `cc reset-password` — set a password without touching the database by hand. Revokes every active session, so a reset actually locks out a stolen cookie.
+  - `cc backup` — write the database plus all library files to a zip, the same archive layout the Settings export produces.
+  - `cc restore` — new capability with no prior equivalent. Validates the archive (rejecting path traversal, absolute paths and symlink entries) before extracting, refuses to overwrite a populated database without `--force`, and renames the existing database to `catalogue.db.pre-restore-<timestamp>` instead of deleting it.
+  - `cc ingest <dir>` — bulk-ingest every `.zip` under a mounted folder. `docker-compose.yml` now mounts `./import` read-only at `/data/import` for this.
+  - `cc diagnostics` — the redacted report the Settings page downloads, on stdout or to a file.
+- `server-dev` compose service and `server/Dockerfile.dev` for running pytest in a container, matching the existing `web-dev` service. The shipped image installs with `--no-dev` and drops the build toolchain, so it cannot run the suite itself. Both sit behind the `dev` profile.
+
+### Changed
+- **BREAKING:** `CC_ALLOW_EXTERNAL_REQUESTS` defaults to `false`, so requests from public IP addresses are rejected with a `403`. This guards against the common self-hosting accident of a port forward silently exposing the whole catalogue, and it applies to every route **including public portfolio links**. Anyone reaching their instance over a public IP must set `CC_ALLOW_EXTERNAL_REQUESTS=true`; anyone behind a reverse proxy must additionally list it in `CC_TRUSTED_PROXIES` for the real client address to be read. `X-Forwarded-For` is ignored unless the immediate peer is a listed proxy — honouring it unconditionally would let any caller claim to be `127.0.0.1` and defeat the check. Blocked requests are logged once per source address per minute, so a scanner cannot fill the disk.
+- `require_admin` now returns the acting username instead of `None`, so handlers can attribute changes. Existing `_: None = Depends(require_admin)` call sites are unaffected.
+- The full-backup endpoint (`POST /api/settings/export/all`) delegates to the shared `backup.create_backup` helper, so the GUI export and `cc backup` produce byte-identical archive layouts.
+- Diagnostic report and `GET /api/settings` now surface the effective access policy (external requests, trusted proxies) and activity-log configuration.
+
+### Fixed
+- `cc reset-password --password ""` now fails with "password cannot be empty" instead of dropping into an interactive prompt, which would hang a script whose password variable was unset.
+
 ## [0.2.1] - 2026-07-29
 
 ### Fixed

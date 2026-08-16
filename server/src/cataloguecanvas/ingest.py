@@ -1,4 +1,5 @@
 from __future__ import annotations
+import ctypes
 import hashlib
 import json
 import mimetypes
@@ -92,6 +93,18 @@ def _select_preview(members: list[str]) -> tuple[Optional[tuple[str, str]], list
     return None, []
 
 
+def _trim_memory() -> None:
+    """Return freed heap arenas to the OS after a large ingest.
+
+    glibc malloc keeps freed memory mapped for reuse rather than releasing it,
+    so process RSS otherwise ratchets up across uploads and never comes back
+    down. No-op on non-glibc platforms (e.g. macOS dev)."""
+    try:
+        ctypes.CDLL(None).malloc_trim(0)
+    except (OSError, AttributeError):
+        pass  # non-glibc platform (e.g. macOS dev); nothing to trim
+
+
 class IngestResult:
     def __init__(self, item: Optional[dict], created: bool, note: Optional[str] = None):
         self.item = item
@@ -116,6 +129,30 @@ def ingest_zip_bytes(
     (False if skipped/deduplicated by content hash and not forced), and an
     optional human-readable `note`.
     """
+    try:
+        return _ingest_zip_bytes(
+            data, filename, conn, library_id, library_path,
+            image_scale=image_scale, force=force, import_dt=import_dt,
+            preview_max_edge=preview_max_edge,
+        )
+    finally:
+        # Runs in the ingest thread, where the large decompression/image
+        # allocations happened -- malloc_trim only reliably reclaims the
+        # calling thread's/main arena.
+        _trim_memory()
+
+
+def _ingest_zip_bytes(
+    data: bytes,
+    filename: str,
+    conn: sqlite3.Connection,
+    library_id: str,
+    library_path: Path,
+    image_scale: float = 2.5,
+    force: bool = False,
+    import_dt: Optional[str] = None,
+    preview_max_edge: Optional[int] = None,
+) -> IngestResult:
     max_edge = settings.preview_max_edge if preview_max_edge is None else preview_max_edge
     content_hash = hashlib.sha256(data).hexdigest()
 
@@ -222,5 +259,11 @@ def ingest_zip_bytes(
         "imported_at": import_dt,
         "library_id": library_id,
     }
-    upsert_item(conn, record)
+    try:
+        upsert_item(conn, record)
+    except sqlite3.IntegrityError:
+        raced = hash_exists(conn, content_hash)
+        if raced is None:
+            raise
+        return IngestResult(item=get_item(conn, raced), created=False, note="already ingested")
     return IngestResult(item=get_item(conn, item_id), created=True, note=note)

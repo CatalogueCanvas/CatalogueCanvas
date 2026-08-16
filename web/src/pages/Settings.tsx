@@ -3,6 +3,7 @@ import * as api from '../api/client'
 import type { Accent, AppSettings, CsvApplyResult, CsvBackup, CsvFieldChange, CsvPreview, Density, Library, NavLayout, Theme, VersionInfo } from '../api/client'
 import { ApiError, DELETE_BACKUP_CONFIRM } from '../api/client'
 import { ACCENT_PRESETS, type AccentPreset, useAppearance } from '../api/appearance'
+import { ActivityLogPanel } from '../components/ActivityLogPanel'
 import { UsersPanel } from '../components/UsersPanel'
 
 const ACCENT_LABELS: Record<Accent, string> = {
@@ -423,6 +424,31 @@ export function Settings() {
         </section>
 
         <section className="cc-panel">
+          <h2 className="cc-h2" style={{ marginBottom: 'var(--space-4)' }}>Access</h2>
+          <div className="cc-aprow">
+            <div className="cc-aprow__txt">
+              <span className="cc-label">External requests</span>
+              <p className="cc-hint">
+                {settings.access.allow_external_requests
+                  ? 'Allowed. This instance serves requests from any address, including the public internet.'
+                  : 'Blocked. Only clients on a private or loopback address are served; everything else gets a 403. This prevents an accidental port forward from exposing the catalogue — including public portfolio links.'}
+                {' '}Set with <code>CC_ALLOW_EXTERNAL_REQUESTS</code>, so it can only be changed in the environment, not here.
+              </p>
+              <p className="cc-hint">
+                Trusted proxies:{' '}
+                {settings.access.trusted_proxies.length > 0
+                  ? <code>{settings.access.trusted_proxies.join(', ')}</code>
+                  : 'none — the X-Forwarded-For header is ignored, so a reverse proxy must be listed in CC_TRUSTED_PROXIES for real client addresses to be read.'}
+              </p>
+            </div>
+            <div className="cc-seg">
+              <button type="button" aria-pressed={settings.access.allow_external_requests} disabled>On</button>
+              <button type="button" aria-pressed={!settings.access.allow_external_requests} disabled>Off</button>
+            </div>
+          </div>
+        </section>
+
+        <section className="cc-panel">
           <h2 className="cc-h2" style={{ marginBottom: 'var(--space-4)' }}>Usage statistics</h2>
           <div className="cc-aprow">
             <div className="cc-aprow__txt">
@@ -644,6 +670,11 @@ export function Settings() {
             <button type="button" className="cc-btn" onClick={() => void api.downloadDiagnostics().catch((err) => { setError(err instanceof ApiError ? err.message : 'download failed') })}>Download diagnostic report</button>
           </div>
           <p className="cc-hint">Diagnostic report is a redacted Markdown summary (versions, masked config, database counts) for attaching to a GitHub issue. No secrets are included.</p>
+        </section>
+
+        <section className="cc-panel">
+          <h2 className="cc-h2" style={{ marginBottom: 'var(--space-4)' }}>Activity log</h2>
+          <ActivityLogPanel />
         </section>
 
         <section className="cc-panel">

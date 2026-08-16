@@ -9,6 +9,7 @@ from io import StringIO
 from pathlib import Path
 from typing import Any, Optional
 
+import anyio
 import lz4.frame
 from starlette.background import BackgroundTask
 from starlette.concurrency import run_in_threadpool
@@ -16,6 +17,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
+from .. import audit
 from ..auth import require_admin, require_session
 from ..db import (
     add_item_to_collection,
@@ -35,6 +37,10 @@ from ..settings import settings
 from .auth import get_db
 
 router = APIRouter(prefix="/api/items", tags=["items"])
+
+# Bounds how many uploads are ingested concurrently, independent of anyio's
+# general-purpose threadpool cap -- see settings.max_concurrent_uploads.
+_upload_semaphore = anyio.Semaphore(settings.max_concurrent_uploads)
 
 
 # CSV round-trip: only title/note/tags are read back on import. The remaining
@@ -260,7 +266,7 @@ async def preview_csv_import(
 async def apply_csv_import(
     file: UploadFile = File(...),
     conn: sqlite3.Connection = Depends(get_db),
-    _: None = Depends(require_admin),
+    actor: str = Depends(require_admin),
 ):
     """Apply title/note/tags changes from the CSV. Takes a compressed backup of
     affected items' current metadata before writing."""
@@ -284,6 +290,15 @@ async def apply_csv_import(
         if fields:
             update_item_meta(conn, change["id"], fields)
             updated.append(change["id"])
+
+    audit.log_event(
+        "item.csv_import",
+        actor=actor,
+        role="admin",
+        updated_count=len(updated),
+        skipped_count=len([s for s in changes["skipped"] if s]),
+        backup=backup,
+    )
 
     return {
         "updated": updated,
@@ -322,7 +337,7 @@ class DeleteBackup(BaseModel):
 
 
 @router.delete("/import/csv/backups/{filename}")
-def delete_csv_backup(filename: str, body: DeleteBackup, _: None = Depends(require_admin)):
+def delete_csv_backup(filename: str, body: DeleteBackup, actor: str = Depends(require_admin)):
     """Delete a single metadata backup. Requires a typed confirmation phrase
     (GitHub-style) so deletion can't happen by accident."""
     if body.confirm.strip() != DELETE_BACKUP_CONFIRM:
@@ -334,6 +349,7 @@ def delete_csv_backup(filename: str, body: DeleteBackup, _: None = Depends(requi
     if not target.exists():
         raise HTTPException(status_code=404, detail="backup not found")
     target.unlink()
+    audit.log_event("backup.delete", actor=actor, role="admin", target=filename)
     return {"ok": True}
 
 
@@ -353,7 +369,7 @@ class BulkIds(BaseModel):
 
 
 @router.post("/bulk/clear-notes")
-def bulk_clear_notes(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def bulk_clear_notes(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     updated, missing = [], []
     for item_id in body.item_ids:
         if get_item(conn, item_id):
@@ -361,6 +377,10 @@ def bulk_clear_notes(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), 
             updated.append(item_id)
         else:
             missing.append(item_id)
+    audit.log_event(
+        "item.bulk_clear_notes", actor=actor, role="admin",
+        updated_count=len(updated), missing_count=len(missing),
+    )
     return {"updated": updated, "missing": missing}
 
 
@@ -370,7 +390,7 @@ class BulkTags(BaseModel):
 
 
 @router.post("/bulk/tags")
-def bulk_add_tags(body: BulkTags, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def bulk_add_tags(body: BulkTags, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     updated, missing = [], []
     for item_id in body.item_ids:
         item = get_item(conn, item_id)
@@ -384,11 +404,15 @@ def bulk_add_tags(body: BulkTags, conn: sqlite3.Connection = Depends(get_db), _:
                 merged.append(tag)
         update_item_meta(conn, item_id, {"tags": merged})
         updated.append(item_id)
+    audit.log_event(
+        "item.bulk_tags", actor=actor, role="admin",
+        updated_count=len(updated), missing_count=len(missing), tags=body.tags,
+    )
     return {"updated": updated, "missing": missing}
 
 
 @router.post("/bulk/favorite")
-def bulk_favorite(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def bulk_favorite(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     updated, missing = [], []
     for item_id in body.item_ids:
         if get_item(conn, item_id):
@@ -396,11 +420,15 @@ def bulk_favorite(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _: 
             updated.append(item_id)
         else:
             missing.append(item_id)
+    audit.log_event(
+        "item.bulk_favorite", actor=actor, role="admin",
+        updated_count=len(updated), missing_count=len(missing),
+    )
     return {"updated": updated, "missing": missing}
 
 
 @router.post("/bulk/unfavorite")
-def bulk_unfavorite(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def bulk_unfavorite(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     updated, missing = [], []
     for item_id in body.item_ids:
         if get_item(conn, item_id):
@@ -408,6 +436,10 @@ def bulk_unfavorite(body: BulkIds, conn: sqlite3.Connection = Depends(get_db), _
             updated.append(item_id)
         else:
             missing.append(item_id)
+    audit.log_event(
+        "item.bulk_unfavorite", actor=actor, role="admin",
+        updated_count=len(updated), missing_count=len(missing),
+    )
     return {"updated": updated, "missing": missing}
 
 
@@ -573,7 +605,7 @@ async def upload_item(
     file: UploadFile = File(...),
     library_id: Optional[str] = Form(None),
     conn: sqlite3.Connection = Depends(get_db),
-    _: None = Depends(require_admin),
+    actor: str = Depends(require_admin),
 ):
     if not file.filename or not file.filename.lower().endswith(".zip"):
         raise HTTPException(status_code=400, detail="only .zip files are supported")
@@ -599,17 +631,29 @@ async def upload_item(
         # Safe for the sqlite handle: get_db yields a fresh connection per
         # request, opened with check_same_thread=False, and this coroutine
         # awaits rather than touching conn concurrently.
-        result = await run_in_threadpool(
-            ingest_zip_bytes,
-            data,
-            file.filename,
-            conn,
-            lib["id"],
-            Path(lib["path"]),
-            import_dt=import_dt,
-        )
+        async with _upload_semaphore:
+            result = await run_in_threadpool(
+                ingest_zip_bytes,
+                data,
+                file.filename,
+                conn,
+                lib["id"],
+                Path(lib["path"]),
+                import_dt=import_dt,
+            )
     except ValueError as exc:
         raise HTTPException(status_code=413, detail=str(exc)) from exc
+
+    audit.log_event(
+        "item.upload",
+        actor=actor,
+        role="admin",
+        target=result.item["id"] if result.item else None,
+        filename=file.filename,
+        created=result.created,
+        library_id=lib["id"],
+    )
+
     return {
         "item": _enrich(result.item) if result.item else None,
         "created": result.created,
@@ -630,7 +674,7 @@ def update_item(
     item_id: str,
     body: ItemUpdate,
     conn: sqlite3.Connection = Depends(get_db),
-    _: None = Depends(require_admin),
+    actor: str = Depends(require_admin),
 ):
     if not get_item(conn, item_id):
         raise HTTPException(status_code=404, detail="item not found")
@@ -639,30 +683,43 @@ def update_item(
     if collection_ids is not None:
         set_item_collections(conn, item_id, collection_ids)
     updated = update_item_meta(conn, item_id, fields)
+    # Field names only: note and raw_meta hold user content that has no business
+    # being duplicated into the log.
+    changed = sorted(fields.keys()) + (["collection_ids"] if collection_ids is not None else [])
+    audit.log_event("item.update", actor=actor, role="admin", target=item_id, fields=changed)
     return _enrich(updated)
 
 
 @router.post("/{item_id}/favorite")
-def favorite_item(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def favorite_item(item_id: str, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     if not get_item(conn, item_id):
         raise HTTPException(status_code=404, detail="item not found")
     add_item_to_collection(conn, item_id, "favorites")
+    audit.log_event("item.favorite", actor=actor, role="admin", target=item_id)
     return _enrich(get_item(conn, item_id))
 
 
 @router.delete("/{item_id}/favorite")
-def unfavorite_item(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
+def unfavorite_item(item_id: str, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
     if not get_item(conn, item_id):
         raise HTTPException(status_code=404, detail="item not found")
     remove_item_from_collection(conn, item_id, "favorites")
+    audit.log_event("item.unfavorite", actor=actor, role="admin", target=item_id)
     return _enrich(get_item(conn, item_id))
 
 
 @router.delete("/{item_id}")
-def delete_item_endpoint(item_id: str, conn: sqlite3.Connection = Depends(get_db), _: None = Depends(require_admin)):
-    if not get_item(conn, item_id):
+def delete_item_endpoint(item_id: str, conn: sqlite3.Connection = Depends(get_db), actor: str = Depends(require_admin)):
+    item = get_item(conn, item_id)
+    if not item:
         raise HTTPException(status_code=404, detail="item not found")
     delete_item(conn, item_id)
+    # Record the title alongside the id: after deletion the id alone no longer
+    # resolves to anything, which makes the log much harder to read back.
+    audit.log_event(
+        "item.delete", actor=actor, role="admin", target=item_id,
+        title=item.get("title") or "",
+    )
     return {"ok": True}
 
 
