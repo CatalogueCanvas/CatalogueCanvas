@@ -29,6 +29,12 @@ class Settings:
         self.max_zip_member_bytes = int(os.environ.get("CC_MAX_ZIP_MEMBER_BYTES", str(500 * 1024 * 1024)))
         self.max_zip_total_bytes = int(os.environ.get("CC_MAX_ZIP_TOTAL_BYTES", str(1024 * 1024 * 1024)))
         self.max_zip_entries = int(os.environ.get("CC_MAX_ZIP_ENTRIES", "10000"))
+        # Caps how many uploads are ingested (decompressed + rasterized) at once.
+        # Each in-flight ingest can transiently hold up to ~max_zip_total_bytes in
+        # RAM, and anyio's general threadpool (default 40 threads) has no
+        # per-workload limit of its own -- without this, a burst of concurrent
+        # large uploads can spike memory far past any single-upload cap.
+        self.max_concurrent_uploads = int(os.environ.get("CC_MAX_CONCURRENT_UPLOADS", "4"))
         # Longest edge (px) of a generated SVG preview. SVG rasterization cost
         # grows with the square of the output size and a dense plotter SVG can
         # otherwise block the server for minutes. 0 disables the cap.

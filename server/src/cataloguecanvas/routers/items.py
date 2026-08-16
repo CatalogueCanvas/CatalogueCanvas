@@ -9,6 +9,7 @@ from io import StringIO
 from pathlib import Path
 from typing import Any, Optional
 
+import anyio
 import lz4.frame
 from starlette.background import BackgroundTask
 from starlette.concurrency import run_in_threadpool
@@ -36,6 +37,10 @@ from ..settings import settings
 from .auth import get_db
 
 router = APIRouter(prefix="/api/items", tags=["items"])
+
+# Bounds how many uploads are ingested concurrently, independent of anyio's
+# general-purpose threadpool cap -- see settings.max_concurrent_uploads.
+_upload_semaphore = anyio.Semaphore(settings.max_concurrent_uploads)
 
 
 # CSV round-trip: only title/note/tags are read back on import. The remaining
@@ -626,15 +631,16 @@ async def upload_item(
         # Safe for the sqlite handle: get_db yields a fresh connection per
         # request, opened with check_same_thread=False, and this coroutine
         # awaits rather than touching conn concurrently.
-        result = await run_in_threadpool(
-            ingest_zip_bytes,
-            data,
-            file.filename,
-            conn,
-            lib["id"],
-            Path(lib["path"]),
-            import_dt=import_dt,
-        )
+        async with _upload_semaphore:
+            result = await run_in_threadpool(
+                ingest_zip_bytes,
+                data,
+                file.filename,
+                conn,
+                lib["id"],
+                Path(lib["path"]),
+                import_dt=import_dt,
+            )
     except ValueError as exc:
         raise HTTPException(status_code=413, detail=str(exc)) from exc
 
