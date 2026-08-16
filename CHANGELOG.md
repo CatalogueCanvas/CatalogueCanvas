@@ -5,7 +5,10 @@ All notable changes to CatalogueCanvas are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Released versions are tagged (see `v*` tags and the published `ghcr.io` image); earlier pre-release entries are grouped by date.
 
-## [Unreleased]
+## [0.2.2] - 2026-08-16
+
+### Fixed
+- Upload memory/thread growth: concurrent uploads had no cap of their own, so each could transiently hold up to `CC_MAX_ZIP_TOTAL_BYTES` (1 GiB) in memory while pooled across anyio's default 40-thread limit, and glibc's allocator never returned freed memory to the OS afterward — RAM ratcheted up across upload bursts and stayed there. Fixed with a dedicated `CC_MAX_CONCURRENT_UPLOADS` (default 4) semaphore around ingest, an explicit `malloc_trim(0)` call after each ingest, and closing an unclosed `PIL.Image` handle in `to_webp`.
 
 ### Added
 - Activity log. Every change is appended to `<CC_DATA_DIR>/logs/audit.log` as JSONL — who did it, when, what action, and what it touched — covering logins and failed logins, uploads, deletions, metadata and batch edits, collection/portfolio/user/library changes, settings updates, and data exports. Only field *names* are recorded: passwords, password hashes, share tokens, notes, prompt templates and the LLM API URL never reach the log. The file rotates at `CC_AUDIT_LOG_MAX_BYTES` (default 5 MiB) keeping one previous generation, and writes are best-effort — a read-only volume or full disk degrades to no logging rather than failing the request that triggered it. Disable with `CC_AUDIT_LOG=0`.
