@@ -102,7 +102,7 @@ def _trim_memory() -> None:
     try:
         ctypes.CDLL(None).malloc_trim(0)
     except (OSError, AttributeError):
-        pass
+        pass  # non-glibc platform (e.g. macOS dev); nothing to trim
 
 
 class IngestResult:
