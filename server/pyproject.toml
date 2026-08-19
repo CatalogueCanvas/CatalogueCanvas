@@ -4,7 +4,7 @@ version = "0.2.2"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.141.1",
-    "uvicorn[standard]>=0.52.1",
+    "uvicorn[standard]>=0.52.3",
     "pillow>=12.3.0",
     "cairosvg>=2.9.0",
     "python-multipart>=0.0.32",
