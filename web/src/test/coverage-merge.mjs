@@ -9,12 +9,14 @@
 //   node src/test/coverage-merge.mjs [reportsDir]
 // (default reportsDir: src/test/.coverage-tmp). It does not run any tests.
 //
-// Uses istanbul-lib-coverage, which ships with @vitest/coverage-v8 — no install.
+// Uses @vitest/istanbul-lib-coverage and @vitest/istanbul-lib-report, which ship
+// with @vitest/coverage-v8 — no install. Vitest 5 forked these from the upstream
+// istanbul-* packages and folded the reporter factory (was istanbul-reports) into
+// @vitest/istanbul-lib-report, so `create` now comes from there.
 import fs from 'node:fs';
 import path from 'node:path';
-import libCoverage from 'istanbul-lib-coverage';
-import libReport from 'istanbul-lib-report';
-import reports from 'istanbul-reports';
+import { createCoverageMap } from '@vitest/istanbul-lib-coverage';
+import { create, createContext } from '@vitest/istanbul-lib-report';
 
 // Resolve the reports dir and confirm it stays within the project root, so a
 // stray CLI argument can't be used to read files elsewhere (path traversal).
@@ -29,7 +31,7 @@ if (!fs.existsSync(tmp)) {
   process.exit(1);
 }
 
-const map = libCoverage.createCoverageMap({});
+const map = createCoverageMap({});
 let files = 0;
 for (const dir of fs.readdirSync(tmp)) {
   const f = path.join(tmp, dir, 'coverage-final.json');
@@ -48,8 +50,8 @@ if (!files) {
 }
 
 // Write coverage/lcov.info (what Codacy ingests) from the merged map.
-const context = libReport.createContext({ dir: 'coverage', coverageMap: map });
-reports.create('lcovonly').execute(context);
+const context = createContext({ dir: 'coverage', coverageMap: map });
+create('lcovonly').execute(context);
 
 const s = map.getCoverageSummary();
 const pct = (m) => `${m.pct}% (${m.covered}/${m.total})`;
