@@ -113,7 +113,10 @@ def _disk_section() -> list[str]:
         pct = (usage.used / usage.total * 100) if usage.total else 0
         lines.append(f"- Data volume: {_fmt_bytes(usage.free)} free of {_fmt_bytes(usage.total)} ({pct:.0f}% used)")
     except OSError as exc:
-        lines.append(f"- Data volume: could not stat `{data_dir}`: {exc}")
+        # The exception text can carry host paths and OS internals, so it goes to
+        # the server log only. The report names the failure class instead.
+        logger.warning("disk usage check failed for %s", data_dir, exc_info=True)
+        lines.append(f"- Data volume: could not stat `{data_dir}` ({type(exc).__name__})")
     if settings.storage_dir.is_dir():
         lines.append(f"- Storage dir size: {_fmt_bytes(_dir_size(settings.storage_dir))}")
     if settings.db_path.is_file():
@@ -158,7 +161,8 @@ def _probe_url(api_url: str) -> str:
     try:
         infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
     except socket.gaierror as exc:
-        return f"DNS resolution failed for {host}: {exc}"
+        logger.warning("DNS resolution failed for %s", host, exc_info=True)
+        return f"DNS resolution failed for {host} ({type(exc).__name__})"
     family, socktype, proto, _, sockaddr = infos[0]
     try:
         with socket.socket(family, socktype, proto) as s:
@@ -166,7 +170,8 @@ def _probe_url(api_url: str) -> str:
             s.connect(sockaddr)
         return f"TCP connect to {host}:{port} OK"
     except OSError as exc:
-        return f"TCP connect to {host}:{port} failed: {exc}"
+        logger.warning("TCP connect to %s:%s failed", host, port, exc_info=True)
+        return f"TCP connect to {host}:{port} failed ({type(exc).__name__})"
 
 
 def _integrity_section() -> list[str]:
